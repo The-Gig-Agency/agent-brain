@@ -4,6 +4,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 
 ## Current Contents
 
+- [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md)
 - [`docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md)
 - [`docs/cognitive-router/spec/terrain-schema.md`](docs/cognitive-router/spec/terrain-schema.md)
 - [`docs/cognitive-router/spec/regime-library.md`](docs/cognitive-router/spec/regime-library.md)
