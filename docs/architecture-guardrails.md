@@ -30,6 +30,9 @@ It is:
 
 That is the center of gravity to protect.
 
+Most agent systems optimize execution.
+This project optimizes search-process selection.
+
 ## What This Project Is
 
 This project is a control layer for adaptive agent search.
@@ -54,6 +57,36 @@ It is not fundamentally:
 
 That distinction matters.
 
+## Why Framework Drift Happens
+
+Framework drift is not accidental or surprising.
+It is structural.
+
+Agent systems naturally drift toward:
+
+- orchestration abstraction
+- workflow generalization
+- infrastructure accumulation
+- configuration layers
+- generic runtime concerns
+
+Because those are usually:
+
+- easier to engineer
+- easier to demo
+- easier to monetize in the short term
+- easier to benchmark superficially
+
+Meanwhile, the most important parts of this project are harder:
+
+- routing quality
+- regime transitions
+- adaptive search policy
+- failed-path suppression
+- search-cost reduction
+
+Without intentional discipline, the architecture will optimize for infrastructure completeness instead of cognitive performance.
+
 ## What This Project Is Not
 
 This project should not become:
@@ -67,6 +100,21 @@ This project should not become:
 - a general agent runtime with thin regime branding
 
 If the architecture devolves into those shapes, the project has lost its differentiator.
+
+## Anti-Pattern: Agent Cosplay
+
+Multiple agents with different names, personalities, or prompt styles are not meaningful by default.
+
+They only matter if they materially change:
+
+- search topology
+- exploration behavior
+- pruning strategy
+- uncertainty handling
+- transition policy
+- evaluation dynamics
+
+Otherwise the system is performing theatrical decomposition rather than adaptive cognition.
 
 ## Primary Design Test
 
@@ -94,8 +142,25 @@ The architecture should make these explicit and central:
 - drift detection
 - evaluation harness
 - routing telemetry
+- search-cost accounting
 
 If these are weak while generic agent abstractions are strong, the architecture is moving in the wrong direction.
+
+## First-Class Primitive: Search Cost
+
+The system should optimize not only for answer quality, but also for bounded cognition under finite compute.
+
+Search-cost primitives should include things like:
+
+- token cost
+- retry cost
+- latency cost
+- branching explosion
+- human review cost
+- uncertainty cost
+
+Routing quality is partly about choosing the right regime for the problem.
+It is also about choosing the right regime for the cost envelope.
 
 ## Discouraged Components
 
@@ -109,6 +174,30 @@ These are not banned forever, but they should arrive late and only if clearly ju
 - elaborate workflow graphs without routing telemetry
 
 The project should resist implementing generic infrastructure before the core routing engine proves value.
+
+## Emerging Layer: Search Topology
+
+Regime selection is not the whole story.
+Search topology will likely become another important layer later.
+
+Examples:
+
+- serial search
+- parallel exploration
+- adversarial branching
+- recursive decomposition
+- speculative expansion
+- convergence funnels
+
+Regime answers:
+
+- how should the system search?
+
+Topology answers:
+
+- how should that search be structurally organized?
+
+This should probably remain a later layer, but the architecture should leave room for it.
 
 ## Product Framing Guardrails
 
@@ -127,6 +216,20 @@ Prefer positioning such as:
 - evaluation and governance layer for reasoning policies
 
 That keeps the differentiation legible.
+
+Be careful not to drift into:
+
+- "policy engine for reasoning"
+
+That nearby category is also becoming crowded.
+
+The distinction to protect is:
+
+- governance of search regimes
+
+not:
+
+- governance of actions in general
 
 ## Codebase Smell Checks
 
