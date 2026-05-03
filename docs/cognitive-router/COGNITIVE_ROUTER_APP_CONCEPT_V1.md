@@ -19,6 +19,26 @@ It is:
 
 That makes the product feel useful, rigorous, and teachable rather than mystical.
 
+## Why Now
+
+This idea becomes more valuable in the AI era because agents make search failures visible, expensive, and measurable.
+
+Why this matters now:
+
+- agents expose search failures more clearly than humans do
+- LLMs are flexible enough to switch reasoning regimes dynamically
+- tool use and memory make routing operational rather than theoretical
+- inference and tool costs make bad search economically expensive
+- agent workflows create evaluation traces, so regime quality can actually be benchmarked
+
+Without this framing, the concept can sound like metaphorical decision advice.
+
+With this framing, it becomes:
+
+- a control layer for agent search quality
+- a cost and capability optimization system
+- a measurable orchestration primitive
+
 ## Product Positioning
 
 Candidate framing:
@@ -60,6 +80,39 @@ Instead, the system should classify the structure of the problem:
 - whether the user is exploring, pruning, scaling, refining, or escaping a local minimum
 
 That is the real engine.
+
+## Terrain As A Universal Model
+
+The deeper claim here is that difficult problems share latent topological properties even when they come from very different domains.
+
+Possible terrain properties:
+
+- ruggedness
+- reversibility
+- feedback latency
+- adversariality
+- branching factor
+- local minima density
+- information cost
+- coordination load
+- environmental stability
+
+Under this view, the same terrain descriptors can apply across:
+
+- startups
+- coding
+- psychology
+- strategy
+- organizational design
+- agentic systems
+
+That means the core innovation may be larger than the app itself.
+
+It suggests a general theory:
+
+- many hard problems can be routed by topology rather than by topic
+
+This is why the terrain schema deserves to be elevated near the front of the concept, not treated as an implementation detail later.
 
 ## Example Terrain-to-Lens Mapping
 
@@ -323,6 +376,68 @@ These can later expand into finer-grained lenses such as:
 
 But the first version should prove routing value before ontology breadth.
 
+## Regime Failure Modes
+
+To make the framework rigorous, each regime should ship with explicit failure modes.
+
+Example failure-mode table:
+
+| Regime | Common failure mode |
+| --- | --- |
+| Momentum | Doubles down too long after initial signal |
+| Bayesian Optimization | Analysis paralysis from over-valuing uncertainty reduction |
+| Simulated Annealing | Endless wandering without convergence pressure |
+| Game Theory | Paranoia or over-strategizing around other agents |
+| Gradient Descent | Getting trapped in local minima |
+| Diffusion | Producing novelty without convergence |
+| Branch and Bound | Over-pruning before enough exploration |
+| Evolutionary Search | Burning resources on too many weak variants |
+
+This matters for two reasons:
+
+- it makes recommendations feel more psychologically real
+- it gives the product a built-in self-critique mechanism
+
+The system should not only say:
+
+- "Here is the recommended regime."
+
+It should also say:
+
+- "Here is how this regime tends to fail if overused."
+
+## Regime Transitions
+
+One of the deepest parts of the framework may not be regime selection alone.
+
+It may be regime transition logic:
+
+- when to move from exploration to exploitation
+- when to move from pruning to scaling
+- when to move from diffusion to convergence
+- when to move from experimentation to momentum
+
+This mirrors real dynamics in:
+
+- startups
+- evolution
+- learning
+- warfare
+- scientific discovery
+
+The long-term product should probably reason about:
+
+- which regime fits now
+- which regime should come next
+- what signal should trigger the transition
+
+That means the real orchestration unit is not just a chosen mode.
+It is:
+
+- a sequence of search regimes across time
+
+This may become one of the most defensible and useful layers in the system.
+
 ## Proposed Product Architecture
 
 ### Frontend
@@ -445,6 +560,57 @@ Design response:
 - measure outcome quality and policy usefulness, not just classification neatness
 - keep the first regime set small enough to evaluate honestly
 
+## Long-Term Moat
+
+The moat is probably not the ontology by itself.
+
+Anyone can copy:
+
+- "algorithms as thinking styles"
+
+The harder and more defensible layer is:
+
+- proving that certain routing policies improve outcomes in certain terrains
+
+That pushes the product toward:
+
+- agent benchmarks
+- workflow efficiency measurement
+- debugging success rates
+- planning quality assessment
+- reduced retries
+- lower token and tool costs
+
+That is where the idea becomes serious rather than merely elegant.
+
+## Philosophical Thesis
+
+A hidden but important thesis inside this concept is:
+
+- intelligence is not a singular capability
+- it is adaptive selection among search regimes
+
+Humans are probably not effective because they run one optimizer well.
+They are effective because they can:
+
+- switch modes
+- recurse on strategy
+- change exploration pressure
+- vary abstraction level
+- coordinate specialists
+- simulate adversaries
+- shift time horizons dynamically
+
+That framing is useful because it connects:
+
+- human cognition
+- organizations
+- evolution
+- science
+- agent systems
+
+It also makes the product feel less like a novelty app and more like an applied theory of adaptive intelligence.
+
 ## Strong Product Principle
 
 The system should never behave like:
@@ -475,23 +641,26 @@ Immediate next steps:
 1. Write the canonical terrain dimensions and allowed values as a small spec.
 2. Define the first regime library, starting with four regimes for the agent MVP.
 3. Create a scoring matrix from terrain dimensions to regime weights.
-4. Define failed-path memory rules and counter-regime checks.
-5. Draft the LLM extraction prompt and required JSON schema.
-6. Build a paper prototype of the questionnaire and result view.
-7. Test the system on debugging, GTM decisions, and product prioritization before expanding.
-8. Add outcome scoring so the router can be evaluated and improved.
-9. Only after those pass, scaffold the actual app.
+4. Add a first pass at regime failure modes and transition triggers.
+5. Define failed-path memory rules and counter-regime checks.
+6. Draft the LLM extraction prompt and required JSON schema.
+7. Build a paper prototype of the questionnaire and result view.
+8. Test the system on debugging, GTM decisions, and product prioritization before expanding.
+9. Add outcome scoring so the router can be evaluated and improved.
+10. Only after those pass, scaffold the actual app.
 
 Suggested build order after documentation:
 
 1. `/spec/terrain-schema.md`
 2. `/spec/regime-library.md`
 3. `/spec/scoring-model.md`
-4. `/spec/failed-path-memory.md`
-5. `/spec/prompt-contract.md`
-6. `/spec/eval-framework.md`
-7. `/ui/wireframes.md`
-8. MVP app scaffold
+4. `/spec/regime-failure-modes.md`
+5. `/spec/regime-transitions.md`
+6. `/spec/failed-path-memory.md`
+7. `/spec/prompt-contract.md`
+8. `/spec/eval-framework.md`
+9. `/ui/wireframes.md`
+10. MVP app scaffold
 
 ## Decision
 
