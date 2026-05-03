@@ -1,0 +1,37 @@
+{"table":"Table 1","quantity":"∆_σ","reported":"0.518157(35)","Lambda":"19"}
+{"table":"Table 1","quantity":"∆_ϵ","reported":"1.41265(36)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_σσϵ","reported":"1.05185(12)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_ϵϵϵ","reported":"1.53240(58)","Lambda":"19"}
+{"table":"Table 1","quantity":"∆_ϵ′","reported":"3.82951(61)","Lambda":"31"}
+{"table":"Table 1","quantity":"λ_σσϵ′","reported":"0.05304(16)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_ϵϵϵ′","reported":"1.5362(12)","Lambda":"19"}
+{"table":"Table 1","quantity":"∆_σ′","reported":"5.262(89)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_σϵσ′","reported":"0.0565(15)","Lambda":"19"}
+{"table":"Table 1","quantity":"c_T / c_T^free","reported":"0.946543(42)","Lambda":"19"}
+{"table":"Table 1","quantity":"∆_T′","reported":"5.499(17)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_σσT′","reported":"0.02107(20)","Lambda":"19"}
+{"table":"Table 1","quantity":"λ_ϵϵT′","reported":"1.355(30)","Lambda":"19"}
+{"table":"Table 1","metadata":"caption","caption":"A summary of the strongest rigorous bounds found in this paper using various sparseness assumptions. All errors (presented in bold) are rigorous. The bounds on the first four quantities were already known [6]. The other rigorous bounds are new."}
+{"table":"Table 3","parameter":"∆ σ","Λ=11_bounds":"0 . 51866( 93 )","Λ=11_minimum":"0 . 51828489773601","Λ=19_bounds":"0 . 518157( 35 )","Λ=19_minimum":"0 . 51815419690124"}
+{"table":"Table 3","parameter":"∆ ϵ","Λ=11_bounds":"1 . 4156( 79 )","Λ=11_minimum":"1 . 41480786868088","Λ=19_bounds":"1 . 41265( 36 )","Λ=19_minimum":"1 . 41269708524225"}
+{"table":"Table 3","parameter":"θ","Λ=11_bounds":"0 . 9701( 43 )","Λ=11_minimum":"0 . 97207282901339","Λ=19_bounds":"0 . 96925( 23 )","Λ=19_minimum":"0 . 96933698299715"}
+{"table":"Table 3","parameter":"∆ ϵ ′","Λ=11_bounds":"3 . 841( 76 )","Λ=11_minimum":"3 . 86750404211864","Λ=19_bounds":"3 . 8290( 52 )","Λ=19_minimum":"3 . 83115744805532"}
+{"table":"Table 3","metadata":"caption","caption":"Allowed interval found at Λ = 11 and 19 using the N(∆ϵ, ∆σ, θ, ∆ϵ′) navigator where we assume ∆σ′ > 3 and ∆ϵ′′ > 6. The error presented in bold is rigorous. The second and fourth column give the location of the minimum at Λ = 11 and 19 respectively."}
+{"table":"Table 4","quantity":"∆ σ","Lambda_11_bounds":"0 . 518157( 35 )","Lambda_19_minimum":"0 . 5181541969","EFM_estimate":"0 . 5181489( 10 )"}
+{"table":"Table 4","quantity":"∆ ϵ","Lambda_11_bounds":"1 . 41265( 36 )","Lambda_19_minimum":"1 . 412697085","EFM_estimate":"1 . 412625( 10 )"}
+{"table":"Table 4","quantity":"λ σσϵ","Lambda_11_bounds":"1 . 05185( 12 )","Lambda_19_minimum":"1 . 051827659","EFM_estimate":"1 . 0518537(41)"}
+{"table":"Table 4","quantity":"λ ϵϵϵ","Lambda_11_bounds":"1 . 53240( 58 )","Lambda_19_minimum":"1 . 532647927","EFM_estimate":"1 . 532435(19)"}
+{"table":"Table 4","quantity":"∆ ϵ ′","Lambda_11_bounds":"3 . 8290( 52 )","Lambda_19_minimum":"3 . 831157444","EFM_estimate":"3 . 82968(23)"}
+{"table":"Table 4","quantity":"λ σσϵ ′","Lambda_11_bounds":"0 . 05304( 16 )","Lambda_19_minimum":"0 . 05298356893","EFM_estimate":"0 . 053012(55)"}
+{"table":"Table 4","quantity":"λ ϵϵϵ ′","Lambda_11_bounds":"1 . 5362( 12 )","Lambda_19_minimum":"1 . 536468123","EFM_estimate":"1 . 5360(16)"}
+{"table":"Table 4","metadata":"caption","caption":"Allowed interval found at Λ = 11 and 19 using the N(∆ϵ, ∆σ, λσσϵ, λϵϵϵ, ∆ϵ′, λσσϵ′, λϵϵϵ′) navigator where we assume ∆σ′ > 3 and ∆ϵ′′ > 6 and that there is no degeneracy at ∆ϵ′. The error presented in bold is rigorous. The EFM estimates obtained in [4] are included for reference."}
+{"table":"Table 5","parameter":"∆σ","∆ϵ′′ > 5 . 5":"0 . 518156( 36 )","∆ϵ′′ > 6":"0 . 518157( 35 )","∆ϵ′′ > 6 . 5":"0 . 518159( 33 )"}
+{"table":"Table 5","parameter":"∆ϵ","∆ϵ′′ > 5 . 5":"1 . 41264( 37 )","∆ϵ′′ > 6":"1 . 41265( 36 )","∆ϵ′′ > 6 . 5":"1 . 41268( 33 )"}
+{"table":"Table 5","parameter":"θ","∆ϵ′′ > 5 . 5":"0 . 96924( 24 )","∆ϵ′′ > 6":"0 . 96925( 23 )","∆ϵ′′ > 6 . 5":"0 . 96927( 21 )"}
+{"table":"Table 5","parameter":"∆ϵ′","∆ϵ′′ > 5 . 5":"3 . 8286( 57 )","∆ϵ′′ > 6":"3 . 8290( 52 )","∆ϵ′′ > 6 . 5":"3 . 8297( 45 )"}
+{"table":"Table 5","metadata":"caption","caption":"The three columns show the allowed interval found at Λ = 19 under the assumptions ∆ϵ′′ > 5.5, 6 and 6.5 respectively. The error presented in bold is rigorous."}
+{"table":"Table 6","parameter":"∆σ","Λ = 19 bounds":"0 . 518153( 40 )","Λ = 19 minimum":"0 . 5181640959254"}
+{"table":"Table 6","parameter":"∆ϵ","Λ = 19 bounds":"1 . 41260( 41 )","Λ = 19 minimum":"1 . 4128014381733"}
+{"table":"Table 6","parameter":"θ","Λ = 19 bounds":"0 . 96920( 28 )","Λ = 19 minimum":"0 . 9693835270248"}
+{"table":"Table 6","parameter":"∆σ′","Λ = 19 bounds":"5 . 262( 89 )","Λ = 19 minimum":"5 . 1725929510462"}
+{"table":"Table 6","metadata":"caption","caption":"Allowed interval and minimum found at Λ = 19 using the N(∆ϵ, ∆σ, θ, ∆σ′) navigator where we assume ∆σ′′ > 6 and ∆ϵ′ > 3. The error presented in bold is rigorous."}
