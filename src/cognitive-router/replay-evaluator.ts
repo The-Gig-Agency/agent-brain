@@ -26,6 +26,13 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
   const isSchemaMismatch = reproStyle.includes("schema") || symptom.includes("field length");
   const isAuth = reproStyle.includes("auth") || symptom.includes("login");
   const isAttributeBoundary = reproStyle.includes("attribute") || symptom.includes("attributeerror");
+  const isHiddenDependency =
+    reproStyle.includes("hidden dependency") ||
+    reproStyle.includes("post-create") ||
+    reproStyle.includes("nested response format");
+  const isMappingContractDrift =
+    reproStyle.includes("mapping contract") ||
+    reproStyle.includes("response-shape mismatch");
   const isMultiHop = reproStyle.includes("multi-hop") || symptom.includes("limits were calculated");
   const isLimitBug = reproStyle.includes("limit") || symptom.includes("limit");
   const hasMisleadingTelemetry = (augmentation?.misleading_telemetry?.length ?? 0) > 0;
@@ -36,21 +43,29 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
   const branchingFactor =
     entryPointCount >= 5 ? "high" : entryPointCount >= 3 ? "medium" : "low";
   const uncertainty =
-    isMultiHop || hasDelayedSignal || hasConflictingEvidence
+    isMultiHop || isHiddenDependency || hasDelayedSignal || hasConflictingEvidence
       ? "high"
-      : isAttributeBoundary || isAuth || entryPointCount >= 3 || hasMisleadingTelemetry
+      : isAttributeBoundary ||
+          isAuth ||
+          isMappingContractDrift ||
+          entryPointCount >= 3 ||
+          hasMisleadingTelemetry
         ? "medium"
         : "low";
   const ruggedness =
-    isMultiHop || hasEnvironmentConfusion
+    isMultiHop || isHiddenDependency || hasEnvironmentConfusion
       ? "high"
-      : isLimitBug || isAttributeBoundary || hasMisleadingTelemetry
+      : isLimitBug || isAttributeBoundary || isMappingContractDrift || hasMisleadingTelemetry
         ? "medium"
         : "low";
   const localMinimaRisk =
-    isMultiHop || isAttributeBoundary || hasDelayedSignal || hasConflictingEvidence
+    isMultiHop ||
+    isHiddenDependency ||
+    isAttributeBoundary ||
+    hasDelayedSignal ||
+    hasConflictingEvidence
       ? "high"
-      : isAuth || hasMisleadingTelemetry
+      : isAuth || isMappingContractDrift || hasMisleadingTelemetry
         ? "medium"
         : "low";
   const informationCost =
@@ -58,9 +73,9 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
   const modePressure =
     isSchemaMismatch
       ? "prune"
-      : isMultiHop || hasDelayedSignal || hasConflictingEvidence || hasMisleadingTelemetry
+      : isHiddenDependency || isMultiHop || hasDelayedSignal || hasConflictingEvidence || hasMisleadingTelemetry
         ? "explore"
-        : entryPointCount <= 2
+      : entryPointCount <= 2
           ? "prune"
           : "prune";
 
@@ -202,6 +217,7 @@ export function runReplaySuite(
 
   const isTightReplay = visibleFileName.includes("tight");
   const isDiverseReplay = visibleFileName.includes("diverse");
+  const isCandidateReplay = visibleFileName.includes("v2-candidates");
 
   return {
     suite_id: suiteId,
@@ -222,22 +238,31 @@ export function runReplaySuite(
     },
     caveats: [
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
+      isCandidateReplay
+        ? "This candidate replay variant broadens the real-case mix with more hidden-dependency, propagation, and contract-drift bugs mined directly from local private-repo history."
+        : null,
       isDiverseReplay
         ? "This diverse replay variant reduces repository and org fingerprinting by anonymizing visible repo identity and shifting the visible layer toward terrain-shaped descriptions."
         : isTightReplay
         ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
         : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
+      isCandidateReplay
+        ? "The current v0.6c visible layer is still partially truth-adjacent because most cases retain changed-surface entry points rather than issue-text-only framing."
+        : null,
       isDiverseReplay
         ? "The ambiguity augmentation remains deliberate, but the visible cases now preserve terrain diversity with less reliance on organization-specific naming or topology."
         : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
+      isCandidateReplay
+        ? "This result is encouraging because the routed policy separates on the deceptive hidden-dependency cases, but the broader candidate set still needs a tighter visible layer before stronger claims."
+        : null,
       isDiverseReplay
         ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
         : isTightReplay
         ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."
         : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
-    ],
+    ].filter((value): value is string => Boolean(value)),
     cases,
   };
 }
@@ -259,5 +284,13 @@ export function runRealReplaysV06bDiverseSuite(): ReplayDatasetReport {
     "real-replays-v1-diverse.visible.json",
     "real-replays-v1-tight.evaluator.json",
     "real-replays-v0.6b-diverse",
+  );
+}
+
+export function runRealReplaysV06cCandidatesSuite(): ReplayDatasetReport {
+  return runReplaySuite(
+    "real-replays-v2-candidates.visible.json",
+    "real-replays-v2-candidates.evaluator.json",
+    "real-replays-v0.6c-candidates",
   );
 }

@@ -19,7 +19,9 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
 - `project-brain/echelon/v0.4-plan.md`: the current hardening plan for stronger baselines and holdout tests
 - `project-brain/echelon/real-replays-v1.md`: the first real-case replay dataset notes
+- `project-brain/echelon/real-replays-v2-candidates.md`: the next mined replay-expansion set from private repo history
 - `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`: the first replay pass that preserves separation after reducing repo and org fingerprinting in the visible layer
+- `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`: the first broader replay-expansion pass over a new mined private-repo candidate set
 
 ## Purpose
 
@@ -68,6 +70,7 @@ This is intentionally small and deterministic:
 - a first replay evaluator for real merged bug-fix cases, with explicit caveats about current truth-adjacent visible context
 - a tighter `v0.6a` replay pass with weaker visible clues and deliberate ambiguity augmentation
 - a `v0.6b` replay pass that keeps the ambiguity but reduces repository and organization fingerprinting in the router-visible layer
+- a `v0.6c` replay-expansion pass that broadens the real-case mix and recovers separation on hidden-dependency bugs
 
 ## Commands
 
@@ -76,3 +79,4 @@ This is intentionally small and deterministic:
 - `npm run eval:replays`
 - `npm run eval:replays:tight`
 - `npm run eval:replays:diverse`
+- `npm run eval:replays:v2`

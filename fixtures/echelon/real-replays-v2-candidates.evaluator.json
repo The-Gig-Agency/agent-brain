@@ -1,0 +1,99 @@
+{
+  "dataset_name": "debugging-real-replays-v2-candidates",
+  "purpose": "Evaluator-only truth for the next real-world replay expansion pass mined from local repo history.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "cg-937",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "d36650f560f20e6798d73ff89ae74e00887c0e36",
+      "start_ref": "736347401c24e298c036981d7e900c9792fdba2a",
+      "likely_fix_files": [
+        "creatorsgift/clients/tasks.py",
+        "creatorsgift/influencers/helpers.py"
+      ],
+      "expected_failure_mode": "missing post-create limit initialization / hidden dependency after campaign creation",
+      "patch_family_judgment": [
+        "fix should restore a missing follow-up limit-creation step after publishers are set for a new campaign",
+        "fix should connect the post-create task path to influencer-limit initialization rather than only masking the AttributeError"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Best interpreted as a deceptive hidden-dependency case, not a narrow direct-attribute typo."
+    },
+    {
+      "id": "cg-987",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "8a0614237b023f42f3dc9f7eb8f029afee545021",
+      "start_ref": "196d086bb4f0f5681120cd0512ceb45f48fc283c",
+      "likely_fix_files": [
+        "creatorsgift/orders/tasks.py"
+      ],
+      "expected_failure_mode": "refresh rollover not applied in expired-order task flow",
+      "patch_family_judgment": [
+        "fix should move or restore allowance rollover handling to the correct refresh/expiration step",
+        "fix should remain localized to task ordering and conditional rollover behavior"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Compact operational logic bug with a small surface and sequencing-sensitive behavior."
+    },
+    {
+      "id": "cg-936",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "1232019129bf4c689e2bcfd74d03d01b494ba177",
+      "start_ref": "edda7966ca2aa00bf41edd515ddf98fc9267ee75",
+      "likely_fix_files": [
+        "creatorsgift/clients/api/serializers.py",
+        "creatorsgift/clients/helpers.py",
+        "creatorsgift/clients/tasks.py",
+        "creatorsgift/influencers/signals.py",
+        "creatorsgift/orders/forms.py",
+        "creatorsgift/orders/tasks.py"
+      ],
+      "expected_failure_mode": "incorrect limit recomputation and propagation across campaign lifecycle",
+      "patch_family_judgment": [
+        "fix should align recalculation triggers, task behavior, and null-safe decrement logic across the limit surfaces",
+        "fix should be evaluated as a multi-part propagation repair rather than a single-line patch"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Strong propagation case with partial-fix risk."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "95356aefedf5cb8ceba215cd677ae0d4032d08d8",
+      "start_ref": "a80e6d53b6d5c0dadd5dbefd542eee4a9e746465",
+      "likely_fix_files": [
+        "supabase/functions/manage/ciq-handlers.ts"
+      ],
+      "expected_failure_mode": "CIQ response-shape mapping mismatch for collections and totals",
+      "patch_family_judgment": [
+        "fix should align handler field names to the actual CIQ response structure",
+        "fix should correct both collection keys and total-count extraction"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Grounded replacement for the originally suggested CIQ refs, which did not resolve in fetched history."
+    },
+    {
+      "id": "acp-8d0c011",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "8d0c0116d39f3662c1e76f9da40ac25d3b6ae2fe",
+      "start_ref": "e2e22fc85f82e8263681a344e562b2f2c07491ac",
+      "likely_fix_files": [
+        "gateway/auth.ts",
+        "GATEWAY-API-KEY-FIX.md"
+      ],
+      "expected_failure_mode": "nested lookup response mismatch at gateway auth boundary",
+      "patch_family_judgment": [
+        "fix should read tenant_id from the nested Repo B response while preserving fallback compatibility",
+        "fix should remain centered in gateway-side lookup parsing rather than key issuance"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Useful deceptive-auth case because the surface symptom is 401, but the true bug is response parsing."
+    }
+  ]
+}

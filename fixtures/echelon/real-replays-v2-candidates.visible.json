@@ -1,0 +1,139 @@
+{
+  "dataset_name": "debugging-real-replays-v2-candidates",
+  "purpose": "Router-visible replay candidates mined directly from local private-repo history for the next real-world expansion pass.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "cg-937",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "CG-937 Fixed attribute error after creating new campaign",
+      "symptom": "Creating a new campaign triggered an AttributeError shortly after publisher setup.",
+      "visible_evidence": [
+        "The fix spans a client task and influencer helper rather than a serializer or view-only surface",
+        "The failure appears after campaign creation, not during initial form submission",
+        "The changed logic suggests a missing follow-up step in post-create setup"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/clients/tasks.py",
+          "creatorsgift/influencers/helpers.py"
+        ],
+        "repro_style": "post-create hidden dependency / delayed attribute failure",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the missing post-create setup step or dependency boundary",
+        "propose a fix family consistent with the landed patch"
+      ],
+      "notes": "Good replay candidate for delayed decisive evidence because the visible symptom can mislead you toward direct attribute access bugs."
+    },
+    {
+      "id": "cg-987",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "CG-987 Fixed not refreshing limits",
+      "symptom": "Refreshing campaign or order limits did not restore the expected allowances.",
+      "visible_evidence": [
+        "Only one task file changed, but the bug involves time-based limit rollover behavior",
+        "The refresh path touches expiration timing and allowance restoration",
+        "The failure likely sits in task sequencing rather than UI input handling"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/orders/tasks.py"
+        ],
+        "repro_style": "stale-state refresh / task sequencing ambiguity",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why refresh and rollover behavior diverged from expected limits",
+        "align with the landed task-level fix direction"
+      ],
+      "notes": "Compact but not trivial: the surface is small while the actual bug is about ordering and conditional rollover behavior."
+    },
+    {
+      "id": "cg-936",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "CG-936 Fixed Incorrect value of items and orders limits",
+      "symptom": "Items and orders limits were calculated or displayed incorrectly across campaign flows.",
+      "visible_evidence": [
+        "The patch spans serializers, helpers, tasks, forms, and signals",
+        "The bug appears to combine value propagation with recalculation timing",
+        "This looks like interacting root causes rather than a single off-by-one line"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/clients/api/serializers.py",
+          "creatorsgift/clients/helpers.py",
+          "creatorsgift/clients/tasks.py",
+          "creatorsgift/influencers/signals.py",
+          "creatorsgift/orders/forms.py",
+          "creatorsgift/orders/tasks.py"
+        ],
+        "repro_style": "multi-hop limit recomputation / propagation",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the interacting limit-recalculation surfaces",
+        "propose a coherent fix family consistent with the merged patch"
+      ],
+      "notes": "Strong harder case for partial-fix risk and propagation bugs."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "stack": "typescript/supabase-edge",
+      "title": "Fix campaign data mapping",
+      "symptom": "Campaign, publisher, or list counts came back wrong because CIQ handler response fields were mapped incorrectly.",
+      "visible_evidence": [
+        "The fix is localized to CIQ handler mapping logic",
+        "The issue involves expected response collections and total-count fields",
+        "This looks like interface-shape mismatch rather than network transport failure"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "supabase/functions/manage/ciq-handlers.ts"
+        ],
+        "repro_style": "response-shape mismatch / mapping contract drift",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the response-field mapping mismatch",
+        "match the fix direction in the handler layer"
+      ],
+      "notes": "Chosen as a grounded CIQ substitute because the originally suggested CIQ commit IDs did not resolve after fetch."
+    },
+    {
+      "id": "acp-8d0c011",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "stack": "typescript/deno",
+      "title": "Fix Gateway API key validation - handle nested response format from Repo B",
+      "symptom": "Gateway returned 401 Invalid API key even though the same key worked against Repo B endpoints.",
+      "visible_evidence": [
+        "The failure sits at the boundary between gateway auth and Repo B lookup",
+        "The patch touches auth parsing and debugging notes rather than API-key creation itself",
+        "The symptom looks like auth failure, but the root cause is likely response interpretation"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "gateway/auth.ts",
+          "GATEWAY-API-KEY-FIX.md"
+        ],
+        "repro_style": "hidden dependency / nested response format mismatch",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the response-format mismatch at the gateway lookup boundary",
+        "propose a fix consistent with the landed auth-path patch"
+      ],
+      "notes": "Clean non-UI hidden-dependency case where the surface symptom is misleadingly auth-themed."
+    }
+  ]
+}
