@@ -3,9 +3,9 @@ import { failedFixAttemptsBeforeFamilySignal } from "./trace.js";
 import type { DebugEvalCase, DebuggingSuiteReport, TransitionCycleMeasurementSummary } from "./types.js";
 
 function trapFamilyFromCaseId(caseId: string): string {
-  const prefix = "candidate-tf01-";
-  if (caseId.startsWith(prefix)) {
-    return caseId.slice(prefix.length);
+  const match = caseId.match(/^candidate-tf0[12]-(?:m\d+-|p\d+-|n\d+-)?(.+)$/);
+  if (match?.[1]) {
+    return match[1];
   }
   return "unknown";
 }

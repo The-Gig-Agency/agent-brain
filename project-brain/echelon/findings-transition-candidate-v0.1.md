@@ -40,5 +40,5 @@ After first implementation, one run showed `routed_success_rate` 0.8, `premature
 
 ## Next steps
 
-- Add paraphrase variants and grow toward 12–30 cases (TGA-230).
+- Prefer **v0.2** for the expanded 20-case lane: `findings-transition-candidate-v0.2.md` and `npm run eval:transition-candidate:v0.2`.
 - Wire the same metric block into a combined “cycle note” template alongside frozen lane runs.

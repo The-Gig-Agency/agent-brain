@@ -23,6 +23,7 @@
     "eval:media:v0.1": "npm run build && node dist/cognitive-router/run-media-eval-v0.1.js",
     "eval:frozen:media:v1": "npm run build && node dist/cognitive-router/run-media-eval-v0.1.js",
     "eval:transition-candidate:v0.1": "npm run build && node dist/cognitive-router/run-transition-candidate-v0.1.js",
+    "eval:transition-candidate:v0.2": "npm run build && node dist/cognitive-router/run-transition-candidate-v0.2.js",
     "eval:ablation-matrix:v0.1": "npm run build && node dist/cognitive-router/run-ablation-matrix-v0.1.js"
   },
   "devDependencies": {

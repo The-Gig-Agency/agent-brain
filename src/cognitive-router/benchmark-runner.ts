@@ -12,6 +12,7 @@ import {
   DEBUGGING_V1_CASES,
   DEBUGGING_V1_HOLDOUT_CASES,
   DEBUGGING_TRANSITION_CANDIDATE_V01_CASES,
+  DEBUGGING_TRANSITION_CANDIDATE_V02_CASES,
   generateDebuggingV04HoldoutCases,
 } from "./debugging-world.js";
 import { computeTransitionCycleMetrics } from "./transition-candidate-metrics.js";
@@ -145,6 +146,13 @@ export function runDebuggingV1Suite(
 export function runTransitionCandidateV01Suite(): DebuggingSuiteReport {
   const report = runDebuggingV1Suite(DEBUGGING_TRANSITION_CANDIDATE_V01_CASES, "transition-candidate-v0.1");
   report.transition_cycle_metrics = computeTransitionCycleMetrics(DEBUGGING_TRANSITION_CANDIDATE_V01_CASES, report.cases);
+  return report;
+}
+
+/** Expanded mutable candidate lane (20 cases): mirrors + paraphrases + boundary mix (TGA-230). */
+export function runTransitionCandidateV02Suite(): DebuggingSuiteReport {
+  const report = runDebuggingV1Suite(DEBUGGING_TRANSITION_CANDIDATE_V02_CASES, "transition-candidate-v0.2");
+  report.transition_cycle_metrics = computeTransitionCycleMetrics(DEBUGGING_TRANSITION_CANDIDATE_V02_CASES, report.cases);
   return report;
 }
 
