@@ -3,6 +3,7 @@
 - brief: `project-brain/echelon/brief.md`
 - decisions: `project-brain/echelon/decisions.md`
 - eval v2: `project-brain/echelon/eval-v2.md`
+- v0.1 debugging core: `project-brain/echelon/v0.1-debugging-core.md`
 - debugging v1 findings: `project-brain/echelon/findings-debugging-v1.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`

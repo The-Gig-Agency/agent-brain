@@ -1,6 +1,14 @@
 import { chooseBaselineAction, type RuntimeStateView } from "./baselines.js";
 import { getHiddenEffect } from "./debugging-world.js";
-import { countRepeatedFailedPaths, countRetriesBeforeSuccess, createEmptyTrace, detectFalseConvergence } from "./trace.js";
+import {
+  countHysteresis,
+  countRepeatedFailedPaths,
+  countRetriesBeforeSuccess,
+  countTransitions,
+  createEmptyTrace,
+  detectFalseConvergence,
+  measureDeadEndPersistence,
+} from "./trace.js";
 import { scoreTerrain } from "./scoring.js";
 import type {
   BaselinePolicyId,
@@ -362,6 +370,9 @@ export function runDebugCase(debugCase: DebugEvalCase, policyId: BaselinePolicyI
     total_cost: state.totalCost,
     repeated_failed_paths: countRepeatedFailedPaths(state.observations),
     retries_before_success: countRetriesBeforeSuccess(state.observations),
+    transition_count: countTransitions(state.observations),
+    hysteresis_count: countHysteresis(state.observations),
+    dead_end_persistence: measureDeadEndPersistence(state.observations),
     false_convergence: false,
     action_count: state.executedActionIds.length,
     trace: state.observations,

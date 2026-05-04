@@ -235,6 +235,9 @@ export type DebugRunResult = {
   total_cost: number;
   repeated_failed_paths: number;
   retries_before_success: number;
+  transition_count: number;
+  hysteresis_count: number;
+  dead_end_persistence: number;
   false_convergence: boolean;
   action_count: number;
   trace: RouterTraceEvent[];
@@ -264,11 +267,53 @@ export type DebuggingSuiteReport = {
     average_cost: number;
     average_repeated_failed_paths: number;
     average_retries_before_success: number;
+    average_transition_count: number;
+    average_hysteresis_count: number;
+    average_dead_end_persistence: number;
   }>;
   cases: Array<{
     case_id: string;
     routed: DebugRunResult;
     baselines: DebugRunResult[];
     pass: boolean;
+  }>;
+};
+
+export type DebuggingCoreV01Report = {
+  suite_id: string;
+  generated_at: string;
+  go_no_go: boolean;
+  criteria: {
+    routed_not_worse_than_fixed_heuristic_on_success: boolean;
+    routed_beats_naive_retry_on_failed_paths: boolean;
+    routed_beats_naive_retry_on_cost: boolean;
+    routed_beats_always_compound_on_failed_paths: boolean;
+  };
+  summary: {
+    case_count: number;
+    routed_success_rate: number;
+    fixed_heuristic_success_rate: number;
+    routed_average_cost: number;
+    naive_retry_average_cost: number;
+    routed_average_repeated_failed_paths: number;
+    naive_retry_average_repeated_failed_paths: number;
+    always_compound_average_repeated_failed_paths: number;
+    routed_average_hysteresis_count: number;
+    routed_average_dead_end_persistence: number;
+  };
+  per_policy: Array<{
+    policy_id: BaselinePolicyId;
+    success_rate: number;
+    average_cost: number;
+    average_repeated_failed_paths: number;
+    average_retries_before_success: number;
+    average_transition_count: number;
+    average_hysteresis_count: number;
+    average_dead_end_persistence: number;
+  }>;
+  cases: Array<{
+    case_id: string;
+    routed: DebugRunResult;
+    baselines: DebugRunResult[];
   }>;
 };

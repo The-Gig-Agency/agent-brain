@@ -289,6 +289,10 @@ export const DEBUGGING_V1_HOLDOUT_CASES: DebugEvalCase[] = [
   }),
 ];
 
+export const DEBUGGING_CORE_V01_CASES: DebugEvalCase[] = DEBUGGING_V1_CASES.filter((debugCase) =>
+  ["debug-v1-01", "debug-v1-02", "debug-v1-03", "debug-v1-06", "debug-v1-10"].includes(debugCase.case_id),
+);
+
 export function getHiddenEffect(debugCase: DebugEvalCase, actionId: string): HiddenDebugActionEffect {
   const effect = debugCase.hidden_truth.effects[actionId];
   if (!effect) {
