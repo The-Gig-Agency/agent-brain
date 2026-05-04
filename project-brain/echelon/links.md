@@ -11,6 +11,7 @@
 - real replays v2 candidates: `project-brain/echelon/real-replays-v2-candidates.md`
 - real replays v3 mining: `project-brain/echelon/real-replays-v3-mining.md`
 - v0.6f plan: `project-brain/echelon/v0.6f-plan.md`
+- v0.7 operational realism plan: `project-brain/echelon/v0.7-operational-realism-plan.md`
 - test design anti-bias: `project-brain/echelon/test-design-anti-bias.md`
 - debugging v1 findings: `project-brain/echelon/findings-debugging-v1.md`
 - debugging core v0.2 findings: `project-brain/echelon/findings-debugging-core-v0.2.md`
