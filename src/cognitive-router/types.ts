@@ -243,6 +243,10 @@ export type DebugRunResult = {
   trace: RouterTraceEvent[];
 };
 
+export type DebugRunOptions = {
+  disable_transitions?: boolean;
+};
+
 export type BaselinePolicyId =
   | "naive_retry"
   | "always_explore"
@@ -322,4 +326,19 @@ export type DebuggingCoreV01Report = {
       fixed_heuristic_cost_before_first_strong_signal: number | null;
     };
   }>;
+};
+
+export type AdversarialTestResult = {
+  test_id: string;
+  title: string;
+  pass: boolean;
+  summary: Record<string, boolean | number | string | null>;
+  notes: string[];
+};
+
+export type AdversarialSuiteReport = {
+  suite_id: string;
+  generated_at: string;
+  overall_pass: boolean;
+  tests: AdversarialTestResult[];
 };

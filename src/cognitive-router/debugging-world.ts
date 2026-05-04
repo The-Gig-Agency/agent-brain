@@ -21,6 +21,7 @@ type CaseSpec = {
   logSignalStrength?: 1 | 2;
   falsePositiveInspectFamilies?: DebugFamily[];
   successSignalThreshold?: number;
+  familyOrder?: DebugFamily[];
 };
 
 function familyLabel(family: DebugFamily): string {
@@ -38,7 +39,7 @@ function createObservation(
 }
 
 function createCase(spec: CaseSpec): DebugEvalCase {
-  const families: DebugFamily[] = [...spec.distractors, spec.rootCause];
+  const families: DebugFamily[] = spec.familyOrder ?? [...spec.distractors, spec.rootCause];
   const availableActions: VisibleDebugAction[] = [
     { id: "inspect:logs", label: "Inspect logs and error traces", family: spec.rootCause, kind: "inspect", cost: 1 },
     ...families.flatMap((family) => [
@@ -351,6 +352,132 @@ export const DEBUGGING_CORE_V02_CASES: DebugEvalCase[] = [
     successSignalThreshold: 3,
   }),
 ];
+
+export const DEBUGGING_CORE_V03_REVERSAL_CASES: DebugEvalCase[] = [
+  createCase({
+    caseId: "debug-core-v03-reversal-01",
+    title: "Two dependency-looking clues hide a version failure",
+    prompt: "The first two observations both reinforce a dependency suspicion, but the decisive signal arrives later from a version path.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    familyOrder: ["dependency", "artifact", "version"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "dependency",
+    falsePositiveInspectFamilies: ["dependency", "artifact"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v03-reversal-02",
+    title: "Permission and env clues mask a secret-scope bug",
+    prompt: "Auth-like symptoms first reinforce the visible permission and env paths before a later signal reveals a secret-scope issue.",
+    rootCause: "secret_scope",
+    distractors: ["permission", "env"],
+    familyOrder: ["permission", "env", "secret_scope"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "medium"),
+    logSignalFamily: "permission",
+    falsePositiveInspectFamilies: ["permission", "env"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v03-reversal-03",
+    title: "Cache then logic clues hide a stale-state defect",
+    prompt: "Early evidence first makes cache and then logic look plausible before a later stale-state signal flips the answer.",
+    rootCause: "stale_state",
+    distractors: ["cache", "logic"],
+    familyOrder: ["cache", "logic", "stale_state"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "cache",
+    falsePositiveInspectFamilies: ["cache", "logic"],
+    successSignalThreshold: 3,
+  }),
+];
+
+function remapActionId(actionId: string, familyMap: Map<DebugFamily, DebugFamily>): string {
+  if (actionId === "inspect:logs") {
+    return actionId;
+  }
+
+  const [kind, familyValue] = actionId.split(":");
+  if (!kind || !familyValue) {
+    return actionId;
+  }
+
+  const mappedFamily = familyMap.get(familyValue as DebugFamily);
+  return mappedFamily ? `${kind}:${mappedFamily}` : actionId;
+}
+
+function remapText(text: string, familyMap: Map<DebugFamily, DebugFamily>): string {
+  let nextText = text;
+  for (const [from, to] of familyMap.entries()) {
+    nextText = nextText.replaceAll(from.replaceAll("_", " "), to.replaceAll("_", " "));
+  }
+  return nextText;
+}
+
+export function createPermutedCase(debugCase: DebugEvalCase): DebugEvalCase {
+  const families = Array.from(
+    new Set(
+      debugCase.input_context.available_actions
+        .filter((action) => action.id !== "inspect:logs")
+        .map((action) => action.family),
+    ),
+  );
+  const rotated = families.length > 1 ? [...families.slice(1), families[0] ?? families[0]] : families;
+  const familyMap = new Map<DebugFamily, DebugFamily>();
+
+  families.forEach((family, index) => {
+    const mapped = rotated[index];
+    if (mapped) {
+      familyMap.set(family, mapped);
+    }
+  });
+
+  const remappedActions = [...debugCase.input_context.available_actions]
+    .map((action) => ({
+      ...action,
+      id: remapActionId(action.id, familyMap),
+      family: familyMap.get(action.family) ?? action.family,
+      label: remapText(action.label, familyMap),
+    }))
+    .sort((left, right) => right.label.localeCompare(left.label));
+
+  const remappedEffects = Object.fromEntries(
+    Object.entries(debugCase.hidden_truth.effects).map(([actionId, effect]) => {
+      const nextActionId = remapActionId(actionId, familyMap);
+      return [
+        nextActionId,
+        {
+          ...effect,
+          action_id: nextActionId,
+          observations: effect.observations.map((observation) => ({
+            ...observation,
+            family: familyMap.get(observation.family) ?? observation.family,
+            text: remapText(observation.text, familyMap),
+          })),
+        },
+      ];
+    }),
+  );
+
+  return {
+    ...debugCase,
+    case_id: `${debugCase.case_id}:permuted`,
+    title: `${debugCase.title} (Permuted)`,
+    input_context: {
+      ...debugCase.input_context,
+      case_id: `${debugCase.input_context.case_id}:permuted`,
+      title: `${debugCase.input_context.title} (Permuted)`,
+      available_actions: remappedActions,
+    },
+    hidden_truth: {
+      root_cause: familyMap.get(debugCase.hidden_truth.root_cause) ?? debugCase.hidden_truth.root_cause,
+      effects: remappedEffects,
+    },
+  };
+}
 
 export function getHiddenEffect(debugCase: DebugEvalCase, actionId: string): HiddenDebugActionEffect {
   const effect = debugCase.hidden_truth.effects[actionId];

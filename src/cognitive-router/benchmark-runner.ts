@@ -1,10 +1,23 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { DEBUGGING_CORE_V01_CASES, DEBUGGING_CORE_V02_CASES, DEBUGGING_V1_CASES, DEBUGGING_V1_HOLDOUT_CASES } from "./debugging-world.js";
+import {
+  createPermutedCase,
+  DEBUGGING_CORE_V01_CASES,
+  DEBUGGING_CORE_V02_CASES,
+  DEBUGGING_CORE_V03_REVERSAL_CASES,
+  DEBUGGING_V1_CASES,
+  DEBUGGING_V1_HOLDOUT_CASES,
+} from "./debugging-world.js";
 import { runDebugCase } from "./router-runner.js";
-import { costBeforeFirstStrongSignal, firstThreeActions } from "./trace.js";
+import {
+  costBeforeFamilySignal,
+  costBeforeFirstStrongSignal,
+  failedFixAttemptsBeforeFamilySignal,
+  firstThreeActions,
+} from "./trace.js";
 import type {
+  AdversarialSuiteReport,
   BaselinePolicyId,
   DebugEvalCase,
   DebuggingCoreV01Report,
@@ -127,6 +140,21 @@ export function runDebuggingCoreV02Suite(): DebuggingCoreV01Report {
   return runFocusedCoreSuite("debugging-core-v0.2", DEBUGGING_CORE_V02_CASES);
 }
 
+export function runDebuggingCoreV03Suite(): AdversarialSuiteReport {
+  const tests = [
+    runLabelPermutationTest(),
+    runRegimeAblationTest(),
+    runMisleadingEvidenceReversalTest(),
+  ];
+
+  return {
+    suite_id: "debugging-core-v0.3",
+    generated_at: new Date().toISOString(),
+    overall_pass: tests.every((test) => test.pass),
+    tests,
+  };
+}
+
 function runFocusedCoreSuite(suiteId: string, cases: DebugEvalCase[]): DebuggingCoreV01Report {
   const routedRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
   const comparedBaselines: Exclude<BaselinePolicyId, "routed_policy">[] = [
@@ -208,7 +236,149 @@ function runFocusedCoreSuite(suiteId: string, cases: DebugEvalCase[]): Debugging
   };
 }
 
-export function writeSuiteReport(report: DebuggingSuiteReport | DebuggingCoreV01Report, outputDir = "reports/debugging-v1") {
+function runLabelPermutationTest() {
+  const baseReport = runFocusedCoreSuite("debugging-core-v0.2-base", DEBUGGING_CORE_V02_CASES);
+  const permutedCases = DEBUGGING_CORE_V02_CASES.map((debugCase) => createPermutedCase(debugCase));
+  const permutedReport = runFocusedCoreSuite("debugging-core-v0.2-permuted", permutedCases);
+
+  const routedSuccessDelta =
+    permutedReport.summary.routed_success_rate - baseReport.summary.routed_success_rate;
+  const routedCostDelta =
+    permutedReport.summary.routed_average_cost - baseReport.summary.routed_average_cost;
+  const fixedSuccessDelta =
+    permutedReport.summary.fixed_heuristic_success_rate - baseReport.summary.fixed_heuristic_success_rate;
+
+  const pass =
+    permutedReport.go_no_go &&
+    permutedReport.summary.routed_success_rate >= permutedReport.summary.fixed_heuristic_success_rate &&
+    Math.abs(routedSuccessDelta) <= 0.001 &&
+    Math.abs(routedCostDelta) <= 0.5 &&
+    Math.abs(fixedSuccessDelta) <= 0.25;
+
+  return {
+    test_id: "label-permutation",
+    title: "Label permutation invariance",
+    pass,
+    summary: {
+      base_go_no_go: baseReport.go_no_go,
+      permuted_go_no_go: permutedReport.go_no_go,
+      routed_success_delta: Number(routedSuccessDelta.toFixed(3)),
+      routed_cost_delta: Number(routedCostDelta.toFixed(3)),
+      fixed_success_delta: Number(fixedSuccessDelta.toFixed(3)),
+    },
+    notes: [
+      "This test shuffles family identities and action ordering to check for surface-pattern leakage.",
+      "It fails if the routed win disappears after permutation.",
+    ],
+  };
+}
+
+function runRegimeAblationTest() {
+  const cases = DEBUGGING_CORE_V03_REVERSAL_CASES;
+  const fullRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const ablatedRuns = cases.map((debugCase) =>
+    runDebugCase(debugCase, "routed_policy", { disable_transitions: true }),
+  );
+
+  const fullScore = policyScore(fullRuns);
+  const ablatedScore = policyScore(ablatedRuns);
+  const fullFailedPaths = average(fullRuns.map((result) => result.repeated_failed_paths));
+  const ablatedFailedPaths = average(ablatedRuns.map((result) => result.repeated_failed_paths));
+  const fullTransitions = average(fullRuns.map((result) => result.transition_count));
+  const ablatedTransitions = average(ablatedRuns.map((result) => result.transition_count));
+
+  const pass = fullScore > ablatedScore + 0.5 || fullFailedPaths < ablatedFailedPaths;
+
+  return {
+    test_id: "regime-ablation",
+    title: "Transitions materially change outcomes",
+    pass,
+    summary: {
+      full_score: Number(fullScore.toFixed(3)),
+      ablated_score: Number(ablatedScore.toFixed(3)),
+      score_delta: Number((fullScore - ablatedScore).toFixed(3)),
+      full_failed_paths: Number(fullFailedPaths.toFixed(3)),
+      ablated_failed_paths: Number(ablatedFailedPaths.toFixed(3)),
+      full_transition_count: Number(fullTransitions.toFixed(3)),
+      ablated_transition_count: Number(ablatedTransitions.toFixed(3)),
+    },
+    notes: [
+      "This test disables runtime transitions after the initial regime choice.",
+      "It fails if the ablated router performs nearly identically to the full routed policy.",
+    ],
+  };
+}
+
+function runMisleadingEvidenceReversalTest() {
+  const cases = DEBUGGING_CORE_V03_REVERSAL_CASES;
+  const comparisons = cases.map((debugCase) => {
+    const routed = runDebugCase(debugCase, "routed_policy");
+    const fixed = runDebugCase(debugCase, "fixed_heuristic");
+    const routedFailedFixes = failedFixAttemptsBeforeFamilySignal(
+      routed.trace,
+      debugCase.hidden_truth.root_cause,
+      3,
+    );
+    const fixedFailedFixes = failedFixAttemptsBeforeFamilySignal(
+      fixed.trace,
+      debugCase.hidden_truth.root_cause,
+      3,
+    );
+    const routedCostToRoot = costBeforeFamilySignal(routed.trace, debugCase.hidden_truth.root_cause, 3);
+    const fixedCostToRoot = costBeforeFamilySignal(fixed.trace, debugCase.hidden_truth.root_cause, 3);
+
+    return {
+      case_id: debugCase.case_id,
+      routed,
+      fixed,
+      routedFailedFixes,
+      fixedFailedFixes,
+      routedCostToRoot,
+      fixedCostToRoot,
+      pass:
+        routedFailedFixes < fixedFailedFixes ||
+        (routedFailedFixes === fixedFailedFixes &&
+          (routedCostToRoot ?? Number.POSITIVE_INFINITY) < (fixedCostToRoot ?? Number.POSITIVE_INFINITY)),
+    };
+  });
+
+  const pass = comparisons.every((comparison) => comparison.pass);
+
+  return {
+    test_id: "misleading-evidence-reversal",
+    title: "Recover from early wrong evidence faster than fixed heuristic",
+    pass,
+    summary: {
+      case_count: comparisons.length,
+      passed_case_count: comparisons.filter((comparison) => comparison.pass).length,
+      routed_average_failed_fixes_before_root_signal: Number(
+        average(comparisons.map((comparison) => comparison.routedFailedFixes)).toFixed(3),
+      ),
+      fixed_average_failed_fixes_before_root_signal: Number(
+        average(comparisons.map((comparison) => comparison.fixedFailedFixes)).toFixed(3),
+      ),
+      routed_average_cost_before_root_signal: Number(
+        average(
+          comparisons.map((comparison) => comparison.routedCostToRoot ?? comparison.routed.total_cost),
+        ).toFixed(3),
+      ),
+      fixed_average_cost_before_root_signal: Number(
+        average(
+          comparisons.map((comparison) => comparison.fixedCostToRoot ?? comparison.fixed.total_cost),
+        ).toFixed(3),
+      ),
+    },
+    notes: comparisons.map(
+      (comparison) =>
+        `${comparison.case_id}: routed failed fixes before reversal=${comparison.routedFailedFixes}, fixed=${comparison.fixedFailedFixes}`,
+    ),
+  };
+}
+
+export function writeSuiteReport(
+  report: DebuggingSuiteReport | DebuggingCoreV01Report | AdversarialSuiteReport,
+  outputDir = "reports/debugging-v1",
+) {
   mkdirSync(outputDir, { recursive: true });
   const filePath = join(outputDir, `${report.suite_id}-${report.generated_at.replaceAll(":", "-")}.json`);
   writeFileSync(filePath, JSON.stringify(report, null, 2));

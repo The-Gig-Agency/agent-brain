@@ -16,6 +16,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - [`docs/cognitive-router/spec/eval-framework.md`](docs/cognitive-router/spec/eval-framework.md)
 - `src/cognitive-router/`: starter TypeScript types, scoring logic, and benchmark cases
 - `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
+- `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
 
 ## Purpose
 
@@ -57,6 +58,7 @@ This is intentionally small and deterministic:
 - benchmark cases for evaluation work
 - a simple benchmark evaluator for exact and acceptable-match scoring
 - a debugging-first synthetic eval engine with executable baselines
+- an adversarial `v0.3` suite for permutation, transition-ablation, and misleading-evidence tests
 
 ## Commands
 

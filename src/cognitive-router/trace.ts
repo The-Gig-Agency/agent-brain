@@ -1,4 +1,4 @@
-import type { DebugRunResult, RouterTraceEvent } from "./types.js";
+import type { DebugFamily, DebugRunResult, RouterTraceEvent } from "./types.js";
 
 export function createEmptyTrace(): RouterTraceEvent[] {
   return [];
@@ -71,6 +71,56 @@ export function costBeforeFirstStrongSignal(trace: RouterTraceEvent[]): number |
   }
 
   return null;
+}
+
+export function costBeforeFamilySignal(
+  trace: RouterTraceEvent[],
+  family: DebugFamily,
+  minimumStrength = 2,
+): number | null {
+  let cost = 0;
+
+  for (const event of trace) {
+    if (event.type === "action") {
+      cost += event.cost;
+    }
+
+    if (
+      event.type === "observation" &&
+      event.observation.family === family &&
+      event.observation.polarity === "positive" &&
+      event.observation.strength >= minimumStrength
+    ) {
+      return cost;
+    }
+  }
+
+  return null;
+}
+
+export function failedFixAttemptsBeforeFamilySignal(
+  trace: RouterTraceEvent[],
+  family: DebugFamily,
+  minimumStrength = 2,
+): number {
+  let failedFixes = 0;
+
+  for (const event of trace) {
+    if (
+      event.type === "observation" &&
+      event.observation.family === family &&
+      event.observation.polarity === "positive" &&
+      event.observation.strength >= minimumStrength
+    ) {
+      return failedFixes;
+    }
+
+    if (event.type === "failed_path") {
+      failedFixes += 1;
+    }
+  }
+
+  return failedFixes;
 }
 
 export function detectFalseConvergence(result: DebugRunResult): boolean {

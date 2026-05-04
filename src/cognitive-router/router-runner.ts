@@ -13,6 +13,7 @@ import { scoreTerrain } from "./scoring.js";
 import type {
   BaselinePolicyId,
   DebugEvalCase,
+  DebugRunOptions,
   DebugFamily,
   DebugRunResult,
   MemoryScoringContext,
@@ -287,6 +288,7 @@ function executeAction(
   debugCase: DebugEvalCase,
   state: RuntimeState,
   policyId: BaselinePolicyId,
+  options: DebugRunOptions,
   actionIdOverride?: string,
 ) {
   const action =
@@ -351,12 +353,16 @@ function executeAction(
     });
   }
 
-  if (policyId === "routed_policy") {
+  if (policyId === "routed_policy" && !options.disable_transitions) {
     maybeTransition(debugCase, state);
   }
 }
 
-export function runDebugCase(debugCase: DebugEvalCase, policyId: BaselinePolicyId): DebugRunResult {
+export function runDebugCase(
+  debugCase: DebugEvalCase,
+  policyId: BaselinePolicyId,
+  options: DebugRunOptions = {},
+): DebugRunResult {
   const state = createRuntimeState(debugCase);
   appendTrace(state.observations, {
     type: "regime_selected",
@@ -367,7 +373,7 @@ export function runDebugCase(debugCase: DebugEvalCase, policyId: BaselinePolicyI
   });
 
   while (!state.success && state.budgetRemaining > 0 && state.step < 12) {
-    executeAction(debugCase, state, policyId);
+    executeAction(debugCase, state, policyId, options);
   }
 
   const result: DebugRunResult = {
