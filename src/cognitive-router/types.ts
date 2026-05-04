@@ -347,3 +347,85 @@ export type AdversarialSuiteReport = {
   overall_pass: boolean;
   tests: AdversarialTestResult[];
 };
+
+export type ReplayVisibleCase = {
+  id: string;
+  repo: string;
+  repo_local_path: string;
+  stack: string;
+  title: string;
+  symptom: string;
+  visible_evidence: string[];
+  starting_context: {
+    entry_points: string[];
+    repro_style: string;
+    can_run_locally: string;
+  };
+  success_criteria: string[];
+  notes: string;
+};
+
+export type ReplayVisibleDataset = {
+  dataset_name: string;
+  purpose: string;
+  visibility: "router_visible";
+  cases: ReplayVisibleCase[];
+};
+
+export type ReplayEvaluatorCase = {
+  id: string;
+  repo: string;
+  repo_local_path: string;
+  pr_number: number;
+  pr_url: string;
+  merge_commit_sha: string;
+  start_ref: string;
+  merged_at: string;
+  likely_fix_files: string[];
+  expected_failure_mode: string;
+  patch_family_judgment: string[];
+  notes: string;
+  external_evidence?: string[];
+};
+
+export type ReplayEvaluatorDataset = {
+  dataset_name: string;
+  purpose: string;
+  visibility: "evaluator_only";
+  cases: ReplayEvaluatorCase[];
+};
+
+export type ReplayCaseReport = {
+  case_id: string;
+  repo: string;
+  title: string;
+  inferred_terrain: TerrainProfile;
+  routed_regime: SearchRegime;
+  fixed_heuristic_regime: SearchRegime;
+  score_threshold_regime: SearchRegime;
+  hidden_expected_regime: SearchRegime;
+  hidden_patch_breadth: "narrow" | "medium" | "broad";
+  recommended_focus_paths: string[];
+  hidden_likely_fix_files: string[];
+  routed_matches_hidden_regime: boolean;
+  routed_beats_fixed_heuristic: boolean;
+  routed_ties_or_beats_score_threshold: boolean;
+  notes: string[];
+};
+
+export type ReplayDatasetReport = {
+  suite_id: string;
+  generated_at: string;
+  dataset_name: string;
+  overall_pass: boolean;
+  summary: {
+    case_count: number;
+    routed_hidden_regime_match_rate: number;
+    fixed_hidden_regime_match_rate: number;
+    score_threshold_hidden_regime_match_rate: number;
+    routed_beats_fixed_case_count: number;
+    routed_ties_or_beats_score_threshold_case_count: number;
+  };
+  caveats: string[];
+  cases: ReplayCaseReport[];
+};

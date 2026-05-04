@@ -27,6 +27,7 @@ import type {
   DebuggingCoreV01Report,
   DebuggingSuiteReport,
   DebugRunResult,
+  ReplayDatasetReport,
 } from "./types.js";
 
 const BASELINES: Exclude<BaselinePolicyId, "routed_policy">[] = [
@@ -694,7 +695,7 @@ function runReplayStyleSetTest() {
 }
 
 export function writeSuiteReport(
-  report: DebuggingSuiteReport | DebuggingCoreV01Report | AdversarialSuiteReport,
+  report: DebuggingSuiteReport | DebuggingCoreV01Report | AdversarialSuiteReport | ReplayDatasetReport,
   outputDir = "reports/debugging-v1",
 ) {
   mkdirSync(outputDir, { recursive: true });

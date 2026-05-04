@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "eval:debugging": "npm run build && node dist/cognitive-router/run-debugging-v1.js"
+    "eval:debugging": "npm run build && node dist/cognitive-router/run-debugging-v1.js",
+    "eval:replays": "npm run build && node dist/cognitive-router/run-real-replays-v1.js"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
