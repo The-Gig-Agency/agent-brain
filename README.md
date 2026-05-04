@@ -24,6 +24,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`: the first replay pass that preserves separation after reducing repo and org fingerprinting in the visible layer
 - `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`: the first broader replay-expansion pass over a new mined private-repo candidate set
 - `project-brain/echelon/findings-real-replays-v0.6c-tight.md`: the tightened replay-visible rerun of the broader v0.6c candidate set
+- `project-brain/echelon/findings-real-replays-v0.6d.md`: the degraded-evidence replay wedge focused on misleading incidents, conflicting telemetry, and delayed root causes
 
 ## Purpose
 
@@ -74,6 +75,7 @@ This is intentionally small and deterministic:
 - a `v0.6b` replay pass that keeps the ambiguity but reduces repository and organization fingerprinting in the router-visible layer
 - a `v0.6c` replay-expansion pass that broadens the real-case mix and recovers separation on hidden-dependency bugs
 - a `v0.6c-tight` replay pass that weakens repo and file-path leakage while preserving the broader real-case signal
+- a `v0.6d` degraded-evidence replay wedge that stress-tests adaptive commitment against fixed narrowing
 
 ## Commands
 
@@ -84,3 +86,4 @@ This is intentionally small and deterministic:
 - `npm run eval:replays:diverse`
 - `npm run eval:replays:v2`
 - `npm run eval:replays:v2:tight`
+- `npm run eval:replays:v0.6d`

@@ -11,7 +11,8 @@
     "eval:replays:tight": "npm run build && node dist/cognitive-router/run-real-replays-v0.6a-tight.js",
     "eval:replays:diverse": "npm run build && node dist/cognitive-router/run-real-replays-v0.6b-diverse.js",
     "eval:replays:v2": "npm run build && node dist/cognitive-router/run-real-replays-v0.6c-candidates.js",
-    "eval:replays:v2:tight": "npm run build && node dist/cognitive-router/run-real-replays-v0.6c-tight.js"
+    "eval:replays:v2:tight": "npm run build && node dist/cognitive-router/run-real-replays-v0.6c-tight.js",
+    "eval:replays:v0.6d": "npm run build && node dist/cognitive-router/run-real-replays-v0.6d.js"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

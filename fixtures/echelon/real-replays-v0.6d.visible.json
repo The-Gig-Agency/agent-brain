@@ -1,0 +1,174 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6d",
+  "purpose": "Router-visible degraded-evidence replay pack focused on misleading incidents, conflicting telemetry, partial fixes, and delayed root causes.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "ciq-bf61b23",
+      "repo": "withheld-service-d",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Auto-fix appeared to work but final state drifted after re-fetch",
+      "symptom": "A reconciliation flow reported progress after an auto-fix step, but later state checks still diverged.",
+      "visible_evidence": [
+        "The same workflow both mutates state and re-fetches it later",
+        "A first apparent correction may not reflect the final settled state",
+        "This looks like degraded evidence rather than a simple one-pass handler bug"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "reconciliation auto-fix loop",
+          "follow-up re-fetch verification step"
+        ],
+        "repro_style": "re-fetch ambiguity / partial fix history / conflicting telemetry",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "single auto-fix success condition"
+      },
+      "success_criteria": [
+        "identify why apparent fix progress did not guarantee final convergence",
+        "propose a fix family consistent with the landed re-fetch and auto-fix changes"
+      ],
+      "notes": "Designed to test whether the router resists premature convergence after a first visible success."
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "withheld-service-d",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Report flow failed across nested response and partner-resolution paths",
+      "symptom": "A report flow failed because upstream response shape and partner resolution did not line up consistently.",
+      "visible_evidence": [
+        "The bug crosses request construction, fallback resolution, and upstream response parsing",
+        "Multiple plausible local fixes exist, but the issue spans more than one boundary",
+        "This is a cross-system ambiguity case, not just a flat mapping typo"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "report request builder",
+          "partner resolution fallback",
+          "summary response handler"
+        ],
+        "repro_style": "cross-system fallback / nested-flat response ambiguity",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "misleading_telemetry": [
+          "first failure can appear to be missing input only",
+          "response shape looks valid in some paths but not others"
+        ],
+        "false_positive_fix_family": "single-field response remap"
+      },
+      "success_criteria": [
+        "identify the cross-boundary failure between partner resolution and response handling",
+        "propose a fix family consistent with the landed multi-surface patch"
+      ],
+      "notes": "Good degraded-evidence case because input resolution and response interpretation can each look like the sole problem."
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "withheld-service-e",
+      "repo_local_path": "withheld",
+      "stack": "typescript/node",
+      "title": "Approval flow returned an ambiguous 200",
+      "symptom": "An approval flow returned HTTP 200, but the result could not safely be treated as a successful approval.",
+      "visible_evidence": [
+        "The surface status code suggests success while the contract signal remains ambiguous",
+        "The safe fix is about interpretation and fail-closed behavior, not just transport success",
+        "This is a conflicting-telemetry case where naive narrowing can trust the wrong signal"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "approval response interpreter",
+          "base URL selection for remote approval call"
+        ],
+        "repro_style": "ambiguous success / fail-closed response contract",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "HTTP status is 200",
+          "payload may omit an explicit success signal"
+        ],
+        "false_positive_fix_family": "treat any 200 as success"
+      },
+      "success_criteria": [
+        "identify why a nominally successful response still required fail-closed handling",
+        "propose a fix family consistent with the landed contract interpretation change"
+      ],
+      "notes": "Strong conflicting-telemetry case."
+    },
+    {
+      "id": "acp-2f10f7c",
+      "repo": "withheld-service-e",
+      "repo_local_path": "withheld",
+      "stack": "typescript/deno",
+      "title": "Public audit facade looked plausible while contract and env state were unsafe",
+      "symptom": "A public audit path could return plausible-looking output even when backend row shape or environment inputs were unsafe.",
+      "visible_evidence": [
+        "The issue is not a single exception path; it is a contract trust problem plus environment validation",
+        "User-facing output can look acceptable while the underlying mapping is invalid",
+        "This is a deceptive facade case rather than a narrow serialization typo"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "public audit facade mapper",
+          "HTTP audit endpoint guard",
+          "environment validation layer"
+        ],
+        "repro_style": "public-facade contract mismatch / env validation ambiguity",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "rows may look partially usable",
+          "request shape may appear valid before stricter checks"
+        ],
+        "false_positive_fix_family": "soft-default missing fields"
+      },
+      "success_criteria": [
+        "identify why the facade needed fail-closed mapping and stricter env validation",
+        "propose a fix family consistent with the landed public-facade hardening"
+      ],
+      "notes": "Good for deceptive safety signals."
+    },
+    {
+      "id": "cg-1036",
+      "repo": "withheld-service-f",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Rollover allowances stopped working after refresh and publisher updates",
+      "symptom": "Allowance rollover behavior failed after later refresh or publisher-update activity even though earlier flows looked correct.",
+      "visible_evidence": [
+        "The bug spans task flow, helper logic, and publisher update behavior",
+        "It has the shape of a partial-fix or stale-state problem rather than a single local decrement issue",
+        "The correct move may require following the post-refresh state path, not just the immediate limit math"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "publisher refresh task",
+          "allowance rollover helper",
+          "publisher synchronization surface"
+        ],
+        "repro_style": "stale-state rollover / partial-fix propagation",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "local allowance arithmetic only"
+      },
+      "success_criteria": [
+        "identify why the rollover logic broke after later state changes",
+        "propose a fix family consistent with the landed multi-surface patch"
+      ],
+      "notes": "Good degraded-evidence backend case with delayed failure after seemingly correct earlier state."
+    }
+  ]
+}

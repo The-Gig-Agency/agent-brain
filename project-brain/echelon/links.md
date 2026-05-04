@@ -21,6 +21,7 @@
 - real replays v0.6b diverse findings: `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`
 - real replays v0.6c candidate findings: `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`
 - real replays v0.6c tight findings: `project-brain/echelon/findings-real-replays-v0.6c-tight.md`
+- real replays v0.6d findings: `project-brain/echelon/findings-real-replays-v0.6d.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
 - terrain schema: `docs/cognitive-router/spec/terrain-schema.md`

@@ -1,0 +1,101 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6d",
+  "purpose": "Evaluator-only truth for the degraded-evidence replay pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "ciq-bf61b23",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "bf61b23063bed5fa46fdbd1a073a8802c41a00a3",
+      "start_ref": "790e0098a6c57aa815af26a17d4c41431db93fa9",
+      "likely_fix_files": [
+        "supabase/functions/reconcile-campaign-publishers/index.ts"
+      ],
+      "expected_failure_mode": "partial fix followed by misleading re-fetch state in reconciliation workflow",
+      "patch_family_judgment": [
+        "fix should address both auto-fix progress handling and the follow-up re-fetch logic",
+        "fix should not treat first apparent convergence as final correctness"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Strongest degraded-evidence case in the pack because visible progress can be misleading."
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "6adf83e8cedc729fe05bfad506ce3b4ffa0e19e9",
+      "start_ref": "d2cae0fff397c3bd2d1ca88f96802660f4021406",
+      "likely_fix_files": [
+        "supabase/functions/get-campaign-summary-report/index.ts",
+        "supabase/functions/manage/ciq-actions.ts",
+        "supabase/functions/manage/ciq-handlers.ts"
+      ],
+      "expected_failure_mode": "cross-system fallback and response-shape mismatch in report flow",
+      "patch_family_judgment": [
+        "fix should align partner resolution, request shaping, and nested or flat response handling",
+        "fix should be evaluated as a cross-boundary repair rather than a single local remap"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Good delayed-root-cause case because multiple boundaries contribute to the visible failure."
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "9b20f69513e0aa457218a98b7e560cbf5260e4b8",
+      "start_ref": "39354a329306096237f90f7ee3d3cb204e07fa97",
+      "likely_fix_files": [
+        "installer/approve.ts",
+        "installer/cli-registry.ts",
+        "tests/approve.spec.ts"
+      ],
+      "expected_failure_mode": "ambiguous success response treated too optimistically in approval flow",
+      "patch_family_judgment": [
+        "fix should require an explicit success signal and fail closed on ambiguous 200 responses",
+        "fix should align approval path configuration with ACP_BASE_URL and contract-safe interpretation"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Conflicting-telemetry case where transport success is not enough."
+    },
+    {
+      "id": "acp-2f10f7c",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "2f10f7c451581829232d2643cb78a94f5a404497",
+      "start_ref": "250abc76ab178737e9c13a6fb477b5423d92a2a3",
+      "likely_fix_files": [
+        "gateway/http-server.ts",
+        "gateway/public-facade.ts",
+        "gateway/public-facade.audit.test.ts"
+      ],
+      "expected_failure_mode": "public facade contract mismatch and unsafe env validation defaults",
+      "patch_family_judgment": [
+        "fix should require explicit contract correctness for public audit rows",
+        "fix should fail closed on invalid env and malformed audit row shape"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Deceptive facade case where plausible public output can hide invalid internal assumptions."
+    },
+    {
+      "id": "cg-1036",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "7ff7fcffd47587a688da37c9fa107383d2b6ec9e",
+      "start_ref": "cee3770d0db7b47d2608ee738db32cc91d65bfbe",
+      "likely_fix_files": [
+        "creatorsgift/clients/tasks.py",
+        "creatorsgift/influencers/helpers.py",
+        "creatorsgift/shared/tools/publishers.py",
+        "creatorsgift/clients/tests/test_api_serializers.py"
+      ],
+      "expected_failure_mode": "stale-state rollover allowances broken after refresh and publisher sync changes",
+      "patch_family_judgment": [
+        "fix should align limit creation and rollover behavior across task, helper, and publisher update surfaces",
+        "fix should address delayed stale-state behavior rather than only local arithmetic"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Good partial-fix propagation case."
+    }
+  ]
+}
