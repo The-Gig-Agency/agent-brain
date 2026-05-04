@@ -2,6 +2,7 @@
 
 - brief: `project-brain/echelon/brief.md`
 - decisions: `project-brain/echelon/decisions.md`
+- adaptive commitment control charter v0.1: `project-brain/echelon/adaptive-commitment-control-charter-v0.1.md`
 - eval v2: `project-brain/echelon/eval-v2.md`
 - v0.1 debugging core: `project-brain/echelon/v0.1-debugging-core.md`
 - v0.2 debugging core: `project-brain/echelon/v0.2-debugging-core.md`
