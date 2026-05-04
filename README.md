@@ -61,6 +61,7 @@ This is intentionally small and deterministic:
 - a debugging-first synthetic eval engine with executable baselines
 - an adversarial `v0.3` suite for permutation, transition-ablation, and misleading-evidence tests
 - a `v0.4` hardening pass with anti-broadening traps, one stronger baseline, and generated holdout cases
+- a `v0.5` control-oriented pass with anti-transition traps, transition-regret metrics, and replay-style cases
 
 ## Commands
 

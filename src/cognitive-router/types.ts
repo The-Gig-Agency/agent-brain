@@ -238,6 +238,10 @@ export type DebugRunResult = {
   transition_count: number;
   hysteresis_count: number;
   dead_end_persistence: number;
+  premature_transition_regret: number;
+  delayed_transition_regret: number;
+  unnecessary_transition_cost: number;
+  recovery_cost_after_wrong_switch: number;
   false_convergence: boolean;
   action_count: number;
   trace: RouterTraceEvent[];

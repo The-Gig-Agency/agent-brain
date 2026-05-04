@@ -7,6 +7,8 @@ import {
   DEBUGGING_CORE_V02_CASES,
   DEBUGGING_CORE_V03_REVERSAL_CASES,
   DEBUGGING_CORE_V04_TRAP_CASES,
+  DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES,
+  DEBUGGING_CORE_V05_REPLAY_CASES,
   DEBUGGING_V1_CASES,
   DEBUGGING_V1_HOLDOUT_CASES,
   generateDebuggingV04HoldoutCases,
@@ -170,6 +172,21 @@ export function runDebuggingCoreV04Suite(): AdversarialSuiteReport {
 
   return {
     suite_id: "debugging-core-v0.4",
+    generated_at: new Date().toISOString(),
+    overall_pass: tests.every((test) => test.pass),
+    tests,
+  };
+}
+
+export function runDebuggingCoreV05Suite(): AdversarialSuiteReport {
+  const tests = [
+    runAntiTransitionTrapTest(),
+    runTransitionRegretTest(),
+    runReplayStyleSetTest(),
+  ];
+
+  return {
+    suite_id: "debugging-core-v0.5",
     generated_at: new Date().toISOString(),
     overall_pass: tests.every((test) => test.pass),
     tests,
@@ -550,6 +567,128 @@ function runGeneratedHiddenHoldoutTest() {
     notes: [
       "These holdout cases are generated from unseen seeds rather than copied from the development set.",
       "It fails if routed advantage collapses outside the hand-authored cases.",
+    ],
+  };
+}
+
+function runAntiTransitionTrapTest() {
+  const routedRuns = DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const ablatedRuns = DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES.map((debugCase) =>
+    runDebugCase(debugCase, "routed_policy", { disable_transitions: true }),
+  );
+  const fixedRuns = DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES.map((debugCase) => runDebugCase(debugCase, "fixed_heuristic"));
+
+  const routedPremature = average(routedRuns.map((result) => result.premature_transition_regret));
+  const ablatedPremature = average(ablatedRuns.map((result) => result.premature_transition_regret));
+  const fixedCost = average(fixedRuns.map((result) => result.total_cost));
+  const routedCost = average(routedRuns.map((result) => result.total_cost));
+  const routedSuccess = successRate(routedRuns);
+  const fixedSuccess = successRate(fixedRuns);
+
+  const pass =
+    routedPremature <= ablatedPremature &&
+    routedSuccess >= fixedSuccess &&
+    routedCost <= fixedCost;
+
+  return {
+    test_id: "anti-transition-traps",
+    title: "Do not switch when switching itself is harmful",
+    pass,
+    summary: {
+      case_count: DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES.length,
+      routed_premature_transition_regret: Number(routedPremature.toFixed(3)),
+      ablated_premature_transition_regret: Number(ablatedPremature.toFixed(3)),
+      routed_success_rate: Number(routedSuccess.toFixed(3)),
+      fixed_success_rate: Number(fixedSuccess.toFixed(3)),
+      routed_average_cost: Number(routedCost.toFixed(3)),
+      fixed_average_cost: Number(fixedCost.toFixed(3)),
+    },
+    notes: [
+      "These cases punish early compounding from transient clues.",
+      "It fails if routed policy transitions too eagerly or loses simple disciplined cases.",
+    ],
+  };
+}
+
+function runTransitionRegretTest() {
+  const cases = [...DEBUGGING_CORE_V03_REVERSAL_CASES, ...DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES];
+  const routedRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const fixedRuns = cases.map((debugCase) => runDebugCase(debugCase, "fixed_heuristic"));
+  const strongerRuns = cases.map((debugCase) => runDebugCase(debugCase, "score_threshold"));
+
+  const routedPremature = average(routedRuns.map((result) => result.premature_transition_regret));
+  const routedDelayed = average(routedRuns.map((result) => result.delayed_transition_regret));
+  const routedUnnecessary = average(routedRuns.map((result) => result.unnecessary_transition_cost));
+  const routedRecovery = average(routedRuns.map((result) => result.recovery_cost_after_wrong_switch));
+  const strongerRecovery = average(strongerRuns.map((result) => result.recovery_cost_after_wrong_switch));
+  const fixedRecovery = average(fixedRuns.map((result) => result.recovery_cost_after_wrong_switch));
+
+  const pass =
+    routedPremature <= 0.34 &&
+    routedDelayed <= 0.5 &&
+    routedUnnecessary <= 0.5 &&
+    routedRecovery <= strongerRecovery &&
+    routedRecovery <= fixedRecovery;
+
+  return {
+    test_id: "transition-regret",
+    title: "Transition regret stays controlled",
+    pass,
+    summary: {
+      case_count: cases.length,
+      routed_premature_transition_regret: Number(routedPremature.toFixed(3)),
+      routed_delayed_transition_regret: Number(routedDelayed.toFixed(3)),
+      routed_unnecessary_transition_cost: Number(routedUnnecessary.toFixed(3)),
+      routed_recovery_cost_after_wrong_switch: Number(routedRecovery.toFixed(3)),
+      stronger_recovery_cost_after_wrong_switch: Number(strongerRecovery.toFixed(3)),
+      fixed_recovery_cost_after_wrong_switch: Number(fixedRecovery.toFixed(3)),
+    },
+    notes: [
+      "This test treats transition timing as a control problem rather than only a classification problem.",
+      "It fails if routed policy thrashes, switches too early, or pays too much to recover from wrong switches.",
+    ],
+  };
+}
+
+function runReplayStyleSetTest() {
+  const routedRuns = DEBUGGING_CORE_V05_REPLAY_CASES.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const fixedRuns = DEBUGGING_CORE_V05_REPLAY_CASES.map((debugCase) => runDebugCase(debugCase, "fixed_heuristic"));
+  const strongerRuns = DEBUGGING_CORE_V05_REPLAY_CASES.map((debugCase) => runDebugCase(debugCase, "score_threshold"));
+
+  const routedScore = policyScore(routedRuns);
+  const fixedScore = policyScore(fixedRuns);
+  const strongerScore = policyScore(strongerRuns);
+  const routedSuccess = successRate(routedRuns);
+  const fixedSuccess = successRate(fixedRuns);
+  const strongerSuccess = successRate(strongerRuns);
+  const routedRecovery = average(routedRuns.map((result) => result.recovery_cost_after_wrong_switch));
+  const strongerRecovery = average(strongerRuns.map((result) => result.recovery_cost_after_wrong_switch));
+
+  const pass =
+    routedScore > fixedScore &&
+    routedScore > strongerScore &&
+    routedSuccess >= fixedSuccess &&
+    routedSuccess >= strongerSuccess &&
+    routedRecovery <= strongerRecovery;
+
+  return {
+    test_id: "replay-style-set",
+    title: "Replay-style messy cases still favor routed control",
+    pass,
+    summary: {
+      case_count: DEBUGGING_CORE_V05_REPLAY_CASES.length,
+      routed_score: Number(routedScore.toFixed(3)),
+      fixed_score: Number(fixedScore.toFixed(3)),
+      stronger_score: Number(strongerScore.toFixed(3)),
+      routed_success_rate: Number(routedSuccess.toFixed(3)),
+      fixed_success_rate: Number(fixedSuccess.toFixed(3)),
+      stronger_success_rate: Number(strongerSuccess.toFixed(3)),
+      routed_recovery_cost_after_wrong_switch: Number(routedRecovery.toFixed(3)),
+      stronger_recovery_cost_after_wrong_switch: Number(strongerRecovery.toFixed(3)),
+    },
+    notes: [
+      "These are still simulator cases, but written as messy replay-style incidents with contradictory clues.",
+      "It fails if the routed advantage disappears once the terrain feels less clean and more incident-like.",
     ],
   };
 }

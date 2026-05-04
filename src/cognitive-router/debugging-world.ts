@@ -471,6 +471,93 @@ export const DEBUGGING_CORE_V04_TRAP_CASES: DebugEvalCase[] = [
   }),
 ];
 
+export const DEBUGGING_CORE_V05_ANTI_TRANSITION_CASES: DebugEvalCase[] = [
+  createCase({
+    caseId: "debug-core-v05-anti-transition-01",
+    title: "Strong log clue should not trigger immediate compounding",
+    prompt: "A strong dependency-looking log clue arrives early, but switching into compounding before targeted inspection would be a mistake.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 7,
+    terrain: debuggingTerrain("prune", "medium", "medium"),
+    logSignalFamily: "dependency",
+    logSignalStrength: 2,
+    falsePositiveInspectFamilies: ["dependency"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v05-anti-transition-02",
+    title: "Temporary auth noise should not force a fast switch",
+    prompt: "An auth-shaped clue looks strong at first, but the right move is to stay in pruning until targeted inspection rules out the false lead.",
+    rootCause: "secret_scope",
+    distractors: ["permission", "env"],
+    budget: 7,
+    terrain: debuggingTerrain("prune", "medium", "medium"),
+    logSignalFamily: "permission",
+    logSignalStrength: 2,
+    falsePositiveInspectFamilies: ["permission"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v05-anti-transition-03",
+    title: "Cache-like symptom should not cause premature commitment",
+    prompt: "A cache-looking signal is only temporary noise. The router should resist switching until inspected evidence firms up.",
+    rootCause: "stale_state",
+    distractors: ["cache", "logic"],
+    budget: 7,
+    terrain: debuggingTerrain("prune", "medium", "high"),
+    logSignalFamily: "cache",
+    logSignalStrength: 2,
+    falsePositiveInspectFamilies: ["cache"],
+    successSignalThreshold: 3,
+  }),
+];
+
+export const DEBUGGING_CORE_V05_REPLAY_CASES: DebugEvalCase[] = [
+  createCase({
+    caseId: "debug-core-v05-replay-01",
+    title: "Replay-style deploy incident with contradictory clues",
+    prompt: "In the original incident, engineers chased a permission symptom before discovering a secret-scope issue after several noisy observations.",
+    rootCause: "secret_scope",
+    distractors: ["permission", "env"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "permission",
+    logSignalStrength: 2,
+    falsePositiveInspectFamilies: ["permission", "env"],
+    successSignalThreshold: 3,
+    familyOrder: ["permission", "env", "secret_scope"],
+  }),
+  createCase({
+    caseId: "debug-core-v05-replay-02",
+    title: "Replay-style stale-session bug with partial-fix feel",
+    prompt: "The incident history suggests a cache-looking symptom, then a logic guess, before the real stale-state issue becomes clear.",
+    rootCause: "stale_state",
+    distractors: ["cache", "logic"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "cache",
+    logSignalStrength: 1,
+    falsePositiveInspectFamilies: ["cache", "logic"],
+    successSignalThreshold: 3,
+    familyOrder: ["cache", "logic", "stale_state"],
+  }),
+  createCase({
+    caseId: "debug-core-v05-replay-03",
+    title: "Replay-style build break with misleading dependency blame",
+    prompt: "The original debugging path over-weighted dependency blame before version evidence finally resolved the incident.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "dependency",
+    logSignalStrength: 1,
+    falsePositiveInspectFamilies: ["dependency", "artifact"],
+    successSignalThreshold: 3,
+    familyOrder: ["dependency", "artifact", "version"],
+  }),
+];
+
 function chooseDistinctFamily(startIndex: number, blocked: Set<DebugFamily>) {
   for (let offset = 0; offset < DEBUG_FAMILY_POOL.length; offset += 1) {
     const family = DEBUG_FAMILY_POOL[(startIndex + offset) % DEBUG_FAMILY_POOL.length];

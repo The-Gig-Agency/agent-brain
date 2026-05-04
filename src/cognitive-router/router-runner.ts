@@ -7,7 +7,11 @@ import {
   countTransitions,
   createEmptyTrace,
   detectFalseConvergence,
+  measureDelayedTransitionRegret,
   measureDeadEndPersistence,
+  measurePrematureTransitionRegret,
+  measureRecoveryCostAfterWrongSwitch,
+  measureUnnecessaryTransitionCost,
 } from "./trace.js";
 import { scoreTerrain } from "./scoring.js";
 import type {
@@ -137,6 +141,14 @@ function deriveMemoryContext(state: RuntimeState): MemoryScoringContext {
   };
 }
 
+function hasTargetedInspectEvidence(state: RuntimeState, family: DebugFamily | null): boolean {
+  if (!family) {
+    return false;
+  }
+
+  return state.executedActionIds.includes(`inspect:${family}`);
+}
+
 function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState) {
   const memoryContext = deriveMemoryContext(state);
   const recommendation = scoreTerrain(debugCase.input_context.terrain, memoryContext);
@@ -148,9 +160,9 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState) {
   if (state.activeRegime === "explore" && strongSignal && family) {
     nextRegime = "prune";
     reason = `Strong signal emerged for ${family}.`;
-  } else if (state.activeRegime === "prune" && strongSignal && family) {
+  } else if (state.activeRegime === "prune" && strongSignal && family && hasTargetedInspectEvidence(state, family)) {
     nextRegime = "compound";
-    reason = `Search narrowed to ${family}.`;
+    reason = `Search narrowed to ${family} after targeted inspection.`;
   } else if (state.activeRegime === "compound" && state.failedFamilies[family ?? debugCase.hidden_truth.root_cause] > 0) {
     nextRegime = "explore";
     reason = "Current compounded path failed and needs new evidence.";
@@ -353,7 +365,7 @@ function executeAction(
     });
   }
 
-  if (policyId === "routed_policy" && !options.disable_transitions) {
+  if (policyId === "routed_policy" && !options.disable_transitions && !state.success) {
     maybeTransition(debugCase, state);
   }
 }
@@ -391,6 +403,10 @@ export function runDebugCase(
     transition_count: countTransitions(state.observations),
     hysteresis_count: countHysteresis(state.observations),
     dead_end_persistence: measureDeadEndPersistence(state.observations),
+    premature_transition_regret: measurePrematureTransitionRegret(state.observations),
+    delayed_transition_regret: measureDelayedTransitionRegret(state.observations),
+    unnecessary_transition_cost: measureUnnecessaryTransitionCost(state.observations),
+    recovery_cost_after_wrong_switch: measureRecoveryCostAfterWrongSwitch(state.observations),
     false_convergence: false,
     action_count: state.executedActionIds.length,
     trace: state.observations,
