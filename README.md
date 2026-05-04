@@ -112,6 +112,8 @@ This is intentionally small and deterministic:
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)
 - `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see `findings-ablation-matrix-v0.1.md`)
 
+Cycle governance templates (copy each cycle): `project-brain/echelon/operating-cadence-checklist-v0.1.md`, `cycle-note-template-v0.1.md`, `cycle-appendix-negatives-template-v0.1.md`; promotion rubric: `promotion-decision-rubric-v0.1.md`.
+
 ## Where eval reports go
 
 Eval runs write a timestamped JSON report under `reports/<suite-id>/...json`.

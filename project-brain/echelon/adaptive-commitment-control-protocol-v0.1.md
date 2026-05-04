@@ -156,6 +156,16 @@ Per cycle:
 4. run adjacent-domain transfer pack
 5. publish findings with deltas and invariant status
 
+Checklist + one-pager + negatives appendix templates:
+
+- `project-brain/echelon/operating-cadence-checklist-v0.1.md`
+- `project-brain/echelon/cycle-note-template-v0.1.md`
+- `project-brain/echelon/cycle-appendix-negatives-template-v0.1.md`
+
+Promotion (candidate → frozen-debug-v2) rubric:
+
+- `project-brain/echelon/promotion-decision-rubric-v0.1.md`
+
 ## Stop Conditions
 
 Pause broadening and investigate if any occur:

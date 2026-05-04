@@ -10,6 +10,10 @@
 - transition candidate lane v0.1 findings: `project-brain/echelon/findings-transition-candidate-v0.1.md`
 - transition candidate lane v0.2 findings: `project-brain/echelon/findings-transition-candidate-v0.2.md`
 - ablation matrix v0.1 findings: `project-brain/echelon/findings-ablation-matrix-v0.1.md`
+- promotion decision rubric v0.1: `project-brain/echelon/promotion-decision-rubric-v0.1.md`
+- cycle appendix (negatives / regressions) template v0.1: `project-brain/echelon/cycle-appendix-negatives-template-v0.1.md`
+- cycle note template v0.1: `project-brain/echelon/cycle-note-template-v0.1.md`
+- operating cadence checklist v0.1: `project-brain/echelon/operating-cadence-checklist-v0.1.md`
 - eval v2: `project-brain/echelon/eval-v2.md`
 - v0.1 debugging core: `project-brain/echelon/v0.1-debugging-core.md`
 - v0.2 debugging core: `project-brain/echelon/v0.2-debugging-core.md`
