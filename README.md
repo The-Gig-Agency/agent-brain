@@ -78,6 +78,7 @@ This is intentionally small and deterministic:
 - a `v0.6c-tight` replay pass that weakens repo and file-path leakage while preserving the broader real-case signal
 - a `v0.6d` degraded-evidence replay wedge that stress-tests adaptive commitment against fixed narrowing
 - a `v0.6e` mixed replay pack that tests whether the router can distinguish real explore-deserving from prune-deserving cases
+- a `v0.6f` harder-asymmetry pack that adds noisy prune cases and weaker-signaled explore cases while making the visible layer read less like labeled terrain
 
 ## Commands
 
@@ -90,3 +91,4 @@ This is intentionally small and deterministic:
 - `npm run eval:replays:v2:tight`
 - `npm run eval:replays:v0.6d`
 - `npm run eval:replays:v0.6e`
+- `npm run eval:replays:v0.6f`

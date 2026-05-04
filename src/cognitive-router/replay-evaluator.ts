@@ -22,18 +22,67 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
   const reproStyle = visibleCase.starting_context.repro_style.toLowerCase();
   const symptom = visibleCase.symptom.toLowerCase();
   const augmentation = visibleCase.replay_augmentation;
+  const allText = [
+    visibleCase.title,
+    visibleCase.symptom,
+    visibleCase.starting_context.repro_style,
+    ...visibleCase.visible_evidence,
+    ...(augmentation?.misleading_telemetry ?? []),
+    ...(augmentation?.environment_confusion ?? []),
+    augmentation?.false_positive_fix_family ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  const textHas = (...patterns: string[]) => patterns.some((pattern) => allText.includes(pattern));
 
-  const isSchemaMismatch = reproStyle.includes("schema") || symptom.includes("field length");
-  const isAuth = reproStyle.includes("auth") || symptom.includes("login");
-  const isAttributeBoundary = reproStyle.includes("attribute") || symptom.includes("attributeerror");
-  const isHiddenDependency =
-    reproStyle.includes("hidden dependency") ||
-    reproStyle.includes("post-create") ||
-    reproStyle.includes("nested response format");
-  const isMappingContractDrift =
-    reproStyle.includes("mapping contract") ||
-    reproStyle.includes("response-shape mismatch");
-  const isMultiHop = reproStyle.includes("multi-hop") || symptom.includes("limits were calculated");
+  const isSchemaMismatch = textHas("field length", "schema inconsistency", "schema mismatch", "migration-backed");
+  const isAuth = textHas("auth failure", "credentials", "401", "login");
+  const isAttributeBoundary = textHas("attributeerror", "attribute boundary", "missing attribute");
+  const isTemporalDrift = textHas(
+    "later",
+    "follow-up",
+    "after refresh",
+    "after later",
+    "drift",
+    "settled state",
+    "stale-state",
+    "re-fetch",
+    "later verification",
+    "later state",
+    "rollover",
+  );
+  const isFallbackBoundary = textHas(
+    "fallback",
+    "partner context",
+    "brand context",
+    "remote call",
+    "remote approval",
+    "publisher update",
+    "reconciliation",
+    "verification fetch",
+    "background refresh",
+    "summary operation",
+  );
+  const isMappingContractDrift = textHas(
+    "mapped incorrectly",
+    "wrong counts",
+    "wrong collections",
+    "response handling",
+    "local output fields",
+    "collection",
+    "total extraction",
+  );
+  const isNarrowRouteBug = textHas("lookup route", "lookup path", "route construction", "one narrow route");
+  const isAmbiguousSuccess = textHas(
+    "reported progress",
+    "appeared to work",
+    "could not safely",
+    "nominally successful",
+    "transport success",
+    "explicit approval signal",
+    "final settled state",
+  );
+  const isMultiHop = isTemporalDrift || isFallbackBoundary || textHas("more than one surface", "same workflow both");
   const isLimitBug = reproStyle.includes("limit") || symptom.includes("limit");
   const hasMisleadingTelemetry = (augmentation?.misleading_telemetry?.length ?? 0) > 0;
   const hasDelayedSignal = augmentation?.delayed_decisive_signal ?? false;
@@ -42,42 +91,51 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
 
   const branchingFactor =
     entryPointCount >= 5 ? "high" : entryPointCount >= 3 ? "medium" : "low";
+  const narrowCue =
+    isSchemaMismatch ||
+    isMappingContractDrift ||
+    isNarrowRouteBug ||
+    textHas("single local fix", "localized task-level", "compact publisher", "one narrow");
+  const narrowButNoisy =
+    narrowCue && entryPointCount <= 2 && !hasDelayedSignal && !hasConflictingEvidence;
   const uncertainty =
-    isMultiHop || isHiddenDependency || hasDelayedSignal || hasConflictingEvidence
+    (isMultiHop || isAmbiguousSuccess || hasDelayedSignal || hasConflictingEvidence) && !narrowButNoisy
       ? "high"
       : isAttributeBoundary ||
           isAuth ||
           isMappingContractDrift ||
+          isNarrowRouteBug ||
           entryPointCount >= 3 ||
           hasMisleadingTelemetry
         ? "medium"
         : "low";
   const ruggedness =
-    isMultiHop || isHiddenDependency || hasEnvironmentConfusion
+    (isMultiHop || isAmbiguousSuccess || hasEnvironmentConfusion) && !narrowButNoisy
       ? "high"
-      : isLimitBug || isAttributeBoundary || isMappingContractDrift || hasMisleadingTelemetry
+      : isLimitBug || isAttributeBoundary || isMappingContractDrift || isNarrowRouteBug || hasMisleadingTelemetry
         ? "medium"
         : "low";
   const localMinimaRisk =
-    isMultiHop ||
-    isHiddenDependency ||
-    isAttributeBoundary ||
-    hasDelayedSignal ||
-    hasConflictingEvidence
+    (isMultiHop || isAmbiguousSuccess || isAttributeBoundary || hasDelayedSignal || hasConflictingEvidence) &&
+    !narrowButNoisy
       ? "high"
-      : isAuth || isMappingContractDrift || hasMisleadingTelemetry
+      : isAuth || isMappingContractDrift || isNarrowRouteBug || hasMisleadingTelemetry
         ? "medium"
         : "low";
   const informationCost =
-    entryPointCount >= 5 || hasEnvironmentConfusion ? "high" : entryPointCount >= 3 ? "medium" : "low";
+    entryPointCount >= 4 || (entryPointCount >= 3 && (isMultiHop || hasEnvironmentConfusion))
+      ? "high"
+      : entryPointCount >= 2
+        ? "medium"
+        : "low";
   const modePressure =
-    isSchemaMismatch
+    narrowCue
       ? "prune"
-      : isHiddenDependency || isMultiHop || hasDelayedSignal || hasConflictingEvidence || hasMisleadingTelemetry
+      : isAmbiguousSuccess || isMultiHop || hasDelayedSignal || hasConflictingEvidence
         ? "explore"
-      : entryPointCount <= 2
-          ? "prune"
-          : "prune";
+      : entryPointCount >= 3 && (hasMisleadingTelemetry || isTemporalDrift || isFallbackBoundary)
+        ? "explore"
+        : "prune";
 
   return {
     feedback_latency: "slow",
@@ -89,7 +147,7 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
     local_minima_risk: localMinimaRisk,
     information_cost: informationCost,
     coordination_load: "low",
-    environment_stability: "stable",
+    environment_stability: isTemporalDrift || hasEnvironmentConfusion ? "shifting" : "stable",
     time_horizon: "iterative",
     mode_pressure: modePressure,
   };
@@ -184,7 +242,7 @@ function buildReplayCaseReport(visibleCase: ReplayVisibleCase, evaluatorCase: Re
     notes: [
       `visible repro style: ${visibleCase.starting_context.repro_style}`,
       `hidden failure mode: ${evaluatorCase.expected_failure_mode}`,
-      "This replay pass is still partially truth-adjacent because visible fixtures include changed-file-derived context.",
+      "This replay pass remains evaluator-curated even when the visible layer is more issue-like and less directly terrain-labeled.",
     ],
   };
 }
@@ -221,6 +279,7 @@ export function runReplaySuite(
   const isCandidateTightReplay = isCandidateReplay && isTightReplay;
   const isDegradedEvidenceReplay = visibleFileName.includes("v0.6d");
   const isMixedReplay = visibleFileName.includes("v0.6e");
+  const isHarderAsymmetryReplay = visibleFileName.includes("v0.6f");
 
   return {
     suite_id: suiteId,
@@ -241,6 +300,9 @@ export function runReplaySuite(
     },
     caveats: [
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
+      isHarderAsymmetryReplay
+        ? "This harder-asymmetry replay pack adds noisy prune cases and one weaker-signaled explore case while reducing direct terrain wording in the visible layer."
+        : null,
       isMixedReplay
         ? "This mixed replay pack combines real explore-deserving degraded-evidence cases with real prune-deserving narrow cases to test regime boundary discrimination."
         : null,
@@ -250,7 +312,9 @@ export function runReplaySuite(
       isCandidateReplay
         ? "This candidate replay variant broadens the real-case mix with more hidden-dependency, propagation, and contract-drift bugs mined directly from local private-repo history."
         : null,
-      isMixedReplay
+      isHarderAsymmetryReplay
+        ? "The visible layer is more issue-like and less terrain-labeled than v0.6e, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
+        : isMixedReplay
         ? "The visible layer is terrain-shaped and repo-anonymized, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
         : isDegradedEvidenceReplay
         ? "The visible layer is terrain-shaped and repo-anonymized, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
@@ -270,7 +334,9 @@ export function runReplaySuite(
         : isCandidateReplay
         ? "The current v0.6c visible layer is still partially truth-adjacent because most cases retain changed-surface entry points rather than issue-text-only framing."
         : null,
-      isMixedReplay
+      isHarderAsymmetryReplay
+        ? "The shaping pressure is more symmetric in this pass: prune-deserving cases also include distracting logs, misleading auth surfaces, or tempting broadening paths."
+        : isMixedReplay
         ? "The augmentation is used only on the explore-deserving side of the pack; the prune-deserving cases remain relatively clean to preserve the regime boundary test."
         : isDegradedEvidenceReplay
         ? "The augmentation is deliberate on these cases because the benchmark is trying to preserve the degraded-evidence topology of the real incidents, not flatten them into clean one-step debugging stories."
@@ -281,7 +347,9 @@ export function runReplaySuite(
         : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
-      isMixedReplay
+      isHarderAsymmetryReplay
+        ? "This result matters only if the router still separates explore from prune after the visible layer becomes less explicit and the prune side becomes noisier."
+        : isMixedReplay
         ? "This result is more meaningful than a one-sided wedge because the router succeeds on both sides of the explore-versus-prune boundary without changing the underlying routing logic."
         : isDegradedEvidenceReplay
         ? "This result is strong for the specific wedge because routed policy cleanly separates from fixed narrowing on all five cases, but it should not be read as a broad all-debugging win."
@@ -290,7 +358,9 @@ export function runReplaySuite(
         : isCandidateReplay
         ? "This result is encouraging because the routed policy separates on the deceptive hidden-dependency cases, but the broader candidate set still needs a tighter visible layer before stronger claims."
         : null,
-      isDiverseReplay
+      isHarderAsymmetryReplay
+        ? "This result is more meaningful than v0.6e only if the weaker-signaled explore case survives and at least some noisy prune cases stay narrow under the same scoring logic."
+        : isDiverseReplay
         ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
         : isTightReplay
         ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."

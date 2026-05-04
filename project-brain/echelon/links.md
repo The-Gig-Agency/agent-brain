@@ -10,6 +10,7 @@
 - real replays v1: `project-brain/echelon/real-replays-v1.md`
 - real replays v2 candidates: `project-brain/echelon/real-replays-v2-candidates.md`
 - real replays v3 mining: `project-brain/echelon/real-replays-v3-mining.md`
+- v0.6f plan: `project-brain/echelon/v0.6f-plan.md`
 - test design anti-bias: `project-brain/echelon/test-design-anti-bias.md`
 - debugging v1 findings: `project-brain/echelon/findings-debugging-v1.md`
 - debugging core v0.2 findings: `project-brain/echelon/findings-debugging-core-v0.2.md`
@@ -23,6 +24,7 @@
 - real replays v0.6c tight findings: `project-brain/echelon/findings-real-replays-v0.6c-tight.md`
 - real replays v0.6d findings: `project-brain/echelon/findings-real-replays-v0.6d.md`
 - real replays v0.6e findings: `project-brain/echelon/findings-real-replays-v0.6e.md`
+- real replays v0.6f findings: `project-brain/echelon/findings-real-replays-v0.6f.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
 - terrain schema: `docs/cognitive-router/spec/terrain-schema.md`
