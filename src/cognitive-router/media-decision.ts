@@ -42,6 +42,14 @@ function clampConfidence(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function textHints(items: string[] | undefined, patterns: string[]): boolean {
+  if (!items || items.length === 0) {
+    return false;
+  }
+  const haystack = items.join(" ").toLowerCase();
+  return patterns.some((pattern) => haystack.includes(pattern));
+}
+
 function deriveModePressure(input: MediaDecisionInput): TerrainProfile["mode_pressure"] {
   if (input.tracking_confidence === "low" || input.signal_quality === "low") {
     return "explore";
@@ -167,6 +175,7 @@ function actionScoresFromRegime(primary: SearchRegime, secondary: SearchRegime |
 
 function applyMediaHeuristics(scores: Record<MediaRecommendedAction, number>, input: MediaDecisionInput): string[] {
   const rationale: string[] = [];
+  const hasExpansionGap = textHints(input.missing_information, ["expansion", "inventory", "coverage", "new cohort"]);
 
   if (input.tracking_confidence === "low") {
     scores.diagnose += 4;
@@ -200,12 +209,41 @@ function applyMediaHeuristics(scores: Record<MediaRecommendedAction, number>, in
     rationale.push("Budget is near fully utilized, so scaling likely requires reallocating spend.");
   }
 
+  if (
+    input.channel === "google" &&
+    input.intent_layer === "brand" &&
+    input.primary_goal === "scale" &&
+    input.cpl_vs_target <= 0.9 &&
+    input.budget_utilization >= 0.9 &&
+    input.conversion_volume <= 45 &&
+    (hasExpansionGap || input.signal_quality !== "high")
+  ) {
+    scores.explore += 4;
+    scores.test_next += 3;
+    scores.scale -= 3;
+    rationale.push("Brand search is efficient but capped, so expansion design should be explored before broad scale.");
+  }
+
   if (input.primary_goal === "learning") {
     scores.test_next += 2;
     scores.explore += 1;
     rationale.push("Primary goal is learning, so test_next and explore actions get preference.");
   } else if (input.primary_goal === "cleanup") {
-    scores.prune += 2;
+    scores.prune += 1;
+    if (input.entity_level === "account" || input.entity_level === "campaign") {
+      scores.reallocate += 3;
+      rationale.push("Cleanup at broader entity scope usually needs spend and structure reallocation before hard cuts.");
+    }
+    if (
+      input.entity_level === "account" &&
+      input.budget_utilization >= 0.9 &&
+      input.cpl_vs_target >= 1.1 &&
+      input.signal_quality !== "low"
+    ) {
+      scores.reallocate += 2;
+      scores.prune -= 1;
+      rationale.push("Fragmented high-spend account cleanup favors budget reallocation before aggressive branch removal.");
+    }
     scores.diagnose += 1;
     rationale.push("Primary goal is cleanup, favoring narrow remediation and diagnostics.");
   } else if (input.primary_goal === "recovery") {
@@ -224,6 +262,61 @@ function applyMediaHeuristics(scores: Record<MediaRecommendedAction, number>, in
   return rationale;
 }
 
+function calibrateActionConfidence(
+  input: MediaDecisionInput,
+  action: MediaRecommendedAction,
+  regimeConfidence: number,
+  margin: number,
+): number {
+  let confidence = regimeConfidence * 0.55 + Math.max(0, margin) * 0.06;
+  const hasExpansionGap = textHints(input.missing_information, ["expansion", "inventory", "coverage", "new cohort"]);
+
+  if (input.signal_quality === "high" && input.tracking_confidence === "high") {
+    confidence += 0.12;
+  } else if (input.signal_quality === "low" || input.tracking_confidence === "low") {
+    confidence -= 0.1;
+  }
+
+  if ((action === "prune" || action === "scale") && input.conversion_volume >= 50) {
+    confidence += 0.08;
+  }
+
+  if (
+    action === "prune" &&
+    input.cpl_vs_target >= 1.3 &&
+    input.signal_quality === "high" &&
+    input.tracking_confidence === "high" &&
+    input.conversion_volume >= 60
+  ) {
+    confidence += 0.14;
+  }
+
+  if (
+    action === "explore" &&
+    input.intent_layer === "brand" &&
+    input.primary_goal === "scale" &&
+    input.budget_utilization >= 0.9 &&
+    input.cpl_vs_target <= 0.9 &&
+    (hasExpansionGap || input.signal_quality !== "high")
+  ) {
+    confidence = Math.max(confidence, 0.5);
+  }
+
+  if (action === "test_next" && input.primary_goal === "learning" && input.signal_quality === "medium") {
+    confidence = Math.max(confidence, 0.5);
+  }
+
+  if (action === "explore" || action === "test_next" || action === "reallocate") {
+    confidence = Math.min(confidence, 0.69);
+  }
+
+  if (action === "diagnose" && input.tracking_confidence === "low") {
+    confidence = Math.max(confidence, 0.52);
+  }
+
+  return clampConfidence(confidence);
+}
+
 export function recommendMediaAction(input: MediaDecisionInput): MediaDecisionRecommendation {
   const inferredTerrain = inferTerrainFromMediaDecision(input);
   const regime = scoreTerrain(inferredTerrain);
@@ -238,10 +331,17 @@ export function recommendMediaAction(input: MediaDecisionInput): MediaDecisionRe
   const blockerList = input.blockers ?? [];
   const missing = input.missing_information ?? [];
   const blockerPenalty = Math.min(0.2, blockerList.length * 0.03 + missing.length * 0.02);
-  const actionConfidence = clampConfidence(regime.confidence * 0.7 + Math.max(0, margin) * 0.08 - blockerPenalty);
+  const rawConfidence = calibrateActionConfidence(input, top[0], regime.confidence, margin);
+  const actionConfidence = clampConfidence(rawConfidence - blockerPenalty);
 
-  if (rationale.length === 0) {
-    rationale.push("Recommendation follows terrain-to-regime mapping with no overriding metric conflicts.");
+  if (top[0] === "scale" && input.cpl_vs_target <= 0.9) {
+    rationale.push("Performance efficiency supports controlled scaling in the current winner path.");
+  }
+  if (top[0] === "test_next" && input.primary_goal === "learning") {
+    rationale.push("Learning objective favors a constrained next experiment over immediate broad action.");
+  }
+  if (rationale.length < 2) {
+    rationale.push(`Current routing aligns with ${regime.primary_regime} regime behavior under observed media signals.`);
   }
 
   return {
