@@ -1,0 +1,152 @@
+{
+  "dataset_name": "debugging-real-replays-v0.7b",
+  "purpose": "Evaluator-only truth for the extended Shopify-focused v0.7b replay pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "shopify-feed-01",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-01",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/transforms/variant-field-mapping.ts",
+        "feed/exports/prepare-shopify.ts",
+        "feed/exports/push-shopify.ts"
+      ],
+      "expected_failure_mode": "missing size dimension during transform caused later variant-shape drift across prepare and push surfaces",
+      "patch_family_judgment": [
+        "fix should preserve the dropped option dimension before export",
+        "fix should keep declared product options aligned with emitted variant values through prepare and push",
+        "fix should not stop at duplicate-only handling"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Built from the 2026-05-01 report section on missing Option2 Value and missing-option errors."
+    },
+    {
+      "id": "shopify-feed-02",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-02",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/prepare-shopify.ts"
+      ],
+      "expected_failure_mode": "row-level option name drift was interpreted as too many product options",
+      "patch_family_judgment": [
+        "fix should normalize unstable option names into stable dimensions like Color and Size",
+        "fix should remain localized to option-name normalization and option builder behavior",
+        "fix should not require a broad product-model redesign"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Built from the Cosmo pant and Garcon shirt option-limit failures."
+    },
+    {
+      "id": "shopify-feed-03",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-03",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/push-shopify.ts"
+      ],
+      "expected_failure_mode": "variant dedupe keyed on an incomplete tuple after size collapse, producing duplicate color variants",
+      "patch_family_judgment": [
+        "fix should dedupe on the full option tuple rather than one visible dimension",
+        "fix should stay in the narrow variant-key or tuple-assembly surface once the missing field issue is understood"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Built from repeated WHITE and BLACK duplicate-variant errors."
+    },
+    {
+      "id": "shopify-feed-04",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-04",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/option-name-sanitizer.ts"
+      ],
+      "expected_failure_mode": "unsupported slash sequence in accessory option names passed through unsanitized",
+      "patch_family_judgment": [
+        "fix should sanitize or remap invalid option-name sequences before export",
+        "fix should remain narrow and deterministic"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Built from ACCESSORIES / MULTI failures on accessory handles."
+    },
+    {
+      "id": "shopify-feed-05",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-05",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/push-shopify.ts",
+        "feed/exports/result-classifier.ts",
+        "feed/exports/prepare-shopify.ts"
+      ],
+      "expected_failure_mode": "throttling pressure and deterministic validation failures were mixed in one receipt and needed separate handling",
+      "patch_family_judgment": [
+        "fix should separate retryable rate limiting from deterministic validation failures",
+        "fix should improve batching or backoff without masking bad feed-shape errors",
+        "fix should preserve or add preview validation rather than relying on retries alone"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Built from the 133 throttled plus 60 non-throttle-failure split in the push receipt."
+    },
+    {
+      "id": "shopify-feed-06",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-06",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/push-shopify.ts"
+      ],
+      "expected_failure_mode": "a first repair pass looked successful while the underlying variant tuple was still inconsistent",
+      "patch_family_judgment": [
+        "fix should not trust the first repaired receipt as proof the tuple is correct",
+        "fix should keep evaluation tied to end-to-end tuple consistency"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Adversarial false-confidence case built from the same incident family."
+    },
+    {
+      "id": "shopify-feed-07",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-07",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/exports/prepare-shopify.ts",
+        "feed/exports/push-shopify.ts"
+      ],
+      "expected_failure_mode": "logs pointed at the wrong layer while the actual bug happened during option assembly",
+      "patch_family_judgment": [
+        "fix should address the earlier option-assembly bug rather than only the downstream push symptom",
+        "fix should stay centered on label drift at the source"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Adversarial wrong-layer-attribution case."
+    },
+    {
+      "id": "shopify-feed-08",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "merge_commit_sha": "shopify-real-incident-2026-05-01-08",
+      "start_ref": "shopify-feed-report-2026-05-01",
+      "likely_fix_files": [
+        "feed/transforms/variant-field-mapping.ts",
+        "feed/exports/prepare-shopify.ts"
+      ],
+      "expected_failure_mode": "partial mitigation improved the batch but left one hidden size path broken",
+      "patch_family_judgment": [
+        "fix should preserve the hidden size path end-to-end",
+        "fix should not stop at aggregate error reduction"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Adversarial partial-fix case."
+    }
+  ]
+}

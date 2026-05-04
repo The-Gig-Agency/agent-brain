@@ -1,0 +1,277 @@
+{
+  "dataset_name": "debugging-real-replays-v0.7b",
+  "purpose": "Shopify feed operational realism replay pack extended with harder real-failure cases from the same incident family.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "shopify-feed-01",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Variant shape looked plausible until size silently disappeared from the export",
+      "symptom": "A product family with multiple colors and sizes failed Shopify sync with missing-option and duplicate-variant style errors even though the transformed export still looked superficially complete.",
+      "visible_evidence": [
+        "Raw source rows clearly carry both color and size information",
+        "The transformed export path preserves one variant dimension but silently loses another",
+        "The push error surface points at variant shape correctness, not one obviously bad row",
+        "A local dedupe tweak would be tempting but would not explain why declared product options and variant values drift apart"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "transform field mapping for variant dimensions",
+          "prepare_shopify option normalization",
+          "push exporter variant assembly"
+        ],
+        "repro_style": "multi-color multi-size apparel export where one hidden dimension disappears before sync",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "transform reports rows prepared successfully",
+          "the exported rows still look populated enough to seem valid at first glance"
+        ],
+        "false_positive_fix_family": "patch duplicate handling only and assume the source data itself is fine"
+      },
+      "success_criteria": [
+        "identify that variant option loss happened before the final Shopify push rather than only at the point of duplicate rejection",
+        "propose a fix family that preserves the missing dimension and keeps declared option names and values aligned through export"
+      ],
+      "notes": "Concrete inspiration: Luna pant and similar multi-size apparel failures from the 2026-05-01 J.Crew push report."
+    },
+    {
+      "id": "shopify-feed-02",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "A single product seemed to have four option names when it really had one drifting label",
+      "symptom": "Shopify rejected a product for exceeding the option limit because row-level option names drifted by color or pattern even though the underlying dimension was still just color plus size.",
+      "visible_evidence": [
+        "One handle shows Option1 Name values like Black, Blue, Brown, and Woven Pattern 5 across rows",
+        "The actual row structure still reads like one color dimension plus one size dimension",
+        "The visible failure can tempt a broad exporter rewrite because the platform reports an options-count problem"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "option-name normalization rule",
+          "prepare_shopify product-option builder"
+        ],
+        "repro_style": "single-handle option-name drift causing apparent too-many-options failure",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "the product has only two human-meaningful dimensions",
+          "the platform error mentions maximum options instead of label drift"
+        ],
+        "false_positive_fix_family": "broaden into a full product-options redesign instead of normalizing one unstable name field"
+      },
+      "success_criteria": [
+        "identify that the problem is unstable option naming rather than true four-dimension product structure",
+        "match the compact normalization fix family around stable names like Color and Size"
+      ],
+      "notes": "Concrete inspiration: Cosmo pant and Garcon shirt option-limit failures."
+    },
+    {
+      "id": "shopify-feed-03",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Duplicate variant errors looked like duplicate rows but were really collapsed tuples",
+      "symptom": "Shopify reported that variants like WHITE or BLACK already existed, even though the source rows differed by size and did not appear truly duplicated in the raw feed.",
+      "visible_evidence": [
+        "Several failing handles have one color repeated across many rows with different sizes",
+        "The duplicate string in the error matches color, not the full intended variant tuple",
+        "The quickest wrong move is to delete rows or dedupe on color only"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "variant dedupe key construction",
+          "exported option tuple assembly"
+        ],
+        "repro_style": "single-color multi-size products collapse into duplicate variant keys",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "the duplicate error names only the visible color value",
+          "the raw feed does not obviously contain exact duplicate rows"
+        ],
+        "false_positive_fix_family": "dedupe harder on the visible duplicate value without restoring the full variant tuple"
+      },
+      "success_criteria": [
+        "identify that the duplicate key is being computed from an incomplete tuple",
+        "match the narrow fix family of deduping on full option tuples after preserving all option values"
+      ],
+      "notes": "Concrete inspiration: boyfriend jersey tees and similar duplicate-color failures."
+    },
+    {
+      "id": "shopify-feed-04",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Accessory variants failed on a string that looked descriptive but violated platform rules",
+      "symptom": "Several accessory products failed despite otherwise simple one-size structure because an option name containing a slash sequence was passed through unsanitized.",
+      "visible_evidence": [
+        "Affected handles are simple accessories rather than deep multi-variant apparel products",
+        "The same visible string ACCESSORIES / MULTI appears in the option-name position",
+        "The failure is deterministic and repeats across multiple handles with otherwise uncomplicated structure"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "option-name sanitizer",
+          "accessory export normalization"
+        ],
+        "repro_style": "simple accessory export rejected for unsupported sequence in option name",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify that the failure sits in option-name sanitization rather than in batching or broad variant logic",
+        "match the localized fix family that remaps or sanitizes unsupported sequences before export"
+      ],
+      "notes": "Concrete inspiration: ACCESSORIES / MULTI failures on bag and sunglasses handles."
+    },
+    {
+      "id": "shopify-feed-05",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Throttling dominated the receipt and hid a second class of deterministic shape failures",
+      "symptom": "A large push returned many throttled product failures plus a smaller set of deterministic data-shape errors, making it unsafe to treat retry success as proof that the feed was healthy.",
+      "visible_evidence": [
+        "Most failed products are marked Throttled",
+        "A non-trivial minority fail with duplicate, missing-option, or invalid-name errors in the same consolidated receipt",
+        "Chunk transport itself succeeds, so the transport layer is not globally broken",
+        "A pure backoff fix would improve many outcomes while still leaving a hidden validation class unresolved"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "push batching and retry policy",
+          "result classifier for throttled vs deterministic errors",
+          "prepare_shopify validation preview"
+        ],
+        "repro_style": "batch push where transport pressure and deterministic validation failures coexist",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "chunk transport failures are zero",
+          "throttling dominates the top-line error count"
+        ],
+        "false_positive_fix_family": "slow the push and claim the incident is resolved once throttling drops"
+      },
+      "success_criteria": [
+        "separate retryable execution pressure from deterministic feed-shape failures",
+        "propose a fix family that improves batching while preserving fast failure and reporting for validation bugs"
+      ],
+      "notes": "Concrete inspiration: 133 throttled failures mixed with 60 non-throttle data failures in the same push receipt."
+    },
+    {
+      "id": "shopify-feed-06",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "A first fix looked right because the transport succeeded, but the variant evidence kept disagreeing",
+      "symptom": "A repair pass made the push path look healthier, yet later inspection still showed the variant tuple was wrong and the apparent success was misleading.",
+      "visible_evidence": [
+        "The push request returns normally after a repair attempt",
+        "Variant evidence is still inconsistent across the transformed export and the final receipt",
+        "The easiest wrong move is to treat the recovered transport as proof the data shape is now correct"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "push receipt interpreter",
+          "variant assembly post-repair"
+        ],
+        "repro_style": "first repair appears successful but later evidence contradicts it",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "request completes successfully",
+          "repair path emits optimistic progress markers"
+        ],
+        "false_positive_fix_family": "accept the first repaired receipt as evidence the shape problem is gone"
+      },
+      "success_criteria": [
+        "identify why the first success signal was not enough to clear the variant-shape bug",
+        "keep the fix grounded in the data-shape path, not transport optimism"
+      ],
+      "notes": "New adversarial case from the same incident family, focused on false confidence after a repair pass."
+    },
+    {
+      "id": "shopify-feed-07",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Logs pointed at the wrong layer while the real break happened during option assembly",
+      "symptom": "The visible failure looked like a downstream push issue, but the actual bug surfaced earlier when option assembly mixed stable and unstable labels.",
+      "visible_evidence": [
+        "The failure surface is downstream and noisy",
+        "The option builder already emitted inconsistent labels before the push",
+        "A local retry or push-only patch would miss the earlier misassembly"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "option builder",
+          "final push classifier"
+        ],
+        "repro_style": "wrong-layer logging that makes the push surface look guilty",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "downstream logs dominate the trace",
+          "option names already drift before the push layer sees them"
+        ],
+        "false_positive_fix_family": "patch only the downstream push code because that is where the loudest error appears"
+      },
+      "success_criteria": [
+        "identify the earlier option-assembly bug behind the downstream symptom",
+        "match a fix family that addresses the true source of label drift"
+      ],
+      "notes": "New case focused on wrong-layer attribution."
+    },
+    {
+      "id": "shopify-feed-08",
+      "repo": "withheld-feed-map-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "A partial mitigation improved the batch but left one hidden size path broken",
+      "symptom": "A mitigation reduced visible failures, but one variant path still broke later because the hidden size dimension was never restored end-to-end.",
+      "visible_evidence": [
+        "The batch appears healthier after a local mitigation",
+        "One hidden dimension still goes missing on a narrower subset of rows",
+        "The easy mistake is to declare victory after the broader error count drops"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "variant tuple assembly",
+          "size-dimension preservation"
+        ],
+        "repro_style": "partial fix reduces noise while a subset stays broken",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "error volume drops after mitigation",
+          "one variant path still disagrees with the expected tuple"
+        ],
+        "false_positive_fix_family": "stop once the count drops instead of checking the remaining hidden-size path"
+      },
+      "success_criteria": [
+        "identify the remaining hidden-size path that stayed broken",
+        "keep the fix anchored to end-to-end tuple preservation"
+      ],
+      "notes": "New case for false confidence after a partial mitigation."
+    }
+  ]
+}

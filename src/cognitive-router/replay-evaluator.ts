@@ -280,6 +280,7 @@ export function runReplaySuite(
   const isDegradedEvidenceReplay = visibleFileName.includes("v0.6d");
   const isMixedReplay = visibleFileName.includes("v0.6e");
   const isHarderAsymmetryReplay = visibleFileName.includes("v0.6f");
+  const isShopifyOperationalReplay = visibleFileName.includes("v0.7a");
 
   return {
     suite_id: suiteId,
@@ -302,7 +303,9 @@ export function runReplaySuite(
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
       isHarderAsymmetryReplay
         ? "This harder-asymmetry replay pack adds noisy prune cases and one weaker-signaled explore case while reducing direct terrain wording in the visible layer."
-        : null,
+        : isShopifyOperationalReplay
+          ? "This v0.7a replay pack is built from one real Shopify incident cluster with concrete handles and failure buckets rather than from a cross-repo mix."
+          : null,
       isMixedReplay
         ? "This mixed replay pack combines real explore-deserving degraded-evidence cases with real prune-deserving narrow cases to test regime boundary discrimination."
         : null,
@@ -314,6 +317,8 @@ export function runReplaySuite(
         : null,
       isHarderAsymmetryReplay
         ? "The visible layer is more issue-like and less terrain-labeled than v0.6e, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
+        : isShopifyOperationalReplay
+          ? "The visible layer uses the real incident language and concrete product examples, but the cases are still evaluator-curated rather than raw receipts or issue transcripts."
         : isMixedReplay
         ? "The visible layer is terrain-shaped and repo-anonymized, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
         : isDegradedEvidenceReplay
@@ -336,6 +341,8 @@ export function runReplaySuite(
         : null,
       isHarderAsymmetryReplay
         ? "The shaping pressure is more symmetric in this pass: prune-deserving cases also include distracting logs, misleading auth surfaces, or tempting broadening paths."
+        : isShopifyOperationalReplay
+          ? "The shaping pressure here comes from one real ops family: missing dimensions, drifting option names, collapsed tuples, invalid labels, and throttling mixed with deterministic data failures."
         : isMixedReplay
         ? "The augmentation is used only on the explore-deserving side of the pack; the prune-deserving cases remain relatively clean to preserve the regime boundary test."
         : isDegradedEvidenceReplay
@@ -349,6 +356,8 @@ export function runReplaySuite(
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
       isHarderAsymmetryReplay
         ? "This result matters only if the router still separates explore from prune after the visible layer becomes less explicit and the prune side becomes noisier."
+        : isShopifyOperationalReplay
+          ? "This result matters only if the router can separate broad incident handling from localized transform fixes inside one messy real production family."
         : isMixedReplay
         ? "This result is more meaningful than a one-sided wedge because the router succeeds on both sides of the explore-versus-prune boundary without changing the underlying routing logic."
         : isDegradedEvidenceReplay
@@ -360,6 +369,8 @@ export function runReplaySuite(
         : null,
       isHarderAsymmetryReplay
         ? "This result is more meaningful than v0.6e only if the weaker-signaled explore case survives and at least some noisy prune cases stay narrow under the same scoring logic."
+        : isShopifyOperationalReplay
+          ? "This pack is still small, but it is a better realism check than synthetic terrain stories because every case comes from the same concrete push receipt and follow-up analysis."
         : isDiverseReplay
         ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
         : isTightReplay
