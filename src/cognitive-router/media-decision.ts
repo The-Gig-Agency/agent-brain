@@ -2,6 +2,7 @@ import { scoreTerrain } from "./scoring.js";
 import type {
   MediaDecisionInput,
   MediaDecisionRecommendation,
+  MediaDecisionRunOptions,
   MediaRecommendedAction,
   SearchRegime,
   TerrainProfile,
@@ -317,11 +318,14 @@ function calibrateActionConfidence(
   return clampConfidence(confidence);
 }
 
-export function recommendMediaAction(input: MediaDecisionInput): MediaDecisionRecommendation {
+export function recommendMediaAction(
+  input: MediaDecisionInput,
+  options: MediaDecisionRunOptions = {},
+): MediaDecisionRecommendation {
   const inferredTerrain = inferTerrainFromMediaDecision(input);
-  const regime = scoreTerrain(inferredTerrain);
+  const regime = scoreTerrain(inferredTerrain, options.terrain_memory, options.terrain_memory_ablation);
   const scores = actionScoresFromRegime(regime.primary_regime, regime.secondary_regime);
-  const rationale = applyMediaHeuristics(scores, input);
+  const rationale = options.disable_heuristics ? [] : applyMediaHeuristics(scores, input);
 
   const ranked = (Object.entries(scores) as Array<[MediaRecommendedAction, number]>).sort((a, b) => b[1] - a[1]);
   const top = ranked[0] ?? ["diagnose", 0];
@@ -331,8 +335,12 @@ export function recommendMediaAction(input: MediaDecisionInput): MediaDecisionRe
   const blockerList = input.blockers ?? [];
   const missing = input.missing_information ?? [];
   const blockerPenalty = Math.min(0.2, blockerList.length * 0.03 + missing.length * 0.02);
-  const rawConfidence = calibrateActionConfidence(input, top[0], regime.confidence, margin);
-  const actionConfidence = clampConfidence(rawConfidence - blockerPenalty);
+  const rawConfidence = options.disable_calibration
+    ? clampConfidence(regime.confidence * 0.55)
+    : calibrateActionConfidence(input, top[0], regime.confidence, margin);
+  const actionConfidence = options.disable_calibration
+    ? rawConfidence
+    : clampConfidence(rawConfidence - blockerPenalty);
 
   if (top[0] === "scale" && input.cpl_vs_target <= 0.9) {
     rationale.push("Performance efficiency supports controlled scaling in the current winner path.");

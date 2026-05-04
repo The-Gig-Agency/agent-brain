@@ -247,8 +247,40 @@ export type DebugRunResult = {
   trace: RouterTraceEvent[];
 };
 
+/** Strip specific memory bumps inside `scoreTerrain` (for one-factor ablations). */
+export type TerrainMemoryAblation = {
+  skip_failed_path_memory?: boolean;
+  skip_disproven_memory?: boolean;
+  skip_strong_signal_memory?: boolean;
+  skip_drift_memory?: boolean;
+};
+
 export type DebugRunOptions = {
   disable_transitions?: boolean;
+  /** Zero failed-path style memory before dynamic scoring (failed-path suppression ablation). */
+  disable_failed_path_memory?: boolean;
+  /** Skip dynamic regime switch when scored confidence crosses threshold. */
+  disable_confidence_gating?: boolean;
+  /** Skip compound→explore recovery on failed compounded path and skip drift_detected emission. */
+  disable_drift_recovery?: boolean;
+  /** Allow prune→compound without prior targeted inspect on inferred family. */
+  disable_inspection_before_compound?: boolean;
+};
+
+/** Optional scoring overrides for replay ablation harness (does not change default `runReplaySuite`). */
+export type ReplayScoringOptions = {
+  memory?: MemoryScoringContext;
+  memory_ablation?: TerrainMemoryAblation;
+};
+
+export type MediaDecisionRunOptions = {
+  /** Skip applyMediaHeuristics (failed-path / branch heuristics proxy). */
+  disable_heuristics?: boolean;
+  /** Use simplified confidence (skip calibrateActionConfidence + blocker penalty). */
+  disable_calibration?: boolean;
+  /** Pass through to scoreTerrain memory ablation strips. */
+  terrain_memory?: MemoryScoringContext;
+  terrain_memory_ablation?: TerrainMemoryAblation;
 };
 
 export type BaselinePolicyId =

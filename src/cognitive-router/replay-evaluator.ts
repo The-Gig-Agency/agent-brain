@@ -4,6 +4,7 @@ import type {
   ReplayCaseReport,
   ReplayDatasetReport,
   ReplayEvaluatorCase,
+  ReplayScoringOptions,
   ReplayVisibleCase,
   SearchRegime,
   TerrainProfile,
@@ -215,9 +216,13 @@ function recommendedFocusPaths(visibleCase: ReplayVisibleCase, regime: SearchReg
   return paths.slice(0, Math.min(2, paths.length));
 }
 
-function buildReplayCaseReport(visibleCase: ReplayVisibleCase, evaluatorCase: ReplayEvaluatorCase): ReplayCaseReport {
+export function buildReplayCaseReport(
+  visibleCase: ReplayVisibleCase,
+  evaluatorCase: ReplayEvaluatorCase,
+  scoring?: ReplayScoringOptions,
+): ReplayCaseReport {
   const inferredTerrain = inferTerrainFromReplayCase(visibleCase);
-  const routed = scoreTerrain(inferredTerrain);
+  const routed = scoreTerrain(inferredTerrain, scoring?.memory, scoring?.memory_ablation);
   const fixedRegime = fixedHeuristicRegime(visibleCase);
   const thresholdRegime = scoreThresholdRegime(visibleCase);
   const hidden = hiddenExpectedRegime(evaluatorCase);
@@ -251,6 +256,7 @@ export function runReplaySuite(
   visibleFileName = "real-replays-v1.visible.json",
   evaluatorFileName = "real-replays-v1.evaluator.json",
   suiteId = "real-replays-v1",
+  scoring?: ReplayScoringOptions,
 ): ReplayDatasetReport {
   const visibleDataset = loadReplayVisibleDataset(visibleFileName);
   const evaluatorDataset = loadReplayEvaluatorDataset(evaluatorFileName);
@@ -262,7 +268,7 @@ export function runReplaySuite(
       throw new Error(`Missing evaluator case for visible replay ${visibleCase.id}`);
     }
 
-    return buildReplayCaseReport(visibleCase, evaluatorCase);
+    return buildReplayCaseReport(visibleCase, evaluatorCase, scoring);
   });
 
   const routedMatchRate = average(cases.map((debugCase) => (debugCase.routed_matches_hidden_regime ? 1 : 0)));

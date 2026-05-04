@@ -23,6 +23,7 @@ import type {
   MemoryScoringContext,
   RouterTraceEvent,
   SearchRegime,
+  TerrainMemoryAblation,
 } from "./types.js";
 
 type RuntimeState = {
@@ -141,6 +142,18 @@ function deriveMemoryContext(state: RuntimeState): MemoryScoringContext {
   };
 }
 
+function augmentMemoryContextForAblation(state: RuntimeState, options: DebugRunOptions): MemoryScoringContext {
+  const base = deriveMemoryContext(state);
+  const ctx: MemoryScoringContext = { ...base };
+  if (options.disable_failed_path_memory) {
+    ctx.repeated_failed_path_count = 0;
+  }
+  if (options.disable_confidence_gating) {
+    ctx.strong_signal_family_count = 0;
+  }
+  return ctx;
+}
+
 function hasTargetedInspectEvidence(state: RuntimeState, family: DebugFamily | null): boolean {
   if (!family) {
     return false;
@@ -149,9 +162,17 @@ function hasTargetedInspectEvidence(state: RuntimeState, family: DebugFamily | n
   return state.executedActionIds.includes(`inspect:${family}`);
 }
 
-function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState) {
-  const memoryContext = deriveMemoryContext(state);
-  const recommendation = scoreTerrain(debugCase.input_context.terrain, memoryContext);
+function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options: DebugRunOptions = {}) {
+  const memoryContext = augmentMemoryContextForAblation(state, options);
+  const memoryAblation: TerrainMemoryAblation | undefined =
+    options.disable_failed_path_memory || options.disable_confidence_gating
+      ? {
+          skip_failed_path_memory: Boolean(options.disable_failed_path_memory),
+          skip_strong_signal_memory: Boolean(options.disable_confidence_gating),
+          skip_disproven_memory: Boolean(options.disable_confidence_gating),
+        }
+      : undefined;
+  const recommendation = scoreTerrain(debugCase.input_context.terrain, memoryContext, memoryAblation);
   const { family, strongSignal } = getTopFamily(state.clueScores);
 
   let nextRegime = state.activeRegime;
@@ -160,13 +181,26 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState) {
   if (state.activeRegime === "explore" && strongSignal && family) {
     nextRegime = "prune";
     reason = `Strong signal emerged for ${family}.`;
-  } else if (state.activeRegime === "prune" && strongSignal && family && hasTargetedInspectEvidence(state, family)) {
+  } else if (
+    state.activeRegime === "prune" &&
+    strongSignal &&
+    family &&
+    (options.disable_inspection_before_compound || hasTargetedInspectEvidence(state, family))
+  ) {
     nextRegime = "compound";
     reason = `Search narrowed to ${family} after targeted inspection.`;
-  } else if (state.activeRegime === "compound" && state.failedFamilies[family ?? debugCase.hidden_truth.root_cause] > 0) {
+  } else if (
+    !options.disable_drift_recovery &&
+    state.activeRegime === "compound" &&
+    state.failedFamilies[family ?? debugCase.hidden_truth.root_cause] > 0
+  ) {
     nextRegime = "explore";
     reason = "Current compounded path failed and needs new evidence.";
-  } else if (recommendation.primary_regime !== state.activeRegime && recommendation.confidence >= 0.45) {
+  } else if (
+    !options.disable_confidence_gating &&
+    recommendation.primary_regime !== state.activeRegime &&
+    recommendation.confidence >= 0.45
+  ) {
     nextRegime = recommendation.primary_regime;
     reason = `Dynamic scoring favors ${recommendation.primary_regime}.`;
   }
@@ -180,7 +214,7 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState) {
       reason,
     });
     state.activeRegime = nextRegime;
-  } else if (state.activeRegime === "compound" && !strongSignal) {
+  } else if (!options.disable_drift_recovery && state.activeRegime === "compound" && !strongSignal) {
     appendTrace(state.observations, {
       type: "drift_detected",
       step: state.step,
@@ -366,7 +400,7 @@ function executeAction(
   }
 
   if (policyId === "routed_policy" && !options.disable_transitions && !state.success) {
-    maybeTransition(debugCase, state);
+    maybeTransition(debugCase, state, options);
   }
 }
 

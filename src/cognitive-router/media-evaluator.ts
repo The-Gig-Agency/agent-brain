@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { recommendMediaAction } from "./media-decision.js";
-import type { MediaDecisionInput, MediaRecommendedAction } from "./types.js";
+import type { MediaDecisionInput, MediaDecisionRunOptions, MediaRecommendedAction } from "./types.js";
 
 type ConfidenceBand = "low" | "medium" | "high";
 
@@ -85,11 +85,14 @@ function loadMediaEvalDataset(fileName = "media-decision-v0.1.json"): MediaEvalD
   return JSON.parse(readFileSync(filePath, "utf8")) as MediaEvalDataset;
 }
 
-export function runMediaEvaluationSuite(fileName = "media-decision-v0.1.json"): MediaEvalReport {
+export function runMediaEvaluationSuite(
+  fileName = "media-decision-v0.1.json",
+  recommendOptions: MediaDecisionRunOptions = {},
+): MediaEvalReport {
   const dataset = loadMediaEvalDataset(fileName);
 
   const caseResults = dataset.cases.map((mediaCase) => {
-    const recommendation = recommendMediaAction(mediaCase.input);
+    const recommendation = recommendMediaAction(mediaCase.input, recommendOptions);
     const confidenceBand = confidenceToBand(recommendation.action_confidence);
 
     return {

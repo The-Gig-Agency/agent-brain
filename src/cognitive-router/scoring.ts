@@ -6,6 +6,7 @@ import {
   type RegimeRecommendation,
   type SearchRegime,
   type TerrainAssessment,
+  type TerrainMemoryAblation,
   type TerrainProfile,
 } from "./types.js";
 
@@ -177,31 +178,32 @@ function applyMemoryAdjustments(
   scores: Record<SearchRegime, number>,
   reasons: Record<SearchRegime, string[]>,
   context?: MemoryScoringContext,
+  memoryAblation?: TerrainMemoryAblation,
 ) {
   if (!context) {
     return;
   }
 
-  if ((context.repeated_failed_path_count ?? 0) > 0) {
+  if (!memoryAblation?.skip_failed_path_memory && (context.repeated_failed_path_count ?? 0) > 0) {
     scores.explore += 1;
     scores.compound -= 1;
     reasons.explore.push("memory: repeated_failed_path_count (+1)");
     reasons.compound.push("memory: repeated_failed_path_count (-1)");
   }
 
-  if ((context.disproven_family_count ?? 0) >= 2) {
+  if (!memoryAblation?.skip_disproven_memory && (context.disproven_family_count ?? 0) >= 2) {
     scores.prune += 2;
     reasons.prune.push("memory: disproven_family_count (+2)");
   }
 
-  if ((context.strong_signal_family_count ?? 0) >= 1) {
+  if (!memoryAblation?.skip_strong_signal_memory && (context.strong_signal_family_count ?? 0) >= 1) {
     scores.compound += 2;
     scores.explore -= 1;
     reasons.compound.push("memory: strong_signal_family_count (+2)");
     reasons.explore.push("memory: strong_signal_family_count (-1)");
   }
 
-  if (context.drift_detected) {
+  if (!memoryAblation?.skip_drift_memory && context.drift_detected) {
     scores.explore += 1;
     scores.compound -= 1;
     reasons.explore.push("memory: drift_detected (+1)");
@@ -209,7 +211,11 @@ function applyMemoryAdjustments(
   }
 }
 
-export function scoreTerrain(profile: TerrainProfile, context?: MemoryScoringContext): RegimeRecommendation {
+export function scoreTerrain(
+  profile: TerrainProfile,
+  context?: MemoryScoringContext,
+  memoryAblation?: TerrainMemoryAblation,
+): RegimeRecommendation {
   const scores = createEmptyScoreMap();
   const reasons: Record<SearchRegime, string[]> = {
     prune: [],
@@ -241,7 +247,7 @@ export function scoreTerrain(profile: TerrainProfile, context?: MemoryScoringCon
     }
   }
 
-  applyMemoryAdjustments(scores, reasons, context);
+  applyMemoryAdjustments(scores, reasons, context, memoryAblation);
 
   const breakdown = SEARCH_REGIMES.map((regime) => ({
     regime,

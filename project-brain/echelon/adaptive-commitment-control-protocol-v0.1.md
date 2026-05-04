@@ -88,6 +88,10 @@ Every report must include:
 
 ## Ablation Matrix
 
+Local runner (v0.1 table JSON + primitive contribution summary):
+
+- `npm run eval:ablation-matrix:v0.1` → `reports/ablation-matrix-v0.1/*.json`
+
 Run one-factor ablations per cycle with all else fixed:
 
 1. remove failed-path suppression

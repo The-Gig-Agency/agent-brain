@@ -109,6 +109,7 @@ This is intentionally small and deterministic:
 - `npm run eval:media:v0.1`
 - `npm run eval:frozen:media:v1` (same runner as media v0.1; ratified frozen-media-v1 — see `project-brain/echelon/frozen-media-v1-lock.md`)
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
+- `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see `findings-ablation-matrix-v0.1.md`)
 
 ## Where eval reports go
 
