@@ -51,10 +51,14 @@ Hypothesis is weakened or rejected if any persist:
 
 ## Benchmark Governance
 
-- maintain one sacred frozen benchmark (immutable once ratified)
+- maintain sacred frozen benchmarks (immutable once ratified); v1 pair is ratified in-repo:
+  - manifest: `project-brain/echelon/frozen-lanes-manifest-v1.json`
+  - debugging lane: `project-brain/echelon/frozen-debug-v1-lock.md` (`npm run eval:frozen:debug:v1`)
+  - media lane: `project-brain/echelon/frozen-media-v1-lock.md` (`npm run eval:frozen:media:v1`)
 - use separate experimental suites for iteration
 - track benchmark versions and report against frozen suite first
 - no headline claims based solely on mutable packs
+- never rewrite frozen v1 fixtures in place; ship frozen-*-v2 with new artifacts if labeling or metric semantics must change
 
 ## Experiment Plan (Next 2 Cycles)
 

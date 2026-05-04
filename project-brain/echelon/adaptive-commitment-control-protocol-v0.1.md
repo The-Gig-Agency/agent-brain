@@ -39,6 +39,18 @@ Maintain three benchmark lanes:
   - metric schema version
 - any metric-definition change increments metric schema version
 
+## Ratified frozen lanes (v1)
+
+Canonical pins, fixture paths, implementation SHA, and **pass thresholds** (including calibration-style gates) live in:
+
+- `project-brain/echelon/frozen-lanes-manifest-v1.json` — machine-readable manifest
+- `project-brain/echelon/frozen-debug-v1-lock.md` — debugging frozen lane
+- `project-brain/echelon/frozen-media-v1-lock.md` — media frozen lane
+
+Stable npm entrypoints: `eval:frozen:debug:v1`, `eval:frozen:media:v1`.
+
+**Immutability:** do not edit v1 fixtures or thresholds in place to chase scores. Add `frozen-debug-v2` / `frozen-media-v2` (new files + manifest) when content or metric semantics must change.
+
 ## Invariants To Track Every Run
 
 1. no unjustified overcommitment under underdetermination
