@@ -218,6 +218,7 @@ export function runReplaySuite(
   const isTightReplay = visibleFileName.includes("tight");
   const isDiverseReplay = visibleFileName.includes("diverse");
   const isCandidateReplay = visibleFileName.includes("v2-candidates");
+  const isCandidateTightReplay = isCandidateReplay && isTightReplay;
 
   return {
     suite_id: suiteId,
@@ -241,20 +242,28 @@ export function runReplaySuite(
       isCandidateReplay
         ? "This candidate replay variant broadens the real-case mix with more hidden-dependency, propagation, and contract-drift bugs mined directly from local private-repo history."
         : null,
-      isDiverseReplay
+      isCandidateTightReplay
+        ? "This tighter candidate replay variant reduces repo identity and file-path leakage by replacing concrete paths with terrain-shaped investigation surfaces."
+        : isDiverseReplay
         ? "This diverse replay variant reduces repository and org fingerprinting by anonymizing visible repo identity and shifting the visible layer toward terrain-shaped descriptions."
         : isTightReplay
         ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
         : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
-      isCandidateReplay
+      isCandidateTightReplay
+        ? "The current v0.6c-tight visible layer is stricter than the base candidate pass, but it still stops short of pure issue-text, log, and repro-note framing."
+        : isCandidateReplay
         ? "The current v0.6c visible layer is still partially truth-adjacent because most cases retain changed-surface entry points rather than issue-text-only framing."
         : null,
-      isDiverseReplay
+      isCandidateTightReplay
+        ? "The augmentation is deliberate on the deceptive cases: delayed signals and false-positive fix families remain to test hidden-dependency handling under lower leakage."
+        : isDiverseReplay
         ? "The ambiguity augmentation remains deliberate, but the visible cases now preserve terrain diversity with less reliance on organization-specific naming or topology."
         : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
-      isCandidateReplay
+      isCandidateTightReplay
+        ? "This result is encouraging because the broader replay-expansion set remains discriminative after a meaningful visible-layer tightening pass."
+        : isCandidateReplay
         ? "This result is encouraging because the routed policy separates on the deceptive hidden-dependency cases, but the broader candidate set still needs a tighter visible layer before stronger claims."
         : null,
       isDiverseReplay
@@ -292,5 +301,13 @@ export function runRealReplaysV06cCandidatesSuite(): ReplayDatasetReport {
     "real-replays-v2-candidates.visible.json",
     "real-replays-v2-candidates.evaluator.json",
     "real-replays-v0.6c-candidates",
+  );
+}
+
+export function runRealReplaysV06cTightSuite(): ReplayDatasetReport {
+  return runReplaySuite(
+    "real-replays-v2-candidates-tight.visible.json",
+    "real-replays-v2-candidates.evaluator.json",
+    "real-replays-v0.6c-tight",
   );
 }

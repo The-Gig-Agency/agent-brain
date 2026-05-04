@@ -1,0 +1,159 @@
+{
+  "dataset_name": "debugging-real-replays-v2-candidates-tight",
+  "purpose": "Stricter router-visible replay candidates with reduced repo and file-path leakage for the broader v0.6c expansion set.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "cg-937",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Post-create attribute failure after campaign setup",
+      "symptom": "A newly created campaign fails shortly after setup with an attribute-related error.",
+      "visible_evidence": [
+        "The failure appears after setup completes, not during the initial create request",
+        "The symptom points toward a direct attribute problem, but the breakage happens in follow-up processing",
+        "The most likely bug family involves a missed post-create dependency rather than invalid form input"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "post-create workflow task",
+          "campaign limit initialization helper"
+        ],
+        "repro_style": "post-create hidden dependency / delayed attribute failure",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "direct attribute guard",
+        "misleading_telemetry": [
+          "stack trace appears close to a helper boundary",
+          "initial symptom suggests a local attribute typo"
+        ]
+      },
+      "success_criteria": [
+        "identify the missing post-create setup step or dependency boundary",
+        "propose a fix family consistent with the landed patch"
+      ],
+      "notes": "Tightened from file-path hints to terrain-oriented surfaces."
+    },
+    {
+      "id": "cg-987",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Refresh did not restore expected allowances",
+      "symptom": "Refreshing a limit window did not restore the expected allowances.",
+      "visible_evidence": [
+        "The bug sits in a scheduled or background refresh path",
+        "The failure depends on task ordering and rollover conditions",
+        "This looks more like stale-state sequencing than broad propagation"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "limit expiration task"
+        ],
+        "repro_style": "stale-state refresh / task sequencing ambiguity",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why refresh and rollover behavior diverged from expected limits",
+        "align with the landed task-level fix direction"
+      ],
+      "notes": "Kept intentionally compact to preserve a prune-friendly real-world case."
+    },
+    {
+      "id": "cg-936",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Incorrect limit values across campaign flows",
+      "symptom": "Limit values were wrong across multiple campaign-related flows.",
+      "visible_evidence": [
+        "The bug spans recomputation, propagation, and update timing rather than one local decrement",
+        "Several layers appear involved, including validation, background work, and runtime updates",
+        "A partial fix in one place would likely leave the failure mode intact elsewhere"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "campaign update flow",
+          "limit recomputation helper",
+          "background recalculation task",
+          "runtime order adjustment path",
+          "post-change signal handling",
+          "form-level decrement logic"
+        ],
+        "repro_style": "multi-hop limit recomputation / propagation",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "single decrement fix"
+      },
+      "success_criteria": [
+        "identify the interacting limit-recalculation surfaces",
+        "propose a coherent fix family consistent with the merged patch"
+      ],
+      "notes": "Preserves broad propagation topology without exposing concrete files."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "withheld-service-b",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Incorrect counts from handler response mapping",
+      "symptom": "Counts and collections returned from a handler were wrong because response fields were mapped incorrectly.",
+      "visible_evidence": [
+        "The failure is a contract-drift problem between an upstream response and local mapping logic",
+        "The system is reading the wrong collection or total fields rather than failing transport altogether",
+        "This should reward narrow contract inspection more than broad exploration"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "response mapping handler"
+        ],
+        "repro_style": "response-shape mismatch / mapping contract drift",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the response-field mapping mismatch",
+        "match the fix direction in the handler layer"
+      ],
+      "notes": "Good pruning case after removing repo-specific CIQ naming."
+    },
+    {
+      "id": "acp-8d0c011",
+      "repo": "withheld-service-c",
+      "repo_local_path": "withheld",
+      "stack": "typescript/gateway",
+      "title": "Gateway rejects valid key from upstream service",
+      "symptom": "A gateway rejects a key as invalid even though the same key works against the upstream service directly.",
+      "visible_evidence": [
+        "The symptom looks like authentication failure, but the mismatch likely occurs at an integration boundary",
+        "The key itself may be valid while the lookup response is being interpreted incorrectly",
+        "This is a deceptive hidden-dependency case rather than a pure credential-format bug"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "gateway auth lookup boundary",
+          "upstream key lookup response parser"
+        ],
+        "repro_style": "hidden dependency / nested response format mismatch",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "credential validation tightening",
+        "misleading_telemetry": [
+          "surface error presents as invalid key",
+          "direct upstream call appears healthy"
+        ]
+      },
+      "success_criteria": [
+        "identify the response-format mismatch at the gateway lookup boundary",
+        "propose a fix consistent with the landed auth-path patch"
+      ],
+      "notes": "Maintains hidden-dependency structure while suppressing concrete file clues."
+    }
+  ]
+}
