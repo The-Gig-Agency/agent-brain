@@ -65,6 +65,7 @@ This is intentionally small and deterministic:
 - a `v0.5` control-oriented pass with anti-transition traps, transition-regret metrics, and replay-style cases
 - split real-replay fixtures for router-visible versus evaluator-only debugging cases
 - a first replay evaluator for real merged bug-fix cases, with explicit caveats about current truth-adjacent visible context
+- a tighter `v0.6a` replay pass with weaker visible clues and deliberate ambiguity augmentation
 
 ## Commands
 

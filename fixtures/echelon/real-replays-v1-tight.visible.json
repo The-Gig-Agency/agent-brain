@@ -1,0 +1,179 @@
+{
+  "dataset_name": "debugging-real-replays-v1-tight",
+  "purpose": "Router-visible replay cases with weaker clues and misleading replay augmentation.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "cg-161",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Merchant login succeeds without credentials",
+      "symptom": "A merchant can reach a logged-in state even when username and password are not entered.",
+      "visible_evidence": [
+        "Authentication state is reached from an apparently incomplete login attempt",
+        "The issue appears around merchant login or onboarding flow boundaries",
+        "Initial reports made it unclear whether this was validation, session reuse, or external integration behavior"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "merchant auth endpoint",
+          "merchant onboarding integration",
+          "external commerce sync boundary"
+        ],
+        "repro_style": "auth flow with ambiguous boundary behavior",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "session or cookie reuse looked plausible early",
+          "external integration state made the issue appear non-local"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "session cleanup only",
+        "conflicting_evidence": true
+      },
+      "success_criteria": [
+        "identify the auth-flow root cause",
+        "propose a fix direction consistent with the merged patch family"
+      ],
+      "notes": "Tight replay version deliberately hides file-level hints and makes the failure look more ambiguous."
+    },
+    {
+      "id": "cg-171",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "AttributeError appears on CIQ path entry",
+      "symptom": "A user enters the CIQ path and an AttributeError occurs, but the boundary where the wrong object shape appears is unclear.",
+      "visible_evidence": [
+        "Failure occurs at the boundary between request handling and downstream publishing logic",
+        "Early debugging suggested multiple possible object-shape or serialization mismatches",
+        "A production incident reference exists, but the initial symptom did not isolate the failing layer"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "request handling layer",
+          "serialization boundary",
+          "publishing integration boundary"
+        ],
+        "repro_style": "attribute boundary with conflicting integration evidence",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "serializer-level assumptions looked guilty early",
+          "publisher-side logs created a competing explanation"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "serializer-only patch",
+        "conflicting_evidence": true,
+        "environment_confusion": [
+          "production-only CIQ path context"
+        ]
+      },
+      "success_criteria": [
+        "trace the CIQ path failure to the correct object or attribute boundary",
+        "match the fix direction in the merged patch family"
+      ],
+      "notes": "This is a stronger discriminative replay because the right layer is not obvious from the visible setup."
+    },
+    {
+      "id": "cg-172",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Refreshing orders does not honor expected limit",
+      "symptom": "Refreshing orders finishes, but the effective limit appears unchanged or ignored.",
+      "visible_evidence": [
+        "The bug appears localized to the refresh path rather than a broad workflow failure",
+        "The symptom is stable and reproducible without much contradictory evidence",
+        "The issue smells like a limit application bug rather than a coordination or multi-system problem"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "orders refresh helper path"
+        ],
+        "repro_style": "limit propagation in a compact helper path",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why the refresh limit was not being applied",
+        "align with the landed fix behavior"
+      ],
+      "notes": "This case intentionally remains compact so simple pruning should still be appropriate."
+    },
+    {
+      "id": "cg-173",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Items and orders limits drift to incorrect values",
+      "symptom": "Items and orders limits end up incorrect, but the visible symptom does not cleanly reveal whether the error originates in forms, tasks, signals, or downstream value propagation.",
+      "visible_evidence": [
+        "The wrong values appear after data moves across multiple workflow stages",
+        "Early checks can make the issue look like a form bug, but later evidence points to broader propagation",
+        "Conflicting workflow signals make the first plausible explanation unreliable"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "client-facing limits surface",
+          "background task chain",
+          "workflow propagation path"
+        ],
+        "repro_style": "multi-hop limit propagation with conflicting evidence",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "form-level values looked wrong before propagation was checked",
+          "task-level counters produced a competing false lead"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "UI-or-form-only patch",
+        "conflicting_evidence": true,
+        "environment_confusion": [
+          "multiple workflow stages can mutate the same effective limit"
+        ]
+      },
+      "success_criteria": [
+        "identify where limit values were being miscomputed or mispropagated",
+        "produce the same fix family as the merged patch"
+      ],
+      "notes": "This is the broadest case and should reward disciplined exploration over premature narrowing."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "The-Gig-Agency/hfc-scoring-engine",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/hfc-scoring-engine",
+      "stack": "python/django",
+      "title": "Response field mismatch causes model/admin failures",
+      "symptom": "A response field mismatch causes failures, but the first visible symptom may appear through admin behavior or data handling rather than the schema boundary itself.",
+      "visible_evidence": [
+        "Two closely related response fields do not behave consistently",
+        "The issue affects model-backed behavior and can surface indirectly through admin or persistence paths",
+        "The cleanest fix may still be schema-level, even if the first symptom looks operational"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "model field definition",
+          "admin surface",
+          "persistence compatibility boundary"
+        ],
+        "repro_style": "schema mismatch with indirect operational symptom",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "admin behavior can look like the primary bug instead of the schema mismatch"
+        ],
+        "false_positive_fix_family": "admin-only patch"
+      },
+      "success_criteria": [
+        "identify the schema inconsistency",
+        "confirm the fix direction through model, migration, and test changes"
+      ],
+      "notes": "Still a cleaner case than the CreatorGift bugs, but the visible setup is less truth-adjacent than v1."
+    }
+  ]
+}

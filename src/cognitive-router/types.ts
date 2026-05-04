@@ -361,6 +361,13 @@ export type ReplayVisibleCase = {
     repro_style: string;
     can_run_locally: string;
   };
+  replay_augmentation?: {
+    misleading_telemetry?: string[];
+    delayed_decisive_signal?: boolean;
+    false_positive_fix_family?: string;
+    conflicting_evidence?: boolean;
+    environment_confusion?: string[];
+  };
   success_criteria: string[];
   notes: string;
 };
@@ -386,6 +393,8 @@ export type ReplayEvaluatorCase = {
   patch_family_judgment: string[];
   notes: string;
   external_evidence?: string[];
+  hidden_expected_regime_override?: SearchRegime;
+  hidden_ambiguity_tags?: string[];
 };
 
 export type ReplayEvaluatorDataset = {

@@ -1,0 +1,147 @@
+{
+  "dataset_name": "debugging-real-replays-v1-tight",
+  "purpose": "Evaluator-only truth for tightened replay cases with misleading augmentation.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "cg-161",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "pr_number": 161,
+      "pr_url": "https://github.com/The-Gig-Agency/creatorgift-backend/pull/161",
+      "merge_commit_sha": "b5bd280d9ad70ea2e0275c9f6ed3d0e2d5e054dd",
+      "start_ref": "53d6e8214a5fd78b98519e2b20b54ed6e1188f0c",
+      "merged_at": "2023-11-16T20:55:54Z",
+      "likely_fix_files": [
+        "creatorsgift/shared/tools/shopify.py",
+        "creatorsgift/shopify/tasks.py",
+        "creatorsgift/users/api/auth/views.py"
+      ],
+      "expected_failure_mode": "auth bypass / missing credential validation",
+      "hidden_expected_regime_override": "explore",
+      "hidden_ambiguity_tags": [
+        "delayed decisive signal",
+        "conflicting evidence",
+        "false-positive session lead"
+      ],
+      "patch_family_judgment": [
+        "fix should close the empty-credential auth path",
+        "fix should be centered in auth-flow validation and related registration or Shopify flow integration"
+      ],
+      "notes": "Tight evaluator expects exploration first because the visible setup intentionally makes simple pruning unsafe."
+    },
+    {
+      "id": "cg-171",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "pr_number": 171,
+      "pr_url": "https://github.com/The-Gig-Agency/creatorgift-backend/pull/171",
+      "merge_commit_sha": "cfb9d7b61ea9fe731f481b4876568016fe7d84d3",
+      "start_ref": "7175187613dba341130e4dbd82bf81a2b5a6f8bf",
+      "merged_at": "2024-01-24T09:28:50Z",
+      "likely_fix_files": [
+        "creatorsgift/influencers/api/viewsets.py",
+        "creatorsgift/influencers/serializers.py",
+        "creatorsgift/shared/tools/publishers.py"
+      ],
+      "expected_failure_mode": "attribute error / object-shape mismatch on CIQ path",
+      "hidden_expected_regime_override": "explore",
+      "hidden_ambiguity_tags": [
+        "contradictory integration evidence",
+        "false-positive serializer lead",
+        "delayed decisive signal"
+      ],
+      "patch_family_judgment": [
+        "fix should resolve the incorrect attribute access boundary",
+        "fix should match the merged path across viewset, serializer, or publisher interaction"
+      ],
+      "external_evidence": [
+        "Sentry issue 4893776462"
+      ],
+      "notes": "Tight evaluator expects broader search-policy behavior before narrowing."
+    },
+    {
+      "id": "cg-172",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "pr_number": 172,
+      "pr_url": "https://github.com/The-Gig-Agency/creatorgift-backend/pull/172",
+      "merge_commit_sha": "edda7966ca2aa00bf41edd515ddf98fc9267ee75",
+      "start_ref": "d36650f560f20e6798d73ff89ae74e00887c0e36",
+      "merged_at": "2024-01-26T08:09:54Z",
+      "likely_fix_files": [
+        "creatorsgift/influencers/helpers.py"
+      ],
+      "expected_failure_mode": "refresh limit not applied",
+      "hidden_expected_regime_override": "prune",
+      "hidden_ambiguity_tags": [
+        "compact helper bug"
+      ],
+      "patch_family_judgment": [
+        "fix should restore correct orders-limit application in refresh flow",
+        "fix should remain localized to helper logic if aligned with the landed patch"
+      ],
+      "external_evidence": [
+        "Sentry issue 4907134194"
+      ],
+      "notes": "This one should stay a pruning-friendly case even in the tighter replay set."
+    },
+    {
+      "id": "cg-173",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "pr_number": 173,
+      "pr_url": "https://github.com/The-Gig-Agency/creatorgift-backend/pull/173",
+      "merge_commit_sha": "1232019129bf4c689e2bcfd74d03d01b494ba177",
+      "start_ref": "edda7966ca2aa00bf41edd515ddf98fc9267ee75",
+      "merged_at": "2024-02-01T08:23:19Z",
+      "likely_fix_files": [
+        "creatorsgift/clients/api/serializers.py",
+        "creatorsgift/clients/helpers.py",
+        "creatorsgift/clients/tasks.py",
+        "creatorsgift/influencers/signals.py",
+        "creatorsgift/orders/forms.py",
+        "creatorsgift/orders/tasks.py"
+      ],
+      "expected_failure_mode": "incorrect limit computation or propagation",
+      "hidden_expected_regime_override": "explore",
+      "hidden_ambiguity_tags": [
+        "multi-hop propagation",
+        "conflicting evidence",
+        "false-positive form-level lead"
+      ],
+      "patch_family_judgment": [
+        "fix should correct items/orders limit values across the multi-file propagation path",
+        "fix should be evaluated as a family of consistent value-handling changes rather than a single-line patch"
+      ],
+      "notes": "This remains the broadest replay case and should reward exploration first."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "The-Gig-Agency/hfc-scoring-engine",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/hfc-scoring-engine",
+      "pr_number": 2,
+      "pr_url": "https://github.com/The-Gig-Agency/hfc-scoring-engine/pull/2",
+      "merge_commit_sha": "6400b8ae3a7f9c2d743aa72a4c6eb4e6da8f98e8",
+      "start_ref": "8f5a0eb018c2c5328e556778f9043caad164ef34",
+      "merged_at": "2022-09-26T12:07:34Z",
+      "likely_fix_files": [
+        "scoringengine/models.py",
+        "scoringengine/migrations/0022_alter_answer_response_text.py",
+        "scoringengine/admin.py",
+        "tests/test_admin.py"
+      ],
+      "expected_failure_mode": "schema mismatch / field length inconsistency",
+      "hidden_expected_regime_override": "prune",
+      "hidden_ambiguity_tags": [
+        "indirect admin symptom",
+        "schema-level root cause"
+      ],
+      "patch_family_judgment": [
+        "fix should align Lead.answers.response with Recommendation.response",
+        "fix should be confirmed through model, migration, and test changes"
+      ],
+      "notes": "Still a pruning-friendly case, but less file-truth-adjacent than the original replay fixture."
+    }
+  ]
+}

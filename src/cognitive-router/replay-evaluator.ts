@@ -21,22 +21,48 @@ function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProf
   const entryPointCount = visibleCase.starting_context.entry_points.length;
   const reproStyle = visibleCase.starting_context.repro_style.toLowerCase();
   const symptom = visibleCase.symptom.toLowerCase();
+  const augmentation = visibleCase.replay_augmentation;
 
   const isSchemaMismatch = reproStyle.includes("schema") || symptom.includes("field length");
   const isAuth = reproStyle.includes("auth") || symptom.includes("login");
   const isAttributeBoundary = reproStyle.includes("attribute") || symptom.includes("attributeerror");
   const isMultiHop = reproStyle.includes("multi-hop") || symptom.includes("limits were calculated");
   const isLimitBug = reproStyle.includes("limit") || symptom.includes("limit");
+  const hasMisleadingTelemetry = (augmentation?.misleading_telemetry?.length ?? 0) > 0;
+  const hasDelayedSignal = augmentation?.delayed_decisive_signal ?? false;
+  const hasConflictingEvidence = augmentation?.conflicting_evidence ?? false;
+  const hasEnvironmentConfusion = (augmentation?.environment_confusion?.length ?? 0) > 0;
 
   const branchingFactor =
     entryPointCount >= 5 ? "high" : entryPointCount >= 3 ? "medium" : "low";
   const uncertainty =
-    isMultiHop ? "high" : isAttributeBoundary || isAuth || entryPointCount >= 3 ? "medium" : "low";
-  const ruggedness = isMultiHop ? "high" : isLimitBug || isAttributeBoundary ? "medium" : "low";
-  const localMinimaRisk = isMultiHop || isAttributeBoundary ? "high" : isAuth ? "medium" : "low";
-  const informationCost = entryPointCount >= 5 ? "high" : entryPointCount >= 3 ? "medium" : "low";
+    isMultiHop || hasDelayedSignal || hasConflictingEvidence
+      ? "high"
+      : isAttributeBoundary || isAuth || entryPointCount >= 3 || hasMisleadingTelemetry
+        ? "medium"
+        : "low";
+  const ruggedness =
+    isMultiHop || hasEnvironmentConfusion
+      ? "high"
+      : isLimitBug || isAttributeBoundary || hasMisleadingTelemetry
+        ? "medium"
+        : "low";
+  const localMinimaRisk =
+    isMultiHop || isAttributeBoundary || hasDelayedSignal || hasConflictingEvidence
+      ? "high"
+      : isAuth || hasMisleadingTelemetry
+        ? "medium"
+        : "low";
+  const informationCost =
+    entryPointCount >= 5 || hasEnvironmentConfusion ? "high" : entryPointCount >= 3 ? "medium" : "low";
   const modePressure =
-    isSchemaMismatch || entryPointCount <= 2 ? "prune" : isMultiHop ? "explore" : "prune";
+    isSchemaMismatch
+      ? "prune"
+      : isMultiHop || hasDelayedSignal || hasConflictingEvidence || hasMisleadingTelemetry
+        ? "explore"
+        : entryPointCount <= 2
+          ? "prune"
+          : "prune";
 
   return {
     feedback_latency: "slow",
@@ -63,6 +89,13 @@ function hiddenExpectedRegime(evaluatorCase: ReplayEvaluatorCase): {
   const breadth =
     patchCount >= 5 ? "broad" : patchCount >= 3 ? "medium" : "narrow";
 
+  if (evaluatorCase.hidden_expected_regime_override) {
+    return {
+      regime: evaluatorCase.hidden_expected_regime_override,
+      patchBreadth: breadth,
+    };
+  }
+
   if (failureMode.includes("propagation") || failureMode.includes("multi") || breadth === "broad") {
     return { regime: "explore", patchBreadth: breadth };
   }
@@ -75,12 +108,21 @@ function hiddenExpectedRegime(evaluatorCase: ReplayEvaluatorCase): {
 }
 
 function fixedHeuristicRegime(visibleCase: ReplayVisibleCase): SearchRegime {
+  const augmentation = visibleCase.replay_augmentation;
+  if (augmentation?.delayed_decisive_signal || augmentation?.conflicting_evidence) {
+    return "prune";
+  }
+
   return visibleCase.starting_context.entry_points.length <= 3 ? "prune" : "explore";
 }
 
 function scoreThresholdRegime(visibleCase: ReplayVisibleCase): SearchRegime {
   const reproStyle = visibleCase.starting_context.repro_style.toLowerCase();
   if (reproStyle.includes("schema") || reproStyle.includes("migration")) {
+    return "prune";
+  }
+
+  if (visibleCase.replay_augmentation?.misleading_telemetry?.length) {
     return "prune";
   }
 
@@ -132,9 +174,13 @@ function buildReplayCaseReport(visibleCase: ReplayVisibleCase, evaluatorCase: Re
   };
 }
 
-export function runRealReplaysV1Suite(): ReplayDatasetReport {
-  const visibleDataset = loadReplayVisibleDataset();
-  const evaluatorDataset = loadReplayEvaluatorDataset();
+export function runReplaySuite(
+  visibleFileName = "real-replays-v1.visible.json",
+  evaluatorFileName = "real-replays-v1.evaluator.json",
+  suiteId = "real-replays-v1",
+): ReplayDatasetReport {
+  const visibleDataset = loadReplayVisibleDataset(visibleFileName);
+  const evaluatorDataset = loadReplayEvaluatorDataset(evaluatorFileName);
   const evaluatorById = new Map(evaluatorDataset.cases.map((debugCase) => [debugCase.id, debugCase]));
 
   const cases = visibleDataset.cases.map((visibleCase) => {
@@ -154,8 +200,10 @@ export function runRealReplaysV1Suite(): ReplayDatasetReport {
     cases.map((debugCase) => (debugCase.score_threshold_regime === debugCase.hidden_expected_regime ? 1 : 0)),
   );
 
+  const isTightReplay = visibleFileName.includes("tight");
+
   return {
-    suite_id: "real-replays-v1",
+    suite_id: suiteId,
     generated_at: new Date().toISOString(),
     dataset_name: visibleDataset.dataset_name,
     overall_pass:
@@ -173,10 +221,28 @@ export function runRealReplaysV1Suite(): ReplayDatasetReport {
     },
     caveats: [
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
-      "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
-      "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
-      "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
+      isTightReplay
+        ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
+        : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
+      isTightReplay
+        ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
+        : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
+      isTightReplay
+        ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."
+        : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
     ],
     cases,
   };
+}
+
+export function runRealReplaysV1Suite(): ReplayDatasetReport {
+  return runReplaySuite();
+}
+
+export function runRealReplaysV06aTightSuite(): ReplayDatasetReport {
+  return runReplaySuite(
+    "real-replays-v1-tight.visible.json",
+    "real-replays-v1-tight.evaluator.json",
+    "real-replays-v0.6a-tight",
+  );
 }
