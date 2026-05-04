@@ -20,6 +20,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - `project-brain/echelon/v0.4-plan.md`: the current hardening plan for stronger baselines and holdout tests
 - `project-brain/echelon/real-replays-v1.md`: the first real-case replay dataset notes
 - `project-brain/echelon/real-replays-v2-candidates.md`: the next mined replay-expansion set from private repo history
+- `project-brain/echelon/real-replays-v3-mining.md`: the next degraded-evidence mining pass for real replay candidates
 - `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`: the first replay pass that preserves separation after reducing repo and org fingerprinting in the visible layer
 - `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`: the first broader replay-expansion pass over a new mined private-repo candidate set
 - `project-brain/echelon/findings-real-replays-v0.6c-tight.md`: the tightened replay-visible rerun of the broader v0.6c candidate set

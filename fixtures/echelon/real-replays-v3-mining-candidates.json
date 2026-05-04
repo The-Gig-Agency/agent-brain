@@ -1,0 +1,220 @@
+{
+  "dataset_name": "debugging-real-replays-v3-mining-candidates",
+  "purpose": "Curated mined bug candidates for the next degraded-evidence replay expansion pass.",
+  "status": "mined_not_yet_integrated",
+  "cases": [
+    {
+      "id": "cg-1036",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "commit_sha": "7ff7fcffd47587a688da37c9fa107383d2b6ec9e",
+      "title": "CG-1036 Fixed not working roll over allowances",
+      "stack": "python/django",
+      "terrain_tags": [
+        "partial_fix_risk",
+        "cross-layer",
+        "non_stationary_state",
+        "delayed_root_cause"
+      ],
+      "why_interesting": "Touches tasks, helpers, publishers logic, and tests. Good candidate for stale-state and rollover logic that can fail after earlier apparent success.",
+      "priority": "high"
+    },
+    {
+      "id": "cg-1013",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "commit_sha": "cee3770d0db7b47d2608ee738db32cc91d65bfbe",
+      "title": "CG-1013 Fixed resets when refresh_influencers",
+      "stack": "python/django",
+      "terrain_tags": [
+        "stale_state",
+        "misleading_local_fix",
+        "refresh_path"
+      ],
+      "why_interesting": "Small patch surface with behavior that likely looks local but is really tied to refresh sequencing and state preservation.",
+      "priority": "high"
+    },
+    {
+      "id": "cg-992",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "commit_sha": "b6b0f8e0dd0dfc5d1ca134fe309969cd44d6fbaf",
+      "title": "CG-992 Fixed not creating limits while csv upload",
+      "stack": "python/django",
+      "terrain_tags": [
+        "delayed_root_cause",
+        "cross_flow_dependency",
+        "partial_ingestion_path"
+      ],
+      "why_interesting": "Useful for cases where one ingestion path fails to trigger the same downstream setup as a normal flow.",
+      "priority": "high"
+    },
+    {
+      "id": "cg-981",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "commit_sha": "a2a088549b37aed852e8404da713f514354d579e",
+      "title": "CG-981 Fixed filtered orders",
+      "stack": "python/django",
+      "terrain_tags": [
+        "cross_system",
+        "false_positive_path",
+        "ui_plus_backend"
+      ],
+      "why_interesting": "Spans backend helpers, views, serializers, admin, and frontend components. Good for misleading first-pass inspection paths.",
+      "priority": "high"
+    },
+    {
+      "id": "cg-995",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "commit_sha": "5c13cb09e4a97212f313e5d1c98ab39a7e5c1405",
+      "title": "CG-995 Fixed 504 error",
+      "stack": "python/django",
+      "terrain_tags": [
+        "misleading_symptom",
+        "perf_or_timeout",
+        "minimal_patch"
+      ],
+      "why_interesting": "A timeout-class symptom with a tiny patch is useful because the visible failure can suggest broad performance hunting while the real cause may be narrow.",
+      "priority": "medium"
+    },
+    {
+      "id": "ciq-bf61b23",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "commit_sha": "bf61b23063bed5fa46fdbd1a073a8802c41a00a3",
+      "title": "Fixed auto-fix & re-fetch logic",
+      "stack": "typescript/supabase-edge",
+      "terrain_tags": [
+        "partial_fix_history",
+        "re_fetch",
+        "conflicting_telemetry",
+        "degraded_evidence"
+      ],
+      "why_interesting": "Excellent degraded-evidence case: auto-fix plus re-fetch implies the first apparent correction may not reveal true final state immediately.",
+      "priority": "high"
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "commit_sha": "6adf83e8cedc729fe05bfad506ce3b4ffa0e19e9",
+      "title": "Fix campaign summary report flow",
+      "stack": "typescript/supabase-edge",
+      "terrain_tags": [
+        "cross_system",
+        "response_shape",
+        "fallback_path",
+        "delayed_root_cause"
+      ],
+      "why_interesting": "Partner resolution, nested/flat JSON support, and handler fallback make this a strong cross-boundary ambiguity case.",
+      "priority": "high"
+    },
+    {
+      "id": "ciq-7eefd8d",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "commit_sha": "7eefd8d5a28fa2a8a1a09601b6c1cc8f0a7f4ce0",
+      "title": "Fix publisher lookup by Id",
+      "stack": "typescript/supabase-edge",
+      "terrain_tags": [
+        "identifier_mismatch",
+        "cross_system",
+        "false_404"
+      ],
+      "why_interesting": "Great case where the surface symptom is a not-found error but the root cause is identifier semantics across systems.",
+      "priority": "high"
+    },
+    {
+      "id": "ciq-a072b65",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "commit_sha": "a072b65321b994326d0986015a654d8cca3fe9c5",
+      "title": "Fix messaging.send: include ShowBodyInChat+Event and return raw CIQ response",
+      "stack": "typescript/supabase-edge",
+      "terrain_tags": [
+        "conflicting_telemetry",
+        "payload_shape",
+        "cross_system"
+      ],
+      "why_interesting": "Strong for payload mismatch and observability confusion because the returned response shape itself is part of the fix.",
+      "priority": "medium"
+    },
+    {
+      "id": "acp-e7eebcc",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "commit_sha": "e7eebccbb684792c4ea4ae223879c505367c0418",
+      "title": "Fix gateway 401: use correct api-keys-lookup path (hyphen not slash)",
+      "stack": "typescript/deno",
+      "terrain_tags": [
+        "cross_system",
+        "misleading_auth_error",
+        "path_composition"
+      ],
+      "why_interesting": "Looks like credential failure but is actually wrong endpoint composition at the gateway boundary.",
+      "priority": "high"
+    },
+    {
+      "id": "acp-faf5153",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "commit_sha": "faf5153c3541147d0a38aa3593fff4676c447bc2",
+      "title": "Fix duplicate /functions/v1 in registry endpoint URLs",
+      "stack": "typescript/deno",
+      "terrain_tags": [
+        "cross_system",
+        "path_composition",
+        "deceptive_surface"
+      ],
+      "why_interesting": "A good delayed-root-cause case where the visible failure can appear downstream while the bug is URL normalization.",
+      "priority": "high"
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "commit_sha": "9b20f69513e0aa457218a98b7e560cbf5260e4b8",
+      "title": "fix: approve uses ACP_BASE_URL and fails closed on ambiguous 200",
+      "stack": "typescript/node",
+      "terrain_tags": [
+        "conflicting_telemetry",
+        "ambiguous_success",
+        "fail_closed"
+      ],
+      "why_interesting": "Excellent case for deceptive success signals where a nominal 200 response still represents unsafe or indeterminate state.",
+      "priority": "high"
+    },
+    {
+      "id": "acp-2f10f7c",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "commit_sha": "2f10f7c451581829232d2643cb78a94f5a404497",
+      "title": "fix: fail-closed audit mapping + validate env",
+      "stack": "typescript/deno",
+      "terrain_tags": [
+        "conflicting_telemetry",
+        "env_validation",
+        "public_facade_mismatch"
+      ],
+      "why_interesting": "Strong for cases where public facade output can look acceptable while internal mapping or env state is actually broken.",
+      "priority": "high"
+    },
+    {
+      "id": "acp-f79bf6c",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "commit_sha": "f79bf6ca97b670a14d11efd8e5e9b67b2bc1bc8b",
+      "title": "fix: make hosted login failures return blocked result",
+      "stack": "typescript/node",
+      "terrain_tags": [
+        "misleading_success",
+        "hosted_workflow",
+        "fail_closed"
+      ],
+      "why_interesting": "Useful for deceptive workflow state: apparent progress that should really be treated as blocked.",
+      "priority": "medium"
+    }
+  ]
+}
