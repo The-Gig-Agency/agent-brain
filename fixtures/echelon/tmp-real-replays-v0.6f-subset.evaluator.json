@@ -1,0 +1,80 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6f-subset-operational",
+  "purpose": "Evaluator-only truth for the v0.6f harder-asymmetry replay pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "acp-9b20f69",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "9b20f69513e0aa457218a98b7e560cbf5260e4b8",
+      "start_ref": "39354a329306096237f90f7ee3d3cb204e07fa97",
+      "likely_fix_files": [
+        "installer/approve.ts",
+        "installer/cli-registry.ts",
+        "tests/approve.spec.ts"
+      ],
+      "expected_failure_mode": "ambiguous success response treated too optimistically in approval flow",
+      "patch_family_judgment": [
+        "fix should require an explicit success signal and fail closed on ambiguous 200 responses",
+        "fix should align approval path configuration with contract-safe interpretation"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Explore-deserving conflicting-telemetry case."
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "6adf83e8cedc729fe05bfad506ce3b4ffa0e19e9",
+      "start_ref": "d2cae0fff397c3bd2d1ca88f96802660f4021406",
+      "likely_fix_files": [
+        "supabase/functions/get-campaign-summary-report/index.ts",
+        "supabase/functions/manage/ciq-actions.ts",
+        "supabase/functions/manage/ciq-handlers.ts"
+      ],
+      "expected_failure_mode": "summary flow depended on missing context assembly and fallback handling before remote call",
+      "patch_family_judgment": [
+        "fix should repair partner or brand context assembly as well as handler fallback behavior",
+        "fix should not collapse into a single local field patch"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Weaker-signaled explore case."
+    },
+    {
+      "id": "cg-987",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "8a0614237b023f42f3dc9f7eb8f029afee545021",
+      "start_ref": "196d086bb4f0f5681120cd0512ceb45f48fc283c",
+      "likely_fix_files": [
+        "creatorsgift/orders/tasks.py"
+      ],
+      "expected_failure_mode": "refresh rollover not applied in one narrow expired-order task path",
+      "patch_family_judgment": [
+        "fix should remain localized to task ordering and conditional rollover handling",
+        "fix should not require broad propagation rewiring"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Prune-deserving noisy operational case."
+    },
+    {
+      "id": "acp-e7eebcc",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "e7eebccbb684792c4ea4ae223879c505367c0418",
+      "start_ref": "9261bc7daa9685819a5ab7f2bfa17d28a462a0a9",
+      "likely_fix_files": [
+        "gateway/auth.ts",
+        "GATEWAY-API-KEY-FIX.md"
+      ],
+      "expected_failure_mode": "gateway auth failure caused by one narrow lookup-route construction bug",
+      "patch_family_judgment": [
+        "fix should stay in the gateway auth boundary and route construction logic",
+        "fix should not broaden into credential rotation or cross-service auth redesign"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Prune-deserving misleading-auth case."
+    }
+  ]
+}

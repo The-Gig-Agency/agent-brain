@@ -1,0 +1,133 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6f-subset-operational",
+  "purpose": "Mixed real-world replay pack with symmetric shaping pressure: noisy prune cases, one weaker-signaled explore case, and less direct terrain wording in the visible layer.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "acp-9b20f69",
+      "repo": "withheld-service-e",
+      "repo_local_path": "withheld",
+      "stack": "typescript/node",
+      "title": "Approval returned 200 but still could not be trusted",
+      "symptom": "An approval request returned HTTP 200, yet the flow still could not safely be interpreted as a real approval.",
+      "visible_evidence": [
+        "Transport success and contract success are not the same thing here",
+        "The response can look healthy while still lacking the signal needed to treat the operation as approved",
+        "The safe fix depends on how the result is interpreted, not just whether a request returned"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "approval response interpreter",
+          "remote approval request builder"
+        ],
+        "repro_style": "nominal success with unsafe interpretation",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "HTTP status is 200",
+          "payload omits a strong explicit approval signal"
+        ],
+        "false_positive_fix_family": "treat any successful HTTP response as approval"
+      },
+      "success_criteria": [
+        "identify why a nominally successful response still required fail-closed handling",
+        "propose a fix family consistent with the landed contract-safe interpretation change"
+      ],
+      "notes": "Explore-deserving conflicting-telemetry case."
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "withheld-service-h",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Campaign summary report sometimes came back incomplete",
+      "symptom": "A campaign summary flow sometimes returned incomplete or empty results even though the request path itself did not fully fail.",
+      "visible_evidence": [
+        "The result depended on how campaign and partner context were assembled before the remote call",
+        "Different caller paths could reach the same summary operation with different available context",
+        "The failure did not look like a single bad field so much as a missing or misrouted setup step"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "summary endpoint entry",
+          "campaign context builder",
+          "remote summary handler"
+        ],
+        "repro_style": "incomplete summary output depending on request context",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify why summary generation depended on upstream context assembly rather than one isolated field fix",
+        "match the landed fix family across summary flow and handler fallback logic"
+      ],
+      "notes": "Weaker-signaled explore case with less explicit ambiguity shaping."
+    },
+    {
+      "id": "cg-987",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Allowance refresh logs looked normal but limits stayed stale",
+      "symptom": "A background refresh appeared to run, but the expected allowance recovery still did not happen.",
+      "visible_evidence": [
+        "Task logs suggested the refresh path executed",
+        "The symptom creates a temptation to broaden into publisher or client state tracking",
+        "The eventual fix was still localized to the refresh step rather than a broad propagation rewrite"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "expired-order refresh task"
+        ],
+        "repro_style": "background refresh looked healthy while one narrow step stayed wrong",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "scheduled task ran on time",
+          "refresh logs looked nominal"
+        ],
+        "false_positive_fix_family": "broaden into full state propagation audit"
+      },
+      "success_criteria": [
+        "find why the refresh step still failed to restore the expected allowance state",
+        "align with the landed localized task-level fix direction"
+      ],
+      "notes": "Prune-deserving noisy operational case."
+    },
+    {
+      "id": "acp-e7eebcc",
+      "repo": "withheld-service-j",
+      "repo_local_path": "withheld",
+      "stack": "typescript/deno",
+      "title": "Gateway returned 401 even though credentials looked valid",
+      "symptom": "A gateway auth flow returned 401 despite credentials that appeared valid in nearby checks.",
+      "visible_evidence": [
+        "Most auth assumptions point toward credential debugging first",
+        "Only one lookup route was consistently wrong while the rest of the auth setup looked normal",
+        "The landed fix stayed narrow even though the surface symptom looked broad"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "gateway auth lookup",
+          "gateway request path builder"
+        ],
+        "repro_style": "auth failure caused by one narrow route construction bug",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "credentials validate elsewhere",
+          "error surface presents as 401 auth failure"
+        ],
+        "false_positive_fix_family": "broaden into credential or secret-rotation debugging"
+      },
+      "success_criteria": [
+        "identify the narrow gateway lookup-path bug behind the auth failure surface",
+        "match the landed fix family in the auth boundary"
+      ],
+      "notes": "Prune-deserving misleading-auth case."
+    }
+  ]
+}

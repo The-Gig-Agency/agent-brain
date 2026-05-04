@@ -1,0 +1,262 @@
+{
+  "dataset_name": "debugging-real-replays-v0.7",
+  "purpose": "Operational realism replay pack for underdetermined, multi-causal, environment-shift, and containment-oriented incidents.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "ciq-bf61b23",
+      "repo": "withheld-service-d",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Reconciliation looked fixed until the follow-up check drifted again",
+      "symptom": "A reconcile flow reported progress after an automatic repair step, but a later verification pass still showed state drift.",
+      "visible_evidence": [
+        "The same workflow both mutates data and verifies it again later",
+        "An early success signal is available before the final settled state is known",
+        "The wrong move is to treat first-pass progress as full convergence"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "reconciliation repair loop",
+          "follow-up verification fetch"
+        ],
+        "repro_style": "workflow repair followed by later verification under noisy state",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "treat first apparent repair as final success"
+      },
+      "success_criteria": [
+        "identify why early progress did not guarantee the settled final state",
+        "propose a fix family consistent with the landed repair plus later verification changes"
+      ],
+      "notes": "Explore-deserving degraded-evidence case with delayed settling."
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "withheld-service-e",
+      "repo_local_path": "withheld",
+      "stack": "typescript/node",
+      "title": "Approval returned 200 but still could not be trusted",
+      "symptom": "An approval request returned HTTP 200, yet the flow still could not safely be interpreted as a real approval.",
+      "visible_evidence": [
+        "Transport success and contract success are not the same thing here",
+        "The response can look healthy while still lacking the signal needed to treat the operation as approved",
+        "The safe fix depends on how the result is interpreted, not just whether a request returned"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "approval response interpreter",
+          "remote approval request builder"
+        ],
+        "repro_style": "nominal success with unsafe interpretation",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "HTTP status is 200",
+          "payload omits a strong explicit approval signal"
+        ],
+        "false_positive_fix_family": "treat any successful HTTP response as approval"
+      },
+      "success_criteria": [
+        "identify why a nominally successful response still required fail-closed handling",
+        "propose a fix family consistent with the landed contract-safe interpretation change"
+      ],
+      "notes": "Explore-deserving conflicting-telemetry case with fail-closed pressure."
+    },
+    {
+      "id": "cg-1036",
+      "repo": "withheld-service-f",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Allowance rollover looked fine until later refresh activity",
+      "symptom": "Rollover behavior seemed fine in the immediate flow, but later refresh and publisher activity left allowances wrong again.",
+      "visible_evidence": [
+        "The visible break happens after later state movement, not only at the first allowance calculation",
+        "More than one surface participates in carrying the state forward",
+        "A local arithmetic fix would be plausible but incomplete"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "refresh task",
+          "rollover helper",
+          "publisher update flow"
+        ],
+        "repro_style": "later state drift after refresh and downstream updates",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "patch only the immediate rollover math"
+      },
+      "success_criteria": [
+        "identify why later state changes re-broke the rollover behavior",
+        "propose a fix family consistent with the landed multi-surface patch"
+      ],
+      "notes": "Explore-deserving stale-state case."
+    },
+    {
+      "id": "ciq-6adf83e",
+      "repo": "withheld-service-h",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Campaign summary report sometimes came back incomplete",
+      "symptom": "A campaign summary flow sometimes returned incomplete or empty results even though the request path itself did not fully fail.",
+      "visible_evidence": [
+        "The result depended on how campaign and partner context were assembled before the remote call",
+        "Different caller paths could reach the same summary operation with different available context",
+        "The failure did not look like a single bad field so much as a missing or misrouted setup step"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "summary endpoint entry",
+          "campaign context builder",
+          "remote summary handler"
+        ],
+        "repro_style": "incomplete summary output depending on request context",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify why summary generation depended on upstream context assembly rather than one isolated field fix",
+        "match the landed fix family across summary flow and handler fallback logic"
+      ],
+      "notes": "Weaker-signaled explore case with context assembly uncertainty."
+    },
+    {
+      "id": "cg-987",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Allowance refresh logs looked normal but limits stayed stale",
+      "symptom": "A background refresh appeared to run, but the expected allowance recovery still did not happen.",
+      "visible_evidence": [
+        "Task logs suggested the refresh path executed",
+        "The symptom creates a temptation to broaden into publisher or client state tracking",
+        "The eventual fix was still localized to the refresh step rather than a broad propagation rewrite"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "expired-order refresh task"
+        ],
+        "repro_style": "background refresh looked healthy while one narrow step stayed wrong",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "scheduled task ran on time",
+          "refresh logs looked nominal"
+        ],
+        "false_positive_fix_family": "broaden into full state propagation audit"
+      },
+      "success_criteria": [
+        "find why the refresh step still failed to restore the expected allowance state",
+        "align with the landed localized task-level fix direction"
+      ],
+      "notes": "Prune-deserving noisy operational case that should stay localized."
+    },
+    {
+      "id": "cg-1013",
+      "repo": "withheld-service-i",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Refresh sometimes reset publisher state without a safe containment path",
+      "symptom": "A refresh path sometimes reset publisher-related state, and the safer outcome was to contain the drift before chasing a global rewrite.",
+      "visible_evidence": [
+        "The visible break feels like a stale-state problem at first glance",
+        "It only reproduces when refresh behavior touches one publisher update path",
+        "A broad cross-system search is tempting, but the landed fix stayed compact",
+        "A safe containment move would be better than claiming the underlying state is fully understood"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "publisher refresh helper",
+          "publisher update call site"
+        ],
+        "repro_style": "state reset during refresh on one compact publisher path with containment pressure",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "manual publisher edits looked stable before refresh",
+          "refresh symptom appears after a seemingly unrelated update call"
+        ],
+        "false_positive_fix_family": "search across all refresh sequencing surfaces"
+      },
+      "success_criteria": [
+        "identify the narrow publisher update condition that allowed refresh to reset state",
+        "match the landed compact publisher-surface fix family"
+      ],
+      "notes": "Prune-deserving noisy single-surface case with a containment-oriented outcome."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "withheld-service-b",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Report counts were wrong even though upstream data existed",
+      "symptom": "A handler returned wrong counts and collections even though upstream responses were not empty.",
+      "visible_evidence": [
+        "The request completed and returned data, but local output fields still came back wrong",
+        "This can look like a broader upstream inconsistency because the raw response is not blank",
+        "The landed fix still stayed in the local response handling layer"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "response handling layer"
+        ],
+        "repro_style": "returned data present but local output fields still wrong",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "upstream response included records",
+          "transport and auth surfaces looked healthy"
+        ],
+        "false_positive_fix_family": "broaden into upstream service instability"
+      },
+      "success_criteria": [
+        "identify the local response-handling mismatch that produced wrong counts and collections",
+        "match the landed handler-layer fix direction"
+      ],
+      "notes": "Prune-deserving mapping case with distracting noise."
+    },
+    {
+      "id": "acp-e7eebcc",
+      "repo": "withheld-service-j",
+      "repo_local_path": "withheld",
+      "stack": "typescript/deno",
+      "title": "Gateway returned 401 even though credentials looked valid",
+      "symptom": "A gateway auth flow returned 401 despite credentials that appeared valid in nearby checks.",
+      "visible_evidence": [
+        "Most auth assumptions point toward credential debugging first",
+        "Only one lookup route was consistently wrong while the rest of the auth setup looked normal",
+        "The landed fix stayed narrow even though the surface symptom looked broad"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "gateway auth lookup",
+          "gateway request path builder"
+        ],
+        "repro_style": "auth failure caused by one narrow route construction bug",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "credentials validate elsewhere",
+          "error surface presents as 401 auth failure"
+        ],
+        "false_positive_fix_family": "broaden into credential or secret-rotation debugging"
+      },
+      "success_criteria": [
+        "identify the narrow gateway lookup-path bug behind the auth failure surface",
+        "match the landed fix family in the auth boundary"
+      ],
+      "notes": "Prune-deserving misleading-auth case."
+    }
+  ]
+}
