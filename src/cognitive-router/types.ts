@@ -253,6 +253,7 @@ export type BaselinePolicyId =
   | "always_prune"
   | "always_compound"
   | "fixed_heuristic"
+  | "score_threshold"
   | "routed_policy";
 
 export type DebuggingSuiteReport = {

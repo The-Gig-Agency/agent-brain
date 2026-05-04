@@ -35,6 +35,13 @@ function chooseFixAction(state: RuntimeStateView, family?: DebugFamily): Visible
   return candidates.sort((left, right) => left.cost - right.cost)[0] ?? null;
 }
 
+function chooseAlternativeInspectAction(state: RuntimeStateView, excludedFamily: DebugFamily): VisibleDebugAction | null {
+  const candidates = state.availableActions.filter(
+    (action) => action.kind === "inspect" && action.family !== excludedFamily && isUntried(action, state),
+  );
+  return candidates.sort((left, right) => left.cost - right.cost)[0] ?? null;
+}
+
 function chooseLeastFailedFamily(state: RuntimeStateView): DebugFamily | null {
   const inspectFamilies = state.availableActions
     .filter((action) => action.kind === "inspect")
@@ -68,6 +75,38 @@ export function chooseBaselineAction(policyId: Exclude<BaselinePolicyId, "routed
   if (policyId === "always_compound") {
     const family = state.inferredFamily ?? chooseLeastFailedFamily(state);
     return chooseFixAction(state, family ?? undefined) ?? chooseInspectAction(state, family ?? undefined);
+  }
+
+  if (policyId === "score_threshold") {
+    const logInspect = firstMatching(
+      state.availableActions,
+      (action) => action.kind === "inspect" && action.id === "inspect:logs" && isUntried(action, state),
+    );
+    if (logInspect) {
+      return logInspect;
+    }
+
+    if (state.strongSignal && state.inferredFamily) {
+      return chooseFixAction(state, state.inferredFamily);
+    }
+
+    if (state.inferredFamily) {
+      const targetedInspect = chooseInspectAction(state, state.inferredFamily);
+      if (targetedInspect) {
+        return targetedInspect;
+      }
+
+      const alternativeInspect = chooseAlternativeInspectAction(state, state.inferredFamily);
+      if (alternativeInspect) {
+        return alternativeInspect;
+      }
+    }
+
+    return (
+      chooseInspectAction(state, chooseLeastFailedFamily(state) ?? undefined) ??
+      chooseInspectAction(state) ??
+      chooseFixAction(state, state.inferredFamily ?? chooseLeastFailedFamily(state) ?? undefined)
+    );
   }
 
   const logInspect = firstMatching(

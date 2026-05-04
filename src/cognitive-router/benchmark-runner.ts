@@ -6,8 +6,10 @@ import {
   DEBUGGING_CORE_V01_CASES,
   DEBUGGING_CORE_V02_CASES,
   DEBUGGING_CORE_V03_REVERSAL_CASES,
+  DEBUGGING_CORE_V04_TRAP_CASES,
   DEBUGGING_V1_CASES,
   DEBUGGING_V1_HOLDOUT_CASES,
+  generateDebuggingV04HoldoutCases,
 } from "./debugging-world.js";
 import { runDebugCase } from "./router-runner.js";
 import {
@@ -31,7 +33,10 @@ const BASELINES: Exclude<BaselinePolicyId, "routed_policy">[] = [
   "always_prune",
   "always_compound",
   "fixed_heuristic",
+  "score_threshold",
 ];
+
+const V04_HOLDOUT_CASES = generateDebuggingV04HoldoutCases();
 
 function average(values: number[]): number {
   if (values.length === 0) {
@@ -155,6 +160,22 @@ export function runDebuggingCoreV03Suite(): AdversarialSuiteReport {
   };
 }
 
+export function runDebuggingCoreV04Suite(): AdversarialSuiteReport {
+  const tests = [
+    runExpandedPermutationTest(),
+    runAntiBroadeningTrapTest(),
+    runStrongerBaselineChallengeTest(),
+    runGeneratedHiddenHoldoutTest(),
+  ];
+
+  return {
+    suite_id: "debugging-core-v0.4",
+    generated_at: new Date().toISOString(),
+    overall_pass: tests.every((test) => test.pass),
+    tests,
+  };
+}
+
 function runFocusedCoreSuite(suiteId: string, cases: DebugEvalCase[]): DebuggingCoreV01Report {
   const routedRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
   const comparedBaselines: Exclude<BaselinePolicyId, "routed_policy">[] = [
@@ -205,6 +226,7 @@ function runFocusedCoreSuite(suiteId: string, cases: DebugEvalCase[]): Debugging
       always_prune: [],
       always_compound: baselineRuns.always_compound,
       fixed_heuristic: baselineRuns.fixed_heuristic,
+      score_threshold: [],
     }).filter((entry) => ["routed_policy", "naive_retry", "always_compound", "fixed_heuristic"].includes(entry.policy_id)),
     cases: cases.map((debugCase, index) => {
       const routed = routedRuns[index];
@@ -269,6 +291,41 @@ function runLabelPermutationTest() {
     notes: [
       "This test shuffles family identities and action ordering to check for surface-pattern leakage.",
       "It fails if the routed win disappears after permutation.",
+    ],
+  };
+}
+
+function runExpandedPermutationTest() {
+  const baseCases = [...DEBUGGING_CORE_V02_CASES, ...DEBUGGING_CORE_V03_REVERSAL_CASES];
+  const offsets = [1, 2];
+  const results = offsets.map((offset) => {
+    const permutedCases = baseCases.map((debugCase) => createPermutedCase(debugCase, offset));
+    const report = runFocusedCoreSuite(`debugging-core-v0.4-permuted-${offset}`, permutedCases);
+    return {
+      offset,
+      report,
+    };
+  });
+
+  const pass = results.every(
+    ({ report }) =>
+      report.go_no_go &&
+      report.summary.routed_success_rate >= report.summary.fixed_heuristic_success_rate,
+  );
+
+  return {
+    test_id: "expanded-permutation-invariance",
+    title: "Expanded permutation invariance",
+    pass,
+    summary: {
+      offset_1_go_no_go: results[0]?.report.go_no_go ?? false,
+      offset_2_go_no_go: results[1]?.report.go_no_go ?? false,
+      offset_1_routed_success: results[0]?.report.summary.routed_success_rate ?? null,
+      offset_2_routed_success: results[1]?.report.summary.routed_success_rate ?? null,
+    },
+    notes: [
+      "This extends the permutation check across more than one remapping offset.",
+      "It fails if routed policy stops beating fixed_heuristic after simple renaming and reorderings.",
     ],
   };
 }
@@ -372,6 +429,128 @@ function runMisleadingEvidenceReversalTest() {
       (comparison) =>
         `${comparison.case_id}: routed failed fixes before reversal=${comparison.routedFailedFixes}, fixed=${comparison.fixedFailedFixes}`,
     ),
+  };
+}
+
+function runAntiBroadeningTrapTest() {
+  const routedRuns = DEBUGGING_CORE_V04_TRAP_CASES.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const fixedRuns = DEBUGGING_CORE_V04_TRAP_CASES.map((debugCase) => runDebugCase(debugCase, "fixed_heuristic"));
+  const strongerRuns = DEBUGGING_CORE_V04_TRAP_CASES.map((debugCase) => runDebugCase(debugCase, "score_threshold"));
+
+  const routedSuccess = successRate(routedRuns);
+  const fixedSuccess = successRate(fixedRuns);
+  const strongerSuccess = successRate(strongerRuns);
+  const routedCost = average(routedRuns.map((result) => result.total_cost));
+  const fixedCost = average(fixedRuns.map((result) => result.total_cost));
+  const strongerCost = average(strongerRuns.map((result) => result.total_cost));
+  const routedTransitions = average(routedRuns.map((result) => result.transition_count));
+
+  const pass =
+    routedSuccess >= fixedSuccess &&
+    routedSuccess >= strongerSuccess &&
+    routedCost <= fixedCost + 1 &&
+    routedCost <= strongerCost + 1;
+
+  return {
+    test_id: "anti-broadening-traps",
+    title: "Do not lose when simple narrowing is the right move",
+    pass,
+    summary: {
+      case_count: DEBUGGING_CORE_V04_TRAP_CASES.length,
+      routed_success_rate: Number(routedSuccess.toFixed(3)),
+      fixed_success_rate: Number(fixedSuccess.toFixed(3)),
+      stronger_success_rate: Number(strongerSuccess.toFixed(3)),
+      routed_average_cost: Number(routedCost.toFixed(3)),
+      fixed_average_cost: Number(fixedCost.toFixed(3)),
+      stronger_average_cost: Number(strongerCost.toFixed(3)),
+      routed_average_transition_count: Number(routedTransitions.toFixed(3)),
+    },
+    notes: [
+      "These cases are designed so that simple pruning should be enough.",
+      "It fails if routed policy needs adaptive drama where restraint should win.",
+    ],
+  };
+}
+
+function runStrongerBaselineChallengeTest() {
+  const challengeCases = [
+    ...DEBUGGING_CORE_V02_CASES,
+    ...DEBUGGING_CORE_V03_REVERSAL_CASES,
+    ...DEBUGGING_CORE_V04_TRAP_CASES,
+  ];
+
+  const routedRuns = challengeCases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const strongerRuns = challengeCases.map((debugCase) => runDebugCase(debugCase, "score_threshold"));
+
+  const routedScore = policyScore(routedRuns);
+  const strongerScore = policyScore(strongerRuns);
+  const routedSuccess = successRate(routedRuns);
+  const strongerSuccess = successRate(strongerRuns);
+  const routedFailures = average(routedRuns.map((result) => result.repeated_failed_paths));
+  const strongerFailures = average(strongerRuns.map((result) => result.repeated_failed_paths));
+
+  const pass =
+    routedScore > strongerScore &&
+    routedSuccess >= strongerSuccess &&
+    routedFailures <= strongerFailures;
+
+  return {
+    test_id: "stronger-baseline-challenge",
+    title: "Beat one stronger non-trivial baseline",
+    pass,
+    summary: {
+      case_count: challengeCases.length,
+      routed_score: Number(routedScore.toFixed(3)),
+      stronger_score: Number(strongerScore.toFixed(3)),
+      routed_success_rate: Number(routedSuccess.toFixed(3)),
+      stronger_success_rate: Number(strongerSuccess.toFixed(3)),
+      routed_average_failed_paths: Number(routedFailures.toFixed(3)),
+      stronger_average_failed_paths: Number(strongerFailures.toFixed(3)),
+    },
+    notes: [
+      "The stronger baseline requires stronger evidence before fixing but does not use routed transitions.",
+      "It fails if routed policy only beats weaker baselines.",
+    ],
+  };
+}
+
+function runGeneratedHiddenHoldoutTest() {
+  const routedRuns = V04_HOLDOUT_CASES.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  const fixedRuns = V04_HOLDOUT_CASES.map((debugCase) => runDebugCase(debugCase, "fixed_heuristic"));
+  const strongerRuns = V04_HOLDOUT_CASES.map((debugCase) => runDebugCase(debugCase, "score_threshold"));
+
+  const routedScore = policyScore(routedRuns);
+  const strongerScore = policyScore(strongerRuns);
+  const routedSuccess = successRate(routedRuns);
+  const fixedSuccess = successRate(fixedRuns);
+  const strongerSuccess = successRate(strongerRuns);
+  const routedDeadEnd = average(routedRuns.map((result) => result.dead_end_persistence));
+  const strongerDeadEnd = average(strongerRuns.map((result) => result.dead_end_persistence));
+
+  const pass =
+    routedScore > strongerScore &&
+    routedSuccess >= fixedSuccess &&
+    routedSuccess >= strongerSuccess &&
+    routedDeadEnd <= strongerDeadEnd;
+
+  return {
+    test_id: "generated-hidden-holdout",
+    title: "Generated hidden holdout resilience",
+    pass,
+    summary: {
+      case_count: V04_HOLDOUT_CASES.length,
+      routed_score: Number(routedScore.toFixed(3)),
+      stronger_score: Number(strongerScore.toFixed(3)),
+      routed_success_rate: Number(routedSuccess.toFixed(3)),
+      fixed_success_rate: Number(fixedSuccess.toFixed(3)),
+      stronger_success_rate: Number(strongerSuccess.toFixed(3)),
+      routed_average_dead_end_persistence: Number(routedDeadEnd.toFixed(3)),
+      stronger_average_dead_end_persistence: Number(strongerDeadEnd.toFixed(3)),
+    },
+    notes: [
+      "These holdout cases are generated from unseen seeds rather than copied from the development set.",
+      "It fails if routed advantage collapses outside the hand-authored cases.",
+    ],
   };
 }
 

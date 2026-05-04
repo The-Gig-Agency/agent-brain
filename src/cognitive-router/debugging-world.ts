@@ -24,6 +24,28 @@ type CaseSpec = {
   familyOrder?: DebugFamily[];
 };
 
+const DEBUG_FAMILY_POOL: DebugFamily[] = [
+  "dependency",
+  "version",
+  "test_flake",
+  "regression",
+  "env",
+  "secret_scope",
+  "cache",
+  "logic",
+  "validation",
+  "downstream_api",
+  "race",
+  "stale_state",
+  "retry_policy",
+  "outage",
+  "schema",
+  "serialization",
+  "permission",
+  "artifact",
+  "observability",
+];
+
 function familyLabel(family: DebugFamily): string {
   return family.replaceAll("_", " ");
 }
@@ -191,6 +213,21 @@ const debuggingTerrain = (
   environment_stability: "stable",
   time_horizon: "iterative",
   mode_pressure: modePressure,
+});
+
+const antiBroadeningTerrain = (): TerrainProfile => ({
+  feedback_latency: "fast",
+  reversibility: "high",
+  uncertainty: "low",
+  branching_factor: "medium",
+  adversariality: "none",
+  ruggedness: "low",
+  local_minima_risk: "low",
+  information_cost: "high",
+  coordination_load: "low",
+  environment_stability: "stable",
+  time_horizon: "one_shot",
+  mode_pressure: "prune",
 });
 
 export const DEBUGGING_V1_CASES: DebugEvalCase[] = [
@@ -395,6 +432,89 @@ export const DEBUGGING_CORE_V03_REVERSAL_CASES: DebugEvalCase[] = [
   }),
 ];
 
+export const DEBUGGING_CORE_V04_TRAP_CASES: DebugEvalCase[] = [
+  createCase({
+    caseId: "debug-core-v04-trap-01",
+    title: "Direct version clue should not trigger broad exploration",
+    prompt: "A deployment break shows a clear version-like signature and the budget is tight enough that broad exploration is wasteful.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 6,
+    terrain: antiBroadeningTerrain(),
+    logSignalFamily: "version",
+    logSignalStrength: 2,
+    successSignalThreshold: 2,
+  }),
+  createCase({
+    caseId: "debug-core-v04-trap-02",
+    title: "Direct permission clue rewards simple narrowing",
+    prompt: "A prod-only failure emits a strong permission-shaped clue. The search space is small and over-broadening should be punished.",
+    rootCause: "permission",
+    distractors: ["env", "artifact"],
+    budget: 6,
+    terrain: antiBroadeningTerrain(),
+    logSignalFamily: "permission",
+    logSignalStrength: 2,
+    successSignalThreshold: 2,
+  }),
+  createCase({
+    caseId: "debug-core-v04-trap-03",
+    title: "Cache clue is strong enough that drama should lose",
+    prompt: "The first signal is already strong enough to justify a narrow cache path, so extra exploration should only burn budget.",
+    rootCause: "cache",
+    distractors: ["logic", "stale_state"],
+    budget: 6,
+    terrain: antiBroadeningTerrain(),
+    logSignalFamily: "cache",
+    logSignalStrength: 2,
+    successSignalThreshold: 2,
+  }),
+];
+
+function chooseDistinctFamily(startIndex: number, blocked: Set<DebugFamily>) {
+  for (let offset = 0; offset < DEBUG_FAMILY_POOL.length; offset += 1) {
+    const family = DEBUG_FAMILY_POOL[(startIndex + offset) % DEBUG_FAMILY_POOL.length];
+    if (family && !blocked.has(family)) {
+      return family;
+    }
+  }
+
+  throw new Error("Unable to choose a distinct debug family.");
+}
+
+function createGeneratedHoldoutCase(seed: number): DebugEvalCase {
+  const rootCause = chooseDistinctFamily(seed * 3, new Set());
+  const distractorA = chooseDistinctFamily(seed * 5 + 2, new Set([rootCause]));
+  const distractorB = chooseDistinctFamily(seed * 7 + 4, new Set([rootCause, distractorA]));
+  const reversalPattern = seed % 2 === 0;
+
+  const baseSpec: CaseSpec = {
+    caseId: `debug-core-v04-holdout-${String(seed + 1).padStart(2, "0")}`,
+    title: reversalPattern
+      ? `Generated holdout reversal for ${familyLabel(rootCause)}`
+      : `Generated holdout prune trap for ${familyLabel(rootCause)}`,
+    prompt: reversalPattern
+      ? `Early clues first reinforce ${familyLabel(distractorA)} before a later signal reveals a ${familyLabel(rootCause)} issue.`
+      : `The initial signal already points strongly at ${familyLabel(rootCause)}, so extra broadening should waste a tight budget.`,
+    rootCause,
+    distractors: [distractorA, distractorB],
+    budget: reversalPattern ? 8 : 6,
+    terrain: reversalPattern ? debuggingTerrain("explore", "high", "high") : antiBroadeningTerrain(),
+    stratum: "holdout",
+    logSignalFamily: reversalPattern ? distractorA : rootCause,
+    logSignalStrength: reversalPattern ? 1 : 2,
+    successSignalThreshold: reversalPattern ? 3 : 2,
+    ...(reversalPattern ? { familyOrder: [distractorA, distractorB, rootCause] as DebugFamily[] } : {}),
+    ...(reversalPattern ? { falsePositiveInspectFamilies: [distractorA] } : {}),
+  };
+
+  return createCase(baseSpec);
+}
+
+export function generateDebuggingV04HoldoutCases(count = 8): DebugEvalCase[] {
+  return Array.from({ length: count }, (_, index) => createGeneratedHoldoutCase(index + 11));
+}
+
 function remapActionId(actionId: string, familyMap: Map<DebugFamily, DebugFamily>): string {
   if (actionId === "inspect:logs") {
     return actionId;
@@ -417,7 +537,7 @@ function remapText(text: string, familyMap: Map<DebugFamily, DebugFamily>): stri
   return nextText;
 }
 
-export function createPermutedCase(debugCase: DebugEvalCase): DebugEvalCase {
+export function createPermutedCase(debugCase: DebugEvalCase, offset = 1): DebugEvalCase {
   const families = Array.from(
     new Set(
       debugCase.input_context.available_actions
@@ -425,7 +545,11 @@ export function createPermutedCase(debugCase: DebugEvalCase): DebugEvalCase {
         .map((action) => action.family),
     ),
   );
-  const rotated = families.length > 1 ? [...families.slice(1), families[0] ?? families[0]] : families;
+  const normalizedOffset = families.length === 0 ? 0 : offset % families.length;
+  const rotated =
+    families.length > 1
+      ? [...families.slice(normalizedOffset), ...families.slice(0, normalizedOffset)]
+      : families;
   const familyMap = new Map<DebugFamily, DebugFamily>();
 
   families.forEach((family, index) => {
@@ -464,12 +588,12 @@ export function createPermutedCase(debugCase: DebugEvalCase): DebugEvalCase {
 
   return {
     ...debugCase,
-    case_id: `${debugCase.case_id}:permuted`,
-    title: `${debugCase.title} (Permuted)`,
+    case_id: `${debugCase.case_id}:permuted:${normalizedOffset}`,
+    title: `${debugCase.title} (Permuted ${normalizedOffset})`,
     input_context: {
       ...debugCase.input_context,
-      case_id: `${debugCase.input_context.case_id}:permuted`,
-      title: `${debugCase.input_context.title} (Permuted)`,
+      case_id: `${debugCase.input_context.case_id}:permuted:${normalizedOffset}`,
+      title: `${debugCase.input_context.title} (Permuted ${normalizedOffset})`,
       available_actions: remappedActions,
     },
     hidden_truth: {

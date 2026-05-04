@@ -2,6 +2,7 @@ import {
   runDebuggingCoreV01Suite,
   runDebuggingCoreV02Suite,
   runDebuggingCoreV03Suite,
+  runDebuggingCoreV04Suite,
   runDebuggingHoldoutSuite,
   runDebuggingV1Suite,
   writeSuiteReport,
@@ -26,12 +27,14 @@ const holdoutReport = runDebuggingHoldoutSuite();
 const coreV01Report = runDebuggingCoreV01Suite();
 const coreV02Report = runDebuggingCoreV02Suite();
 const coreV03Report = runDebuggingCoreV03Suite();
+const coreV04Report = runDebuggingCoreV04Suite();
 
 const trainPath = writeSuiteReport(trainReport, "reports/debugging-v1");
 const holdoutPath = writeSuiteReport(holdoutReport, "reports/debugging-v1");
 const corePath = writeSuiteReport(coreV01Report, "reports/debugging-v0.1");
 const coreV02Path = writeSuiteReport(coreV02Report, "reports/debugging-v0.2");
 const coreV03Path = writeSuiteReport(coreV03Report, "reports/debugging-v0.3");
+const coreV04Path = writeSuiteReport(coreV04Report, "reports/debugging-v0.4");
 
 printReport("Debugging V1", trainReport);
 printReport("Debugging V1 Holdout", holdoutReport);
@@ -72,5 +75,16 @@ console.log(
     2,
   ),
 );
+console.log(`\n=== Debugging Core v0.4 ===`);
+console.log(
+  JSON.stringify(
+    {
+      overall_pass: coreV04Report.overall_pass,
+      tests: coreV04Report.tests,
+    },
+    null,
+    2,
+  ),
+);
 
-console.log(`\nWrote reports:\n- ${trainPath}\n- ${holdoutPath}\n- ${corePath}\n- ${coreV02Path}\n- ${coreV03Path}`);
+console.log(`\nWrote reports:\n- ${trainPath}\n- ${holdoutPath}\n- ${corePath}\n- ${coreV02Path}\n- ${coreV03Path}\n- ${coreV04Path}`);

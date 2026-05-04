@@ -17,6 +17,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - `src/cognitive-router/`: starter TypeScript types, scoring logic, and benchmark cases
 - `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
 - `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
+- `project-brain/echelon/v0.4-plan.md`: the current hardening plan for stronger baselines and holdout tests
 
 ## Purpose
 
@@ -59,6 +60,7 @@ This is intentionally small and deterministic:
 - a simple benchmark evaluator for exact and acceptable-match scoring
 - a debugging-first synthetic eval engine with executable baselines
 - an adversarial `v0.3` suite for permutation, transition-ablation, and misleading-evidence tests
+- a `v0.4` hardening pass with anti-broadening traps, one stronger baseline, and generated holdout cases
 
 ## Commands
 
