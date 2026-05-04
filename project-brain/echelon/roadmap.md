@@ -6,6 +6,8 @@
 - MVP runtime: debugging-first local CLI and benchmark engine
 - Adaptive routing loop: failed-path memory, transition triggers, drift detection
 - First proof report: routed policy vs simple baselines on debugging-v1
+- v0.3 adversarial pass: permutation, transition ablation, and misleading-evidence reversal
+- v0.4 hardening pass: anti-broadening traps, one stronger baseline, and generated hidden holdout
 
 ## Dependencies
 
@@ -21,3 +23,5 @@
 - synthetic worlds may be too easy or too artificial
 - label-match progress may outpace real outcome gains
 - framework drift may outrun benchmark discipline
+- routed policy may only win on worlds that reward broadening or transition-heavy behavior
+- stronger baselines may erase the current focused advantage
