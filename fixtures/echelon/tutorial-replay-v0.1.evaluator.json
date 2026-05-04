@@ -1,0 +1,44 @@
+{
+  "dataset_name": "echelon-tutorial-replays-v0.1",
+  "purpose": "Evaluator-only truth for OSS tutorial replay pack (synthetic).",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "tut-ambiguous-1",
+      "repo": "example/oss-tutorial-service",
+      "repo_local_path": "/tmp/oss-tutorial-service",
+      "pr_number": 1,
+      "pr_url": "https://example.invalid/oss-tutorial-service/pull/1",
+      "merge_commit_sha": "0000000000000000000000000000000000000001",
+      "start_ref": "0000000000000000000000000000000000000000",
+      "merged_at": "2026-01-01T00:00:00Z",
+      "likely_fix_files": ["src/api.py", "src/models.py", "src/tasks.py"],
+      "expected_failure_mode": "ambiguous success / delayed decisive signal",
+      "patch_family_judgment": [
+        "fix should reconcile cached summaries with raw event totals",
+        "fix should avoid declaring victory on green tests alone"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Synthetic tutorial evaluator row; regime pinned for harness smoke tests."
+    },
+    {
+      "id": "tut-narrow-1",
+      "repo": "example/oss-tutorial-service",
+      "repo_local_path": "/tmp/oss-tutorial-service",
+      "pr_number": 2,
+      "pr_url": "https://example.invalid/oss-tutorial-service/pull/2",
+      "merge_commit_sha": "0000000000000000000000000000000000000002",
+      "start_ref": "0000000000000000000000000000000000000000",
+      "merged_at": "2026-01-02T00:00:00Z",
+      "likely_fix_files": ["src/config_helper.py"],
+      "expected_failure_mode": "attribute error / narrow fix",
+      "patch_family_judgment": [
+        "fix should guard optional nested config access",
+        "fix should remain localized to helper boundary"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "hidden_failure_kind": "logic_bug",
+      "notes": "Synthetic tutorial evaluator row; narrow prune surface."
+    }
+  ]
+}

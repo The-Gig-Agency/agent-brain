@@ -1,6 +1,8 @@
 import { scoreTerrain } from "./scoring.js";
 import { loadReplayEvaluatorDataset, loadReplayVisibleDataset } from "./replay-dataset.js";
 import type {
+  DebuggingFailureKind,
+  ReplayBaselineVersus,
   ReplayCaseReport,
   ReplayDatasetReport,
   ReplayEvaluatorCase,
@@ -203,6 +205,67 @@ function scoreThresholdRegime(visibleCase: ReplayVisibleCase): SearchRegime {
   return visibleCase.starting_context.entry_points.length >= 4 ? "explore" : "prune";
 }
 
+function inferFailureKindFromEvaluator(evaluatorCase: ReplayEvaluatorCase): DebuggingFailureKind {
+  const mode = evaluatorCase.expected_failure_mode.toLowerCase();
+  if (mode.includes("timeout") || mode.includes("timed out")) {
+    return "timeout";
+  }
+  if (mode.includes("flake") || mode.includes("flaky")) {
+    return "flake";
+  }
+  if (mode.includes("schema") || mode.includes("migration")) {
+    return "schema_bug";
+  }
+  if (mode.includes("auth") || mode.includes("credential") || mode.includes("login")) {
+    return "auth_boundary";
+  }
+  if (mode.includes("data") || mode.includes("propagation") || mode.includes("limit")) {
+    return "data_issue";
+  }
+  if (mode.includes("routing") || mode.includes("route")) {
+    return "routing_bug";
+  }
+  if (mode.includes("integration") || mode.includes("api") || mode.includes("downstream")) {
+    return "integration";
+  }
+  if (mode.includes("logic") || mode.includes("attribute") || mode.includes("bug")) {
+    return "logic_bug";
+  }
+  return "unknown";
+}
+
+function versusBaseline(
+  routedMatches: boolean,
+  baselineMatches: boolean,
+  routedBeatsBaseline: boolean,
+): ReplayBaselineVersus {
+  if (routedBeatsBaseline) {
+    return "better";
+  }
+  if (!routedMatches && baselineMatches) {
+    return "worse";
+  }
+  return "tie";
+}
+
+function collectAmbiguityFlags(visibleCase: ReplayVisibleCase): string[] {
+  const flags: string[] = [];
+  const aug = visibleCase.replay_augmentation;
+  if (aug?.conflicting_evidence) {
+    flags.push("conflicting_evidence");
+  }
+  if (aug?.delayed_decisive_signal) {
+    flags.push("delayed_decisive_signal");
+  }
+  if ((aug?.misleading_telemetry?.length ?? 0) > 0) {
+    flags.push("misleading_telemetry");
+  }
+  if (visibleCase.visible_evidence.join(" ").toLowerCase().includes("unknown")) {
+    flags.push("partial_visible_context");
+  }
+  return flags;
+}
+
 function recommendedFocusPaths(visibleCase: ReplayVisibleCase, regime: SearchRegime): string[] {
   const paths = visibleCase.starting_context.entry_points;
   if (regime === "explore") {
@@ -226,8 +289,18 @@ export function buildReplayCaseReport(
   const fixedRegime = fixedHeuristicRegime(visibleCase);
   const thresholdRegime = scoreThresholdRegime(visibleCase);
   const hidden = hiddenExpectedRegime(evaluatorCase);
+  const routedMatches = routed.primary_regime === hidden.regime;
+  const fixedMatches = fixedRegime === hidden.regime;
+  const thresholdMatches = thresholdRegime === hidden.regime;
+  const routedBeatsFixed =
+    Number(routed.primary_regime === hidden.regime) > Number(fixedRegime === hidden.regime);
+  const routedTiesOrBeatsThreshold =
+    Number(routed.primary_regime === hidden.regime) >= Number(thresholdRegime === hidden.regime);
 
-  return {
+  const failureKind =
+    visibleCase.failure_kind ?? evaluatorCase.hidden_failure_kind ?? inferFailureKindFromEvaluator(evaluatorCase);
+
+  const baseReport: ReplayCaseReport = {
     case_id: visibleCase.id,
     repo: visibleCase.repo,
     title: visibleCase.title,
@@ -239,23 +312,44 @@ export function buildReplayCaseReport(
     hidden_patch_breadth: hidden.patchBreadth,
     recommended_focus_paths: recommendedFocusPaths(visibleCase, routed.primary_regime),
     hidden_likely_fix_files: evaluatorCase.likely_fix_files,
-    routed_matches_hidden_regime: routed.primary_regime === hidden.regime,
-    routed_beats_fixed_heuristic:
-      Number(routed.primary_regime === hidden.regime) > Number(fixedRegime === hidden.regime),
-    routed_ties_or_beats_score_threshold:
-      Number(routed.primary_regime === hidden.regime) >= Number(thresholdRegime === hidden.regime),
+    routed_matches_hidden_regime: routedMatches,
+    routed_beats_fixed_heuristic: routedBeatsFixed,
+    routed_ties_or_beats_score_threshold: routedTiesOrBeatsThreshold,
     notes: [
       `visible repro style: ${visibleCase.starting_context.repro_style}`,
       `hidden failure mode: ${evaluatorCase.expected_failure_mode}`,
       "This replay pass remains evaluator-curated even when the visible layer is more issue-like and less directly terrain-labeled.",
     ],
+    failure_kind: failureKind,
+    expected_vs_actual: {
+      expected_regime: hidden.regime,
+      actual_regime: routed.primary_regime,
+      summary: routedMatches
+        ? "Routed primary regime matches hidden expected regime."
+        : `Routed ${routed.primary_regime} vs hidden expected ${hidden.regime}.`,
+    },
+    baseline_comparison: {
+      versus_fixed: versusBaseline(routedMatches, fixedMatches, routedBeatsFixed),
+      versus_threshold: versusBaseline(
+        routedMatches,
+        thresholdMatches,
+        Number(routedMatches) > Number(thresholdMatches),
+      ),
+    },
+    ambiguity_flags: collectAmbiguityFlags(visibleCase),
   };
+
+  if (visibleCase.repro_steps && visibleCase.repro_steps.length > 0) {
+    return { ...baseReport, repro_steps: visibleCase.repro_steps };
+  }
+
+  return baseReport;
 }
 
 export function runReplaySuite(
-  visibleFileName = "real-replays-v1.visible.json",
-  evaluatorFileName = "real-replays-v1.evaluator.json",
-  suiteId = "real-replays-v1",
+  visibleFileName = "tutorial-replay-v0.1.visible.json",
+  evaluatorFileName = "tutorial-replay-v0.1.evaluator.json",
+  suiteId = "tutorial-replay-v0.1",
   scoring?: ReplayScoringOptions,
 ): ReplayDatasetReport {
   const visibleDataset = loadReplayVisibleDataset(visibleFileName);
@@ -287,6 +381,8 @@ export function runReplaySuite(
   const isMixedReplay = visibleFileName.includes("v0.6e");
   const isHarderAsymmetryReplay = visibleFileName.includes("v0.6f");
   const isShopifyOperationalReplay = visibleFileName.includes("v0.7a");
+  const isTutorialReplay = visibleFileName.includes("tutorial-replay");
+  const isCommunityExampleReplay = visibleFileName.includes("community-example");
 
   return {
     suite_id: suiteId,
@@ -306,7 +402,11 @@ export function runReplaySuite(
       ).length,
     },
     caveats: [
-      "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
+      isTutorialReplay
+        ? "Synthetic OSS tutorial pack: fictional repos/commits; for harness wiring and local smoke tests only."
+        : isCommunityExampleReplay
+          ? "Community schema example pack: validates contribution conventions; not a certification or realism benchmark."
+          : "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
       isHarderAsymmetryReplay
         ? "This harder-asymmetry replay pack adds noisy prune cases and one weaker-signaled explore case while reducing direct terrain wording in the visible layer."
         : isShopifyOperationalReplay
@@ -335,7 +435,11 @@ export function runReplaySuite(
         ? "This diverse replay variant reduces repository and org fingerprinting by anonymizing visible repo identity and shifting the visible layer toward terrain-shaped descriptions."
         : isTightReplay
         ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
-        : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
+        : isTutorialReplay
+          ? "Tutorial cases intentionally mix one ambiguous-success surface with one narrow attribute boundary; not a realism or discrimination benchmark."
+          : isCommunityExampleReplay
+            ? "Community example uses synthetic docs-site stories; contributor packs must follow community-replay-pack-spec-v0.1.md."
+            : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
       isMixedReplay
         ? "This pack is useful as an early regime-boundary benchmark, but it is still small and does not yet test compound-deserving cases."
         : isDegradedEvidenceReplay
@@ -359,7 +463,11 @@ export function runReplaySuite(
         ? "The ambiguity augmentation remains deliberate, but the visible cases now preserve terrain diversity with less reliance on organization-specific naming or topology."
         : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
-        : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
+        : isTutorialReplay
+          ? "Do not use tutorial replay metrics for headline product or benchmark claims."
+          : isCommunityExampleReplay
+            ? "Do not treat community-example metrics as product certification; signing and registry govern commercial lanes."
+            : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
       isHarderAsymmetryReplay
         ? "This result matters only if the router still separates explore from prune after the visible layer becomes less explicit and the prune side becomes noisier."
         : isShopifyOperationalReplay
@@ -381,14 +489,20 @@ export function runReplaySuite(
         ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
         : isTightReplay
         ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."
-        : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
+        : isTutorialReplay || isCommunityExampleReplay
+          ? null
+          : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
     ].filter((value): value is string => Boolean(value)),
     cases,
   };
 }
 
 export function runRealReplaysV1Suite(): ReplayDatasetReport {
-  return runReplaySuite();
+  return runReplaySuite(
+    "real-replays-v1.visible.json",
+    "real-replays-v1.evaluator.json",
+    "real-replays-v1",
+  );
 }
 
 export function runRealReplaysV06aTightSuite(): ReplayDatasetReport {

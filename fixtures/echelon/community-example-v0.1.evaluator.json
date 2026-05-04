@@ -1,0 +1,50 @@
+{
+  "pack_manifest": {
+    "pack_schema_version": "0.1",
+    "pack_kind": "community",
+    "contributor_display_name": "Echelon docs (example)",
+    "license_spdx": "MIT",
+    "redaction_attestation": "Fully synthetic; no real incident."
+  },
+  "dataset_name": "community-example-replays-v0.1",
+  "purpose": "Evaluator-only truth for community-example pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "community/doc-narrow-1",
+      "repo": "example/community-docs",
+      "repo_local_path": "/tmp/community-docs",
+      "pr_number": 101,
+      "pr_url": "https://example.invalid/community-docs/pull/101",
+      "merge_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "start_ref": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "merged_at": "2026-01-10T12:00:00Z",
+      "likely_fix_files": ["layouts/nav.md"],
+      "expected_failure_mode": "wrong anchor / single-file content",
+      "patch_family_judgment": [
+        "fix should correct slug or anchor reference",
+        "fix stays in nav partial"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Synthetic evaluator row for community example."
+    },
+    {
+      "id": "community/doc-ambiguous-1",
+      "repo": "example/community-docs",
+      "repo_local_path": "/tmp/community-docs",
+      "pr_number": 102,
+      "pr_url": "https://example.invalid/community-docs/pull/102",
+      "merge_commit_sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "start_ref": "dddddddddddddddddddddddddddddddddddddddd",
+      "merged_at": "2026-01-11T12:00:00Z",
+      "likely_fix_files": ["search/indexer.ts", "editor/autosave.ts", "build/pipeline.ts"],
+      "expected_failure_mode": "ambiguous success / delayed decisive signal",
+      "patch_family_judgment": [
+        "fix should reconcile save hooks with indexer ordering",
+        "avoid declaring victory on UI toast alone"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Synthetic evaluator row for community example."
+    }
+  ]
+}

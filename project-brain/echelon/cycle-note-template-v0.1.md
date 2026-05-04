@@ -43,3 +43,4 @@ If any **yes** → stop line noted here + link to appendix §4/§5.
 
 - Negatives appendix: fill from `cycle-appendix-negatives-template-v0.1.md`
 - Tickets / PRs: `<links>`
+- Optional **ticket-sized** wrap-up: `decision-artifact-template-v0.1.md` (what changed / proves / still fails / next)

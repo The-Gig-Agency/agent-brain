@@ -1,5 +1,7 @@
 # Echelon — Eval V2
 
+**Router upgrade roadmap (debugging + media reporting):** `router-core-service-upgrades-v0.1.md` · **Ticket-sized decisions:** `decision-artifact-template-v0.1.md`
+
 ## Goal
 
 Prove Echelon is a search-policy engine, not a dressed-up framework.

@@ -1,0 +1,57 @@
+{
+  "dataset_name": "echelon-tutorial-replays-v0.1",
+  "purpose": "Synthetic OSS-safe replay cases for harness demos. Not discriminative; no proprietary realism.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "tut-ambiguous-1",
+      "repo": "example/oss-tutorial-service",
+      "repo_local_path": "/tmp/oss-tutorial-service",
+      "stack": "python",
+      "title": "Reports appeared to work until later reconciliation showed drift",
+      "symptom": "CI passed but production still showed wrong totals; could not safely declare root cause from green tests alone.",
+      "visible_evidence": [
+        "Nominally successful deploy with no failing checks",
+        "Later verification against warehouse totals exposed mismatch",
+        "Same workflow both reads cached summaries and recomputes from raw events"
+      ],
+      "starting_context": {
+        "entry_points": ["src/api.py", "src/models.py"],
+        "repro_style": "later verification / reconciliation",
+        "can_run_locally": "yes"
+      },
+      "success_criteria": [
+        "Treat as ambiguous success until reconciliation path is validated",
+        "Prefer widening evidence before narrowing to a single file"
+      ],
+      "notes": "Tutorial-only: trains the harness on explore-leaning ambiguity without real incident IP."
+    },
+    {
+      "id": "tut-narrow-1",
+      "repo": "example/oss-tutorial-service",
+      "repo_local_path": "/tmp/oss-tutorial-service",
+      "stack": "python",
+      "title": "AttributeError when accessing optional config block",
+      "symptom": "AttributeError on missing nested config key in a single module.",
+      "visible_evidence": [
+        "Stack trace points to one helper module",
+        "Repro is stable with a minimal local fixture"
+      ],
+      "starting_context": {
+        "entry_points": ["src/config_helper.py"],
+        "repro_style": "attribute boundary / object-shape mismatch",
+        "can_run_locally": "yes"
+      },
+      "success_criteria": [
+        "Confirm missing key handling and patch the narrow boundary"
+      ],
+      "repro_steps": [
+        "Run minimal fixture that imports config_helper",
+        "Trigger code path that reads optional nested config",
+        "Confirm AttributeError and capture stack to single module"
+      ],
+      "failure_kind": "logic_bug",
+      "notes": "Tutorial-only: narrow prune-shaped surface for contrast with tut-ambiguous-1."
+    }
+  ]
+}

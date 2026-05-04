@@ -4,6 +4,18 @@
 - decisions: `project-brain/echelon/decisions.md`
 - adaptive commitment control charter v0.1: `project-brain/echelon/adaptive-commitment-control-charter-v0.1.md`
 - adaptive commitment control protocol v0.1: `project-brain/echelon/adaptive-commitment-control-protocol-v0.1.md`
+- Commercial / open-core epic framing (TGA-233): `project-brain/echelon/commercial-open-core-epic-framing-v0.1.md`
+- OSS vs proprietary boundary matrix (TGA-234, v0.4 CP registry): `project-brain/echelon/oss-proprietary-boundary-matrix.md`
+- ADR 002 Phase 1 OSS publish scope (TGA-235): `project-brain/echelon/adr-002-phase1-oss-publish-scope.md`
+- OSS public extract runbook (TGA-235): `project-brain/echelon/oss-public-extract-runbook-v0.1.md`
+- Proprietary moat registry v0.1 (TGA-236): `project-brain/echelon/proprietary-moat-registry-v0.1.md` · JSON: `project-brain/echelon/proprietary-moat-registry-v0.1.json`
+- Commercial packaging Model 1 v0.1 (TGA-237): `project-brain/echelon/commercial-packaging-model1-v0.1.md`
+- Commercial tracks Model 2 & 3 v0.1 (TGA-238): `project-brain/echelon/commercial-tracks-model2-model3-v0.1.md`
+- Community replay pack spec v0.1 (TGA-239): `project-brain/echelon/community-replay-pack-spec-v0.1.md`
+- Legal & repo hygiene checklist v0.1 (TGA-240): `project-brain/echelon/legal-repo-hygiene-checklist-v0.1.md`
+- Echelon product shell alignment v0.1 (TGA-241): `project-brain/echelon/echelon-product-shell-alignment-v0.1.md`
+- Router core service upgrades (media + debugging roadmap): `project-brain/echelon/router-core-service-upgrades-v0.1.md` — YouTrack umbrella [TGA-242](https://youtrack.thegig.agency/issue/TGA-242) ([TGA-243](https://youtrack.thegig.agency/issue/TGA-243) media · [TGA-244](https://youtrack.thegig.agency/issue/TGA-244) debugging · [TGA-245](https://youtrack.thegig.agency/issue/TGA-245) decision artifact hygiene)
+- Decision artifact template (ticket / PR): `project-brain/echelon/decision-artifact-template-v0.1.md`
 - frozen lanes manifest v1: `project-brain/echelon/frozen-lanes-manifest-v1.json`
 - frozen-debug-v1 lock: `project-brain/echelon/frozen-debug-v1-lock.md`
 - frozen-media-v1 lock: `project-brain/echelon/frozen-media-v1-lock.md`

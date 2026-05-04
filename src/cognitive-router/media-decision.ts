@@ -1,3 +1,4 @@
+import { buildMediaV2Attachment, mediaV2ConfidenceAdjustment } from "./media-decision-v2.js";
 import { scoreTerrain } from "./scoring.js";
 import type {
   MediaDecisionInput,
@@ -338,9 +339,10 @@ export function recommendMediaAction(
   const rawConfidence = options.disable_calibration
     ? clampConfidence(regime.confidence * 0.55)
     : calibrateActionConfidence(input, top[0], regime.confidence, margin);
-  const actionConfidence = options.disable_calibration
+  let actionConfidence = options.disable_calibration
     ? rawConfidence
     : clampConfidence(rawConfidence - blockerPenalty);
+  actionConfidence = clampConfidence(actionConfidence - mediaV2ConfidenceAdjustment(input, options));
 
   if (top[0] === "scale" && input.cpl_vs_target <= 0.9) {
     rationale.push("Performance efficiency supports controlled scaling in the current winner path.");
@@ -365,5 +367,6 @@ export function recommendMediaAction(
     evidence_requirements: ACTION_EVIDENCE_REQUIREMENTS[top[0]],
     blockers: blockerList,
     missing_information: missing,
+    ...buildMediaV2Attachment(input, top[0], options),
   };
 }

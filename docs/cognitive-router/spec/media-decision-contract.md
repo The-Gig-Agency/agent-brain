@@ -66,6 +66,31 @@ The decision should be explicit, auditable, and confidence-scored.
 - Penalize confidence when blockers or missing information accumulate.
 - Always return exactly one action with rationale and evidence requirements.
 
+## Media v2 (optional fields — TGA-243)
+
+Implemented in `src/cognitive-router/types.ts`, `media-decision-v2.ts`, and `recommendMediaAction` output extensions.
+
+**Optional inputs on `MediaDecisionInput`:**
+
+- `statistical_reliability` — impressions/conversions/tier; weak tiers apply a deterministic confidence penalty.
+- `ad_level_metrics[]` — per-ad `ctr`, `cpc`, `cpa`, `spend` for winner/loser readout.
+- `creative_breakdown` — `hook` / `body` / `cta` each with at least `ctr` (optional `cpc`, `spend_share`).
+- `dimension_splits` — nested map `dimensionLabel -> sliceKey -> { ctr, cpa?, spend_share? }` for highlights.
+
+**Optional outputs on `MediaDecisionRecommendation`:**
+
+- `statistical_readout` — tier, `sample_adequate`, operator-facing notes.
+- `ad_level_readout` — `winners` / `losers` with short rationales.
+- `creative_component_readout` — best component + rationale.
+- `dimension_split_highlights` — short strings for top slices.
+- `test_plan` — `hypotheses`, `next_variants`, `success_metrics`, `stop_rules`.
+
+**`MediaDecisionRunOptions.v2_readouts`:** when `true`, emit readouts even with sparse v2 inputs (use for demos; frozen **v0.1** pack should keep default `false`).
+
+**Fixture:** `fixtures/echelon/media-decision-v0.2.json` (v0.1 cases + structured reliability; case `media-01` includes ad/creative/split signals). Run `npm run eval:media:v0.2`.
+
+Full product rationale: `project-brain/echelon/router-core-service-upgrades-v0.1.md` ([TGA-243](https://youtrack.thegig.agency/issue/TGA-243)).
+
 ## Worked Examples
 
 1. **Explore**  

@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./community-pack-validation.js";
 export * from "./scoring.js";
 export * from "./benchmarks.js";
 export * from "./evaluator.js";
@@ -10,4 +11,5 @@ export * from "./benchmark-runner.js";
 export * from "./replay-dataset.js";
 export * from "./replay-evaluator.js";
 export * from "./media-decision.js";
+export * from "./media-decision-v2.js";
 export * from "./media-evaluator.js";

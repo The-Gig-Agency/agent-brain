@@ -1,0 +1,400 @@
+{
+  "registry_schema_version": "0.1",
+  "updated_at": "2026-05-04",
+  "ticket": "TGA-236",
+  "parent_epic": "TGA-233",
+  "governance": {
+    "owner_default": "TGA / Echelon",
+    "dri_engineering": "YouTrack assignee on TGA-236 (single DRI for registry JSON + fixture paths)",
+    "dri_product": "Product owner for SKU ↔ asset mapping (see TGA-237); signs off on new paid rows",
+    "update_cadence": "At minimum: (1) every merge that adds/changes fixtures/echelon or eval runners touching assets; (2) end of each sprint; (3) before any pack tarball publish.",
+    "review_trigger": "Any new frozen lane, new real-replays-* file, or npm script eval:* that loads fixtures must add or update a registry asset in the same PR.",
+    "immutability_note": "Frozen rows require new asset ids (e.g. frozen-debug-v2) for content or pass-threshold semantic changes; see frozen-lanes-manifest-v1.json immutability_policy.",
+    "oss_runtime_anchor": "Phase 1 OSS publish per adr-002-phase1-oss-publish-scope.md; paid packs declare min compatible OSS runtime when versioning begins."
+  },
+  "assets": [
+    {
+      "id": "frozen-debug-v1",
+      "display_name": "Frozen debugging replay certification (debug v1)",
+      "category": "frozen_certification",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": true,
+      "mutable": false,
+      "logical_suite_id": "real-replays-v0.8",
+      "case_count": 10,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.8.visible.json",
+        "fixtures/echelon/real-replays-v0.8.evaluator.json"
+      ],
+      "npm_scripts": ["eval:frozen:debug:v1", "eval:replays:v0.8"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.8.ts",
+      "lock_documents": ["project-brain/echelon/frozen-debug-v1-lock.md"],
+      "manifest_pointer": "project-brain/echelon/frozen-lanes-manifest-v1.json#frozen_debug_v1",
+      "metric_schema": "replay-report-frozen-v1",
+      "notes": "Ratified frozen lane; headline claims allowed only with pinned manifest SHA + lock doc."
+    },
+    {
+      "id": "frozen-media-v1",
+      "display_name": "Frozen media decision certification (media v1)",
+      "category": "frozen_certification",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": true,
+      "mutable": false,
+      "logical_suite_id": "media-decision-v0.1",
+      "case_count": 6,
+      "fixtures": ["fixtures/echelon/media-decision-v0.1.json"],
+      "npm_scripts": ["eval:frozen:media:v1", "eval:media:v0.1"],
+      "runner_module": "src/cognitive-router/run-media-eval-v0.1.ts",
+      "lock_documents": ["project-brain/echelon/frozen-media-v1-lock.md"],
+      "manifest_pointer": "project-brain/echelon/frozen-lanes-manifest-v1.json#frozen_media_v1",
+      "metric_schema": "media-report-frozen-v1",
+      "notes": "Domain-specific premium lane; pair with same router+evaluator SHA policy as debug frozen."
+    },
+    {
+      "id": "replay-real-v1",
+      "display_name": "Real debugging replays v1 (base)",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "logical_suite_id": "real-replays-v1",
+      "fixtures": [
+        "fixtures/echelon/real-replays-v1.visible.json",
+        "fixtures/echelon/real-replays-v1.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays"],
+      "runner_module": "src/cognitive-router/run-real-replays-v1.ts",
+      "lock_documents": [],
+      "metric_schema": "replay-report-frozen-v1",
+      "notes": "Ambiguity-quality / operational realism IP; not for public npm per boundary matrix."
+    },
+    {
+      "id": "replay-real-v1-tight",
+      "display_name": "Real replays v1 tight visible",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v1-tight.visible.json",
+        "fixtures/echelon/real-replays-v1-tight.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:tight"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6a-tight.ts",
+      "notes": "Tighter visible layer; paired evaluator file shares v1-tight naming."
+    },
+    {
+      "id": "replay-real-v1-diverse",
+      "display_name": "Real replays v1 diverse visible",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v1-diverse.visible.json",
+        "fixtures/echelon/real-replays-v1-tight.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:diverse"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6b-diverse.ts",
+      "notes": "Diverse visible uses tight evaluator pairing per runner implementation."
+    },
+    {
+      "id": "replay-v2-candidates",
+      "display_name": "Real replays v2 candidates",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v2-candidates.visible.json",
+        "fixtures/echelon/real-replays-v2-candidates.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v2"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6c-candidates.ts",
+      "notes": "Mined candidate lane; premium realism."
+    },
+    {
+      "id": "replay-v2-candidates-tight",
+      "display_name": "Real replays v2 candidates tight",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v2-candidates-tight.visible.json",
+        "fixtures/echelon/real-replays-v2-candidates.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v2:tight"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6c-tight.ts",
+      "notes": "Tightened candidate visible layer."
+    },
+    {
+      "id": "replay-v0.6d",
+      "display_name": "Real replays v0.6d degraded-evidence wedge",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.6d.visible.json",
+        "fixtures/echelon/real-replays-v0.6d.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.6d"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6d.ts",
+      "notes": "One-sided degraded-evidence stress pack."
+    },
+    {
+      "id": "replay-v0.6e",
+      "display_name": "Real replays v0.6e mixed explore/prune",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.6e.visible.json",
+        "fixtures/echelon/real-replays-v0.6e.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.6e"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6e.ts",
+      "notes": "Mixed regime boundary discrimination."
+    },
+    {
+      "id": "replay-v0.6f",
+      "display_name": "Real replays v0.6f harder asymmetry",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.6f.visible.json",
+        "fixtures/echelon/real-replays-v0.6f.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.6f"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.6f.ts",
+      "notes": "Noisy prune + weaker explore signal."
+    },
+    {
+      "id": "replay-v0.7",
+      "display_name": "Real replays v0.7",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.7.visible.json",
+        "fixtures/echelon/real-replays-v0.7.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.7"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.7.ts",
+      "notes": "Operational realism iteration."
+    },
+    {
+      "id": "replay-v0.7a",
+      "display_name": "Real replays v0.7a Shopify operational cluster",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.7a.visible.json",
+        "fixtures/echelon/real-replays-v0.7a.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.7a"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.7a.ts",
+      "notes": "Single-family operational realism."
+    },
+    {
+      "id": "replay-v0.7b",
+      "display_name": "Real replays v0.7b",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.7b.visible.json",
+        "fixtures/echelon/real-replays-v0.7b.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.7b"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.7b.ts",
+      "notes": "Successor to v0.7a lane."
+    },
+    {
+      "id": "replay-v0.8",
+      "display_name": "Real replays v0.8 (logical suite for frozen-debug-v1)",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": false,
+      "logical_suite_id": "real-replays-v0.8",
+      "case_count": 10,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.8.visible.json",
+        "fixtures/echelon/real-replays-v0.8.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.8", "eval:frozen:debug:v1"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.8.ts",
+      "notes": "Same bytes as frozen-debug-v1; treat as certification when manifest ratified."
+    },
+    {
+      "id": "replay-v3-mining-candidates",
+      "display_name": "Real replays v3 mining candidates (single fixture)",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": ["fixtures/echelon/real-replays-v3-mining-candidates.json"],
+      "npm_scripts": [],
+      "notes": "Mining output; wire dedicated runner when promoted to suite."
+    },
+    {
+      "id": "replay-tmp-v0.6f-subset",
+      "display_name": "Temporary v0.6f subset (lab)",
+      "category": "lab_derived",
+      "license_tier": "internal_rnd",
+      "distribution": "internal_git_only",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/tmp-real-replays-v0.6f-subset.visible.json",
+        "fixtures/echelon/tmp-real-replays-v0.6f-subset.evaluator.json"
+      ],
+      "npm_scripts": [],
+      "notes": "Ephemeral / lab; do not ship in customer packs without promotion review."
+    },
+    {
+      "id": "transition-candidate-v0.1",
+      "display_name": "Transition candidate lane v0.1",
+      "category": "transition_suite",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "npm_scripts": ["eval:transition-candidate:v0.1"],
+      "runner_module": "src/cognitive-router/run-transition-candidate-v0.1.ts",
+      "notes": "Transition-control benchmarking; fixtures embedded or loaded in runner — confirm paths in module."
+    },
+    {
+      "id": "transition-candidate-v0.2",
+      "display_name": "Transition candidate lane v0.2 (expanded)",
+      "category": "transition_suite",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "npm_scripts": ["eval:transition-candidate:v0.2"],
+      "runner_module": "src/cognitive-router/run-transition-candidate-v0.2.ts",
+      "notes": "20-case candidate lane; not frozen."
+    },
+    {
+      "id": "ablation-matrix-v0.1",
+      "display_name": "Ablation matrix v0.1 (primitive table)",
+      "category": "tuning_infrastructure",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "npm_scripts": ["eval:ablation-matrix:v0.1"],
+      "runner_module": "src/cognitive-router/run-ablation-matrix-v0.1.ts",
+      "notes": "Scoring harness + replay/media matrix definitions; premium study configs stay private."
+    },
+    {
+      "id": "debugging-synthetic-v1",
+      "display_name": "Debugging synthetic world v1",
+      "category": "synthetic_benchmark",
+      "license_tier": "oss_reference",
+      "distribution": "public_with_runtime",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "npm_scripts": ["eval:debugging"],
+      "runner_module": "src/cognitive-router/run-debugging-v1.ts",
+      "notes": "Synthetic substrate; OSS with runtime per boundary matrix."
+    },
+    {
+      "id": "tutorial-replay-v0.1",
+      "display_name": "Tutorial replay pack v0.1",
+      "category": "tutorial_pack",
+      "license_tier": "oss",
+      "distribution": "public_with_runtime",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/tutorial-replay-v0.1.visible.json",
+        "fixtures/echelon/tutorial-replay-v0.1.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:tutorial"],
+      "runner_module": "src/cognitive-router/run-tutorial-replay-v0.1.ts",
+      "notes": "Synthetic OSS-safe harness smoke; no headline benchmark claims."
+    },
+    {
+      "id": "media-decision-v0.2",
+      "display_name": "Media decision eval pack v0.2 (structured v2 inputs)",
+      "category": "lab_derived",
+      "license_tier": "internal_rnd",
+      "distribution": "internal_git_only",
+      "certification": false,
+      "mutable": true,
+      "fixtures": ["fixtures/echelon/media-decision-v0.2.json"],
+      "npm_scripts": ["eval:media:v0.2"],
+      "runner_module": "src/cognitive-router/run-media-eval-v0.2.ts",
+      "notes": "TGA-243 dev pack; not frozen — frozen-media-v1 remains on v0.1 fixture."
+    },
+    {
+      "id": "community-example-v0.1",
+      "display_name": "Community replay schema example v0.1",
+      "category": "tutorial_pack",
+      "license_tier": "oss",
+      "distribution": "public_with_runtime",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [
+        "fixtures/echelon/community-example-v0.1.visible.json",
+        "fixtures/echelon/community-example-v0.1.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:community-example", "check:community-pack-spec"],
+      "runner_module": "src/cognitive-router/run-community-example-replay-v0.1.ts",
+      "notes": "Documents TGA-239 conventions; run with community-pack-validation selftest."
+    },
+    {
+      "id": "scoring-policy-default",
+      "display_name": "Default deterministic scoring weights (current monolith)",
+      "category": "scoring_policy",
+      "license_tier": "oss_until_forked",
+      "distribution": "public_with_runtime",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "code": ["src/cognitive-router/scoring.ts"],
+      "notes": "Per TGA-234: tuned production weights may move to paid pack; track fork here when split."
+    },
+    {
+      "id": "team-telemetry-future",
+      "display_name": "Team / cohort benchmark telemetry (product)",
+      "category": "telemetry",
+      "license_tier": "proprietary_paid",
+      "distribution": "hosted_saas_or_enterprise_contract",
+      "certification": false,
+      "mutable": true,
+      "fixtures": [],
+      "notes": "Placeholder row; no implementation in agent-brain yet. Default: no trace upload without explicit opt-in."
+    }
+  ]
+}

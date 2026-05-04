@@ -43,6 +43,14 @@ type MediaEvalCaseResult = {
     cut: string[];
     test_next: string[];
   };
+  /** Present when media v2 fields were emitted on the recommendation (TGA-243). */
+  media_v2?: {
+    statistical_readout: boolean;
+    test_plan: boolean;
+    ad_level_readout: boolean;
+    creative_readout: boolean;
+    dimension_highlights: boolean;
+  };
 };
 
 export type MediaEvalReport = {
@@ -90,10 +98,28 @@ export function runMediaEvaluationSuite(
   recommendOptions: MediaDecisionRunOptions = {},
 ): MediaEvalReport {
   const dataset = loadMediaEvalDataset(fileName);
+  const suiteId = fileName.replace(/\.json$/i, "");
 
   const caseResults = dataset.cases.map((mediaCase) => {
     const recommendation = recommendMediaAction(mediaCase.input, recommendOptions);
     const confidenceBand = confidenceToBand(recommendation.action_confidence);
+
+    const media_v2 =
+      recommendation.statistical_readout ||
+      recommendation.test_plan ||
+      recommendation.ad_level_readout ||
+      recommendation.creative_component_readout ||
+      (recommendation.dimension_split_highlights && recommendation.dimension_split_highlights.length > 0)
+        ? {
+            statistical_readout: Boolean(recommendation.statistical_readout),
+            test_plan: Boolean(recommendation.test_plan),
+            ad_level_readout: Boolean(recommendation.ad_level_readout),
+            creative_readout: Boolean(recommendation.creative_component_readout),
+            dimension_highlights: Boolean(
+              recommendation.dimension_split_highlights && recommendation.dimension_split_highlights.length > 0,
+            ),
+          }
+        : undefined;
 
     return {
       case_id: mediaCase.id,
@@ -107,6 +133,7 @@ export function runMediaEvaluationSuite(
       rationale_count: recommendation.rationale.length,
       rationale_quality_pass: recommendation.rationale.length >= mediaCase.minimum_rationale_points,
       operator_recommendations: mediaCase.expected_operator_recommendations,
+      media_v2,
     } as MediaEvalCaseResult;
   });
 
@@ -116,7 +143,7 @@ export function runMediaEvaluationSuite(
   const rationalePassRate = average(caseResults.map((result) => (result.rationale_quality_pass ? 1 : 0)));
 
   return {
-    suite_id: "media-decision-v0.1",
+    suite_id: suiteId,
     generated_at: new Date().toISOString(),
     dataset_name: dataset.dataset_name,
     overall_pass: acceptableMatchRate >= 0.83 && confidenceBandMatchRate >= 0.66 && rationalePassRate >= 1,

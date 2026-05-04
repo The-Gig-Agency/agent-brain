@@ -1,3 +1,6 @@
 node_modules/
 dist/
 reports/
+_oss_export/
+.DS_Store
+**/.DS_Store

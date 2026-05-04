@@ -92,7 +92,13 @@ This is intentionally small and deterministic:
 ## Commands
 
 - `npm run check`
+- `npm run check:oss-boundary` (asserts replay loader defaults stay on OSS-safe `tutorial-replay-v0.1` — see `project-brain/echelon/adr-002-phase1-oss-publish-scope.md`)
 - `npm run eval:debugging`
+- `npm run eval:replays:tutorial` (synthetic tutorial replay smoke test; safe for open-core extraction)
+- `npm run eval:replays:community-example` (community pack schema example; see `project-brain/echelon/community-replay-pack-spec-v0.1.md`)
+- `npm run check:community-pack-spec` (validation + anti-impersonation selftest for TGA-239)
+
+Legal / product-shell alignment (Echelon commercial program): `project-brain/echelon/legal-repo-hygiene-checklist-v0.1.md` (TGA-240), `project-brain/echelon/echelon-product-shell-alignment-v0.1.md` (TGA-241).
 - `npm run eval:replays`
 - `npm run eval:replays:tight`
 - `npm run eval:replays:diverse`
@@ -107,6 +113,7 @@ This is intentionally small and deterministic:
 - `npm run eval:replays:v0.8`
 - `npm run eval:frozen:debug:v1` (same runner as v0.8; ratified frozen-debug-v1 — see `project-brain/echelon/frozen-debug-v1-lock.md`)
 - `npm run eval:media:v0.1`
+- `npm run eval:media:v0.2` (media v2 structured readouts + `media-decision-v0.2.json`)
 - `npm run eval:frozen:media:v1` (same runner as media v0.1; ratified frozen-media-v1 — see `project-brain/echelon/frozen-media-v1-lock.md`)
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)

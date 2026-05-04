@@ -281,6 +281,11 @@ export type MediaDecisionRunOptions = {
   /** Pass through to scoreTerrain memory ablation strips. */
   terrain_memory?: MemoryScoringContext;
   terrain_memory_ablation?: TerrainMemoryAblation;
+  /**
+   * When true, emit v2 readouts (test_plan, statistical_readout, ad-level summaries) even if v2 inputs are sparse.
+   * Default false keeps legacy v0.1 fixture outputs shape-stable for frozen-media-v1.
+   */
+  v2_readouts?: boolean;
 };
 
 export type BaselinePolicyId =
@@ -412,6 +417,29 @@ export type AdversarialSuiteReport = {
   tests: AdversarialTestResult[];
 };
 
+/** Optional manifest for community-authored replay packs (TGA-239). */
+export type CommunityPackManifest = {
+  pack_schema_version: string;
+  pack_kind: "community";
+  contributor_display_name: string;
+  license_spdx: string;
+  /** What was redacted vs any original incident source. */
+  redaction_attestation?: string;
+  submitted_at?: string;
+};
+
+/** Debugging / replay failure taxonomy (TGA-244). */
+export type DebuggingFailureKind =
+  | "routing_bug"
+  | "schema_bug"
+  | "data_issue"
+  | "timeout"
+  | "flake"
+  | "logic_bug"
+  | "integration"
+  | "auth_boundary"
+  | "unknown";
+
 export type ReplayVisibleCase = {
   id: string;
   repo: string;
@@ -420,6 +448,10 @@ export type ReplayVisibleCase = {
   title: string;
   symptom: string;
   visible_evidence: string[];
+  /** Optional structured repro (TGA-244). */
+  repro_steps?: string[];
+  /** Optional visible-side failure label (TGA-244). */
+  failure_kind?: DebuggingFailureKind;
   starting_context: {
     entry_points: string[];
     repro_style: string;
@@ -441,6 +473,7 @@ export type ReplayVisibleDataset = {
   purpose: string;
   visibility: "router_visible";
   cases: ReplayVisibleCase[];
+  pack_manifest?: CommunityPackManifest;
 };
 
 export type ReplayEvaluatorCase = {
@@ -459,6 +492,8 @@ export type ReplayEvaluatorCase = {
   external_evidence?: string[];
   hidden_expected_regime_override?: SearchRegime;
   hidden_ambiguity_tags?: string[];
+  /** Evaluator-only failure taxonomy when it differs from visible (TGA-244). */
+  hidden_failure_kind?: DebuggingFailureKind;
 };
 
 export type ReplayEvaluatorDataset = {
@@ -466,7 +501,10 @@ export type ReplayEvaluatorDataset = {
   purpose: string;
   visibility: "evaluator_only";
   cases: ReplayEvaluatorCase[];
+  pack_manifest?: CommunityPackManifest;
 };
+
+export type ReplayBaselineVersus = "better" | "worse" | "tie";
 
 export type ReplayCaseReport = {
   case_id: string;
@@ -484,6 +522,19 @@ export type ReplayCaseReport = {
   routed_beats_fixed_heuristic: boolean;
   routed_ties_or_beats_score_threshold: boolean;
   notes: string[];
+  /** TGA-244 extensions (optional for backward-compatible reports). */
+  failure_kind?: DebuggingFailureKind;
+  repro_steps?: string[];
+  expected_vs_actual?: {
+    expected_regime: SearchRegime;
+    actual_regime: SearchRegime;
+    summary: string;
+  };
+  baseline_comparison?: {
+    versus_fixed: ReplayBaselineVersus;
+    versus_threshold: ReplayBaselineVersus;
+  };
+  ambiguity_flags?: string[];
 };
 
 export type ReplayDatasetReport = {
@@ -528,6 +579,52 @@ export type MediaRecommendedAction =
   | "reallocate"
   | "test_next";
 
+/** Sample / power hint for media v2 (TGA-243). */
+export type MediaReliabilityTier = "weak" | "moderate" | "strong";
+
+export type MediaStatisticalReliability = {
+  impressions?: number;
+  conversions?: number;
+  /** When omitted, may be inferred from impressions/conversions heuristics when `v2_readouts` is on. */
+  reliability_tier?: MediaReliabilityTier;
+};
+
+export type MediaAdMetricRow = {
+  ad_id: string;
+  ctr: number;
+  cpc: number;
+  cpa: number;
+  spend: number;
+};
+
+export type MediaCreativeComponentSlice = {
+  ctr: number;
+  cpc?: number;
+  spend_share?: number;
+};
+
+export type MediaCreativeBreakdown = {
+  hook: MediaCreativeComponentSlice;
+  body: MediaCreativeComponentSlice;
+  cta: MediaCreativeComponentSlice;
+};
+
+export type MediaDimensionSplitRow = {
+  ctr: number;
+  cpa?: number;
+  spend_share?: number;
+};
+
+/** e.g. `{ "device:mobile": { "ios": { "ctr": 0.02 } } }` — keys are free-form labels. */
+export type MediaDimensionSplits = Record<string, Record<string, MediaDimensionSplitRow>>;
+
+export type MediaTestPlan = {
+  hypotheses: string[];
+  next_variants: string[];
+  success_metrics: string[];
+  stop_rules: string[];
+};
+
 export type MediaDecisionInput = {
   entity_level: MediaEntityLevel;
   channel: MediaChannel;
@@ -544,6 +641,27 @@ export type MediaDecisionInput = {
   tracking_confidence: TrackingConfidence;
   blockers?: string[];
   missing_information?: string[];
+  /** v2 (TGA-243): optional structured signals — omitted in frozen v0.1 pack. */
+  statistical_reliability?: MediaStatisticalReliability;
+  ad_level_metrics?: MediaAdMetricRow[];
+  creative_breakdown?: MediaCreativeBreakdown;
+  dimension_splits?: MediaDimensionSplits;
+};
+
+export type MediaStatisticalReadout = {
+  reliability_tier: MediaReliabilityTier;
+  sample_adequate: boolean;
+  notes: string[];
+};
+
+export type MediaAdLevelReadout = {
+  winners: Array<{ ad_id: string; rationale: string }>;
+  losers: Array<{ ad_id: string; rationale: string }>;
+};
+
+export type MediaCreativeComponentReadout = {
+  best_component: "hook" | "body" | "cta" | null;
+  rationale: string[];
 };
 
 export type MediaDecisionRecommendation = {
@@ -559,4 +677,10 @@ export type MediaDecisionRecommendation = {
   evidence_requirements: string[];
   blockers: string[];
   missing_information: string[];
+  /** v2 structured outputs (TGA-243) — present when inputs rich enough or `v2_readouts` option is on. */
+  statistical_readout?: MediaStatisticalReadout;
+  ad_level_readout?: MediaAdLevelReadout;
+  creative_component_readout?: MediaCreativeComponentReadout;
+  dimension_split_highlights?: string[];
+  test_plan?: MediaTestPlan;
 };
