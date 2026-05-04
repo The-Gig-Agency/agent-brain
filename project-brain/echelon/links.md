@@ -16,6 +16,7 @@
 - debugging core v0.5 findings: `project-brain/echelon/findings-debugging-core-v0.5.md`
 - real replays v1 findings: `project-brain/echelon/findings-real-replays-v1.md`
 - real replays v0.6a tight findings: `project-brain/echelon/findings-real-replays-v0.6a-tight.md`
+- real replays v0.6b diverse findings: `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
 - terrain schema: `docs/cognitive-router/spec/terrain-schema.md`

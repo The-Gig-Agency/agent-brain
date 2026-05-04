@@ -1,0 +1,179 @@
+{
+  "dataset_name": "debugging-real-replays-v1-diverse",
+  "purpose": "Router-visible replay cases with reduced repo fingerprinting and more explicit terrain diversity.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "cg-161",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "backend service",
+      "title": "Credentialless login reaches authenticated state",
+      "symptom": "An account can reach an authenticated state even when expected credentials are not provided.",
+      "visible_evidence": [
+        "The failure sits somewhere between login validation, onboarding flow, and external account state reconciliation",
+        "A plausible early explanation is stale session or reused state, but that may be misleading",
+        "The most visible symptom appears simple, but the actual commitment decision is not"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "authentication boundary",
+          "onboarding flow boundary",
+          "external account sync boundary"
+        ],
+        "repro_style": "auth bypass with delayed decisive evidence",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "session reuse looked plausible first",
+          "external state reconciliation created a non-local explanation"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "session cleanup only",
+        "conflicting_evidence": true
+      },
+      "success_criteria": [
+        "identify the auth-flow root cause",
+        "propose a fix direction consistent with the merged patch family"
+      ],
+      "notes": "Terrain class: auth failure under deceptive evidence."
+    },
+    {
+      "id": "cg-171",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "backend service",
+      "title": "AttributeError surfaces at integration path boundary",
+      "symptom": "An AttributeError appears when a workflow enters an integration path, but the wrong object boundary is initially unclear.",
+      "visible_evidence": [
+        "The failure could live in request handling, shape conversion, or integration publishing layers",
+        "Competing clues make a serializer-only fix look attractive at first",
+        "The case contains production-like ambiguity rather than a clean stack-local answer"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "request boundary",
+          "shape-conversion boundary",
+          "integration publishing boundary"
+        ],
+        "repro_style": "attribute mismatch with contradictory integration evidence",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "shape-conversion assumptions looked guilty early",
+          "publishing logs created a competing explanation"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "conversion-layer-only patch",
+        "conflicting_evidence": true,
+        "environment_confusion": [
+          "integration-only path context"
+        ]
+      },
+      "success_criteria": [
+        "trace the failure to the correct object boundary",
+        "match the fix direction in the merged patch family"
+      ],
+      "notes": "Terrain class: integration boundary / object-shape mismatch."
+    },
+    {
+      "id": "cg-172",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "backend service",
+      "title": "Refresh path ignores expected limit",
+      "symptom": "A refresh path completes, but the applied limit remains unchanged or ineffective.",
+      "visible_evidence": [
+        "The symptom is compact and reproducible",
+        "There is little evidence of broad workflow corruption",
+        "The bug looks more like a focused propagation mistake than a multi-layer search problem"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "refresh helper path"
+        ],
+        "repro_style": "compact limit propagation bug",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why the refresh limit was not being applied",
+        "align with the landed fix behavior"
+      ],
+      "notes": "Terrain class: compact helper logic / pruning-friendly."
+    },
+    {
+      "id": "cg-173",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "backend service",
+      "title": "Incorrect limit values emerge across workflow stages",
+      "symptom": "Limit values become incorrect after moving through multiple workflow stages, but the initial visible layer does not reveal the true mutation point.",
+      "visible_evidence": [
+        "The failure can look like a UI or task-level issue before broader propagation is inspected",
+        "Multiple workflow stages may touch the same effective value",
+        "The first plausible explanation is likely to be incomplete"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "user-facing limits surface",
+          "background workflow boundary",
+          "value propagation chain"
+        ],
+        "repro_style": "multi-stage data consistency bug with deceptive local clues",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "surface-layer values looked wrong before propagation was checked",
+          "background counters suggested a different false lead"
+        ],
+        "delayed_decisive_signal": true,
+        "false_positive_fix_family": "surface-layer-only patch",
+        "conflicting_evidence": true,
+        "environment_confusion": [
+          "multiple stages can mutate the same value"
+        ]
+      },
+      "success_criteria": [
+        "identify where limit values were being miscomputed or mispropagated",
+        "produce the same fix family as the merged patch"
+      ],
+      "notes": "Terrain class: data consistency / multi-hop propagation."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "withheld-service-b",
+      "repo_local_path": "withheld",
+      "stack": "backend service",
+      "title": "Indirect operational symptom masks schema mismatch",
+      "symptom": "Operational behavior fails because two closely related response fields are inconsistent, but the first visible symptom is indirect.",
+      "visible_evidence": [
+        "The failure may appear through admin or persistence surfaces rather than the schema boundary itself",
+        "A tempting false fix is to patch only the operational surface",
+        "The clean root cause likely sits lower than the first visible symptom"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "schema boundary",
+          "operational/admin surface",
+          "persistence compatibility boundary"
+        ],
+        "repro_style": "schema mismatch with indirect operational symptom",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "misleading_telemetry": [
+          "operational surface behavior can distract from the schema root cause"
+        ],
+        "false_positive_fix_family": "surface-only patch"
+      },
+      "success_criteria": [
+        "identify the schema inconsistency",
+        "confirm the fix direction through model, migration, and test changes"
+      ],
+      "notes": "Terrain class: schema consistency / indirect symptom."
+    }
+  ]
+}

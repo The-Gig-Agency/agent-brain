@@ -201,6 +201,7 @@ export function runReplaySuite(
   );
 
   const isTightReplay = visibleFileName.includes("tight");
+  const isDiverseReplay = visibleFileName.includes("diverse");
 
   return {
     suite_id: suiteId,
@@ -221,13 +222,19 @@ export function runReplaySuite(
     },
     caveats: [
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
-      isTightReplay
+      isDiverseReplay
+        ? "This diverse replay variant reduces repository and org fingerprinting by anonymizing visible repo identity and shifting the visible layer toward terrain-shaped descriptions."
+        : isTightReplay
         ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
         : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
-      isTightReplay
+      isDiverseReplay
+        ? "The ambiguity augmentation remains deliberate, but the visible cases now preserve terrain diversity with less reliance on organization-specific naming or topology."
+        : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
-      isTightReplay
+      isDiverseReplay
+        ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
+        : isTightReplay
         ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."
         : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
     ],
@@ -244,5 +251,13 @@ export function runRealReplaysV06aTightSuite(): ReplayDatasetReport {
     "real-replays-v1-tight.visible.json",
     "real-replays-v1-tight.evaluator.json",
     "real-replays-v0.6a-tight",
+  );
+}
+
+export function runRealReplaysV06bDiverseSuite(): ReplayDatasetReport {
+  return runReplaySuite(
+    "real-replays-v1-diverse.visible.json",
+    "real-replays-v1-tight.evaluator.json",
+    "real-replays-v0.6b-diverse",
   );
 }
