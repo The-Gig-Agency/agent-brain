@@ -1,0 +1,143 @@
+{
+  "dataset_name": "debugging-real-replays-v1",
+  "purpose": "Router-visible replay cases for debugging-policy evaluation.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "cg-161",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Bug/cg 757/merchant can log in without username and password",
+      "symptom": "Merchant authentication allowed login without entering username and password.",
+      "visible_evidence": [
+        "Authentication flow issue in merchant login path",
+        "Changed files include users auth view plus shared Shopify-related modules",
+        "PR title indicates a real production auth bug rather than a test-only defect"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/users/api/auth/views.py",
+          "creatorsgift/shared/tools/shopify.py",
+          "creatorsgift/shopify/tasks.py"
+        ],
+        "repro_style": "auth flow / validation boundary",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the auth-flow root cause",
+        "propose a fix direction consistent with the merged patch family"
+      ],
+      "notes": "PR body was null, so visible context relies mainly on title and changed-file pattern."
+    },
+    {
+      "id": "cg-171",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Bug/cg 942/attribute error when entering ciq path",
+      "symptom": "An AttributeError occurred when entering the CIQ path.",
+      "visible_evidence": [
+        "Failure involves CIQ path entry",
+        "Changed files span influencers viewsets, serializers, and shared publishers logic",
+        "Merge trail references a Sentry issue, so this looks like a real observed production failure"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/influencers/api/viewsets.py",
+          "creatorsgift/influencers/serializers.py",
+          "creatorsgift/shared/tools/publishers.py"
+        ],
+        "repro_style": "attribute boundary / object-shape mismatch",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "trace the CIQ path failure to the correct object or attribute boundary",
+        "match the fix direction in the merged patch family"
+      ],
+      "notes": "Strong replay case because the GitHub trail points to an external incident reference."
+    },
+    {
+      "id": "cg-172",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "Bug/cg 940/refreshing orders limit does not work",
+      "symptom": "Refreshing orders did not apply the expected limit.",
+      "visible_evidence": [
+        "Orders refresh path is ignoring or misapplying a limit",
+        "Only one helper file changed",
+        "Merge trail references a Sentry issue"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/influencers/helpers.py"
+        ],
+        "repro_style": "limit propagation / helper logic",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why the refresh limit was not being applied",
+        "align with the landed fix behavior"
+      ],
+      "notes": "Best compact CreatorGift backend replay to start with."
+    },
+    {
+      "id": "cg-173",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "stack": "python/django",
+      "title": "CG-936 Fixed Incorrect value of items and orders limits",
+      "symptom": "Items and orders limits were calculated or displayed incorrectly.",
+      "visible_evidence": [
+        "Multiple clients, orders, and influencer-side files changed",
+        "Bug appears to involve value propagation across tasks, forms, helpers, and signals",
+        "This looks broader than a one-line fix and more like a miscomputed or mispropagated limit value"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "creatorsgift/clients/api/serializers.py",
+          "creatorsgift/clients/helpers.py",
+          "creatorsgift/clients/tasks.py",
+          "creatorsgift/influencers/signals.py",
+          "creatorsgift/orders/forms.py",
+          "creatorsgift/orders/tasks.py"
+        ],
+        "repro_style": "multi-hop limit computation / propagation",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify where limit values were being miscomputed or mispropagated",
+        "produce the same fix family as the merged patch"
+      ],
+      "notes": "Broader patch than the others, useful as a harder replay case after the compact ones."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "The-Gig-Agency/hfc-scoring-engine",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/hfc-scoring-engine",
+      "stack": "python/django",
+      "title": "[HFC-63] Fixing issue caused by Lead.answers.response field length inconsistency with Recommendation.response",
+      "symptom": "Model field length mismatch between Lead.answers.response and Recommendation.response caused failures.",
+      "visible_evidence": [
+        "Schema inconsistency between two response fields",
+        "Changed files include models, migration, admin, tests, and README",
+        "This looks like a clean data-model mismatch rather than a UI or workflow issue"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "scoringengine/models.py",
+          "scoringengine/migrations/0022_alter_answer_response_text.py",
+          "tests/test_admin.py"
+        ],
+        "repro_style": "schema mismatch / migration-backed fix",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the schema inconsistency",
+        "confirm the fix direction through model, migration, and test changes"
+      ],
+      "notes": "Best clean non-UI replay case in the set."
+    }
+  ]
+}

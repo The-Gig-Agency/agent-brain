@@ -95,6 +95,13 @@ The evaluator may read:
 
 This separation is required to keep the eval actually blinded.
 
+For real replay datasets, keep this separation as two fixtures:
+
+- router-visible dataset file
+- evaluator-only truth file
+
+That prevents PR metadata, patch truth, or root-cause clues from leaking into the router prompt or runtime.
+
 ## Baselines
 
 At minimum:

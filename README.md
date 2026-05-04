@@ -18,6 +18,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
 - `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
 - `project-brain/echelon/v0.4-plan.md`: the current hardening plan for stronger baselines and holdout tests
+- `project-brain/echelon/real-replays-v1.md`: the first real-case replay dataset notes
 
 ## Purpose
 
@@ -62,6 +63,7 @@ This is intentionally small and deterministic:
 - an adversarial `v0.3` suite for permutation, transition-ablation, and misleading-evidence tests
 - a `v0.4` hardening pass with anti-broadening traps, one stronger baseline, and generated holdout cases
 - a `v0.5` control-oriented pass with anti-transition traps, transition-regret metrics, and replay-style cases
+- split real-replay fixtures for router-visible versus evaluator-only debugging cases
 
 ## Commands
 

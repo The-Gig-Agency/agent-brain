@@ -7,6 +7,7 @@
 - v0.2 debugging core: `project-brain/echelon/v0.2-debugging-core.md`
 - v0.3 adversarial tests: `project-brain/echelon/v0.3-adversarial-tests.md`
 - v0.4 plan: `project-brain/echelon/v0.4-plan.md`
+- real replays v1: `project-brain/echelon/real-replays-v1.md`
 - test design anti-bias: `project-brain/echelon/test-design-anti-bias.md`
 - debugging v1 findings: `project-brain/echelon/findings-debugging-v1.md`
 - debugging core v0.2 findings: `project-brain/echelon/findings-debugging-core-v0.2.md`
