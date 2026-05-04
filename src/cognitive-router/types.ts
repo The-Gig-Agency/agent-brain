@@ -260,6 +260,36 @@ export type BaselinePolicyId =
   | "score_threshold"
   | "routed_policy";
 
+/** Per-cycle metrics for transition-first candidate lanes (protocol labels; see findings doc). */
+export type TransitionCycleMeasurementSummary = {
+  case_count: number;
+  /** Sum of premature + delayed transition regret + unnecessary transition cost (routed), averaged per case. */
+  transition_regret_avg: number;
+  /** Share of cases where the router showed early compound pressure or false convergence. */
+  premature_convergence_proxy_rate: number;
+  /** Mean recovery cost after an early compound transition (drift recovery proxy). */
+  drift_recovery_cost_avg: number;
+  /** Mean count of drift_detected trace events per case. */
+  drift_events_avg: number;
+  /** Higher means stabler regime path (inverse hysteresis / false-convergence pressure). */
+  confidence_collapse_quality_avg: number;
+  /** Higher means fewer failed fixes before a strength≥2 signal on the true root family. */
+  partial_resolution_handling_avg: number;
+  /** Mean repeated-failed-path pressure + dead-end persistence (calibration-style penalty). */
+  calibration_penalty_avg: number;
+  per_case: Array<{
+    case_id: string;
+    trap_family: string;
+    transition_regret: number;
+    premature_convergence_proxy: boolean;
+    drift_recovery_cost: number;
+    drift_events: number;
+    confidence_collapse_quality: number;
+    partial_resolution_handling: number;
+    calibration_penalty: number;
+  }>;
+};
+
 export type DebuggingSuiteReport = {
   suite_id: string;
   generated_at: string;
@@ -286,6 +316,8 @@ export type DebuggingSuiteReport = {
     baselines: DebugRunResult[];
     pass: boolean;
   }>;
+  /** Present for transition-candidate / transition-first instrumented suites. */
+  transition_cycle_metrics?: TransitionCycleMeasurementSummary;
 };
 
 export type DebuggingCoreV01Report = {

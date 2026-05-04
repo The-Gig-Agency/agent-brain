@@ -215,6 +215,16 @@ const debuggingTerrain = (
   mode_pressure: modePressure,
 });
 
+/** Same as debuggingTerrain but marks shifting production context (drift / recovery pressure). */
+const debuggingTerrainShifting = (
+  modePressure: TerrainProfile["mode_pressure"],
+  uncertainty: TerrainProfile["uncertainty"],
+  localMinimaRisk: TerrainProfile["local_minima_risk"],
+): TerrainProfile => ({
+  ...debuggingTerrain(modePressure, uncertainty, localMinimaRisk),
+  environment_stability: "shifting",
+});
+
 const antiBroadeningTerrain = (): TerrainProfile => ({
   feedback_latency: "fast",
   reversibility: "high",
@@ -549,6 +559,85 @@ export const DEBUGGING_CORE_V05_REPLAY_CASES: DebugEvalCase[] = [
     rootCause: "version",
     distractors: ["dependency", "artifact"],
     budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "dependency",
+    logSignalStrength: 1,
+    falsePositiveInspectFamilies: ["dependency", "artifact"],
+    successSignalThreshold: 3,
+    familyOrder: ["dependency", "artifact", "version"],
+  }),
+];
+
+/**
+ * Candidate lane (mutable): transition trap families for Week-1 style measurement.
+ * Not frozen — do not use for longitudinal frozen claims.
+ */
+export const DEBUGGING_TRANSITION_CANDIDATE_V01_CASES: DebugEvalCase[] = [
+  createCase({
+    caseId: "candidate-tf01-early-switch",
+    title: "[Candidate trap: early switch] Strong log clue should not force immediate compounding",
+    prompt:
+      "A strong dependency-looking log clue arrives early, but switching into compounding before targeted inspection would be a mistake.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 7,
+    terrain: debuggingTerrain("prune", "medium", "medium"),
+    logSignalFamily: "dependency",
+    logSignalStrength: 2,
+    falsePositiveInspectFamilies: ["dependency"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "candidate-tf01-late-switch",
+    title: "[Candidate trap: late switch] Misleading dependency blame before version evidence firms up",
+    prompt:
+      "The original debugging path over-weighted dependency blame before version evidence finally resolved the incident.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "dependency",
+    logSignalStrength: 1,
+    falsePositiveInspectFamilies: ["dependency", "artifact"],
+    successSignalThreshold: 3,
+    familyOrder: ["dependency", "artifact", "version"],
+  }),
+  createCase({
+    caseId: "candidate-tf01-drift-miss",
+    title: "[Candidate trap: drift miss] Shifting metrics while chasing cache vs logic vs stale state",
+    prompt:
+      "Production metrics shift while you are mid-incident; early cache and logic strands look plausible before stale-state becomes decisive.",
+    rootCause: "stale_state",
+    distractors: ["cache", "logic"],
+    budget: 10,
+    terrain: debuggingTerrainShifting("explore", "high", "high"),
+    logSignalFamily: "cache",
+    logSignalStrength: 1,
+    falsePositiveInspectFamilies: ["cache", "logic"],
+    successSignalThreshold: 3,
+    familyOrder: ["cache", "logic", "stale_state"],
+  }),
+  createCase({
+    caseId: "candidate-tf01-partial-overcommit",
+    title: "[Candidate trap: partial-success overcommit] Test progress masks a deeper race",
+    prompt:
+      "A change looks helpful in tests but production still looks flaky. It may be a partial fix or a deeper race.",
+    rootCause: "race",
+    distractors: ["test_flake", "regression"],
+    budget: 9,
+    terrain: debuggingTerrain("explore", "high", "medium"),
+    logSignalFamily: "test_flake",
+    falsePositiveInspectFamilies: ["test_flake", "regression"],
+    successSignalThreshold: 3,
+    familyOrder: ["test_flake", "regression", "race"],
+  }),
+  createCase({
+    caseId: "candidate-tf01-false-convergence",
+    title: "[Candidate trap: false convergence] Noisy deploy with tight budget",
+    prompt: "Deploy failed with mixed signals. Several families look plausible at first glance and the budget is tight.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 4,
     terrain: debuggingTerrain("explore", "high", "high"),
     logSignalFamily: "dependency",
     logSignalStrength: 1,

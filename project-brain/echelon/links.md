@@ -7,6 +7,7 @@
 - frozen lanes manifest v1: `project-brain/echelon/frozen-lanes-manifest-v1.json`
 - frozen-debug-v1 lock: `project-brain/echelon/frozen-debug-v1-lock.md`
 - frozen-media-v1 lock: `project-brain/echelon/frozen-media-v1-lock.md`
+- transition candidate lane v0.1 findings: `project-brain/echelon/findings-transition-candidate-v0.1.md`
 - eval v2: `project-brain/echelon/eval-v2.md`
 - v0.1 debugging core: `project-brain/echelon/v0.1-debugging-core.md`
 - v0.2 debugging core: `project-brain/echelon/v0.2-debugging-core.md`

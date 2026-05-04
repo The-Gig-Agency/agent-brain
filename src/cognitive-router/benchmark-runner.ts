@@ -11,8 +11,10 @@ import {
   DEBUGGING_CORE_V05_REPLAY_CASES,
   DEBUGGING_V1_CASES,
   DEBUGGING_V1_HOLDOUT_CASES,
+  DEBUGGING_TRANSITION_CANDIDATE_V01_CASES,
   generateDebuggingV04HoldoutCases,
 } from "./debugging-world.js";
+import { computeTransitionCycleMetrics } from "./transition-candidate-metrics.js";
 import { runDebugCase } from "./router-runner.js";
 import {
   costBeforeFamilySignal,
@@ -86,7 +88,10 @@ function buildPerPolicy(resultsByPolicy: Record<BaselinePolicyId, DebugRunResult
   }));
 }
 
-export function runDebuggingV1Suite(cases: DebugEvalCase[] = DEBUGGING_V1_CASES): DebuggingSuiteReport {
+export function runDebuggingV1Suite(
+  cases: DebugEvalCase[] = DEBUGGING_V1_CASES,
+  suiteId: string = "debugging-v1",
+): DebuggingSuiteReport {
   const routedRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
   const baselineRuns = Object.fromEntries(
     BASELINES.map((baseline) => [baseline, cases.map((debugCase) => runDebugCase(debugCase, baseline))]),
@@ -119,7 +124,7 @@ export function runDebuggingV1Suite(cases: DebugEvalCase[] = DEBUGGING_V1_CASES)
   });
 
   return {
-    suite_id: "debugging-v1",
+    suite_id: suiteId,
     generated_at: new Date().toISOString(),
     summary: {
       case_count: cases.length,
@@ -134,6 +139,13 @@ export function runDebuggingV1Suite(cases: DebugEvalCase[] = DEBUGGING_V1_CASES)
     }),
     cases: casesWithComparison,
   };
+}
+
+/** Mutable candidate lane: transition traps + instrumented cycle metrics (not frozen). */
+export function runTransitionCandidateV01Suite(): DebuggingSuiteReport {
+  const report = runDebuggingV1Suite(DEBUGGING_TRANSITION_CANDIDATE_V01_CASES, "transition-candidate-v0.1");
+  report.transition_cycle_metrics = computeTransitionCycleMetrics(DEBUGGING_TRANSITION_CANDIDATE_V01_CASES, report.cases);
+  return report;
 }
 
 export function runDebuggingHoldoutSuite(): DebuggingSuiteReport {

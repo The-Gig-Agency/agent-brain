@@ -16,6 +16,10 @@ export function countTransitions(trace: RouterTraceEvent[]): number {
   return trace.filter((event) => event.type === "transition").length;
 }
 
+export function countDriftDetected(trace: RouterTraceEvent[]): number {
+  return trace.filter((event) => event.type === "drift_detected").length;
+}
+
 export function countHysteresis(trace: RouterTraceEvent[]): number {
   const transitions = trace.filter((event) => event.type === "transition");
   let hysteresis = 0;

@@ -25,6 +25,7 @@ Maintain three benchmark lanes:
    - new cases and metric refinements
    - must run alongside frozen lane
    - used to decide future frozen-lane promotion
+   - transition-first candidate pack v0.1: `npm run eval:transition-candidate:v0.1` (cases in `DEBUGGING_TRANSITION_CANDIDATE_V01_CASES`, report includes `transition_cycle_metrics`)
 
 3. **Stress Lane (adversarial)**
    - harsh counterfactuals and deception-heavy cases
