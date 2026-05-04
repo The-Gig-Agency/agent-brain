@@ -220,6 +220,7 @@ export function runReplaySuite(
   const isCandidateReplay = visibleFileName.includes("v2-candidates");
   const isCandidateTightReplay = isCandidateReplay && isTightReplay;
   const isDegradedEvidenceReplay = visibleFileName.includes("v0.6d");
+  const isMixedReplay = visibleFileName.includes("v0.6e");
 
   return {
     suite_id: suiteId,
@@ -240,13 +241,18 @@ export function runReplaySuite(
     },
     caveats: [
       "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
+      isMixedReplay
+        ? "This mixed replay pack combines real explore-deserving degraded-evidence cases with real prune-deserving narrow cases to test regime boundary discrimination."
+        : null,
       isDegradedEvidenceReplay
         ? "This degraded-evidence replay pack is intentionally one-sided: all five cases are real incidents chosen to stress misleading progress, conflicting telemetry, partial fixes, and delayed root causes."
         : null,
       isCandidateReplay
         ? "This candidate replay variant broadens the real-case mix with more hidden-dependency, propagation, and contract-drift bugs mined directly from local private-repo history."
         : null,
-      isDegradedEvidenceReplay
+      isMixedReplay
+        ? "The visible layer is terrain-shaped and repo-anonymized, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
+        : isDegradedEvidenceReplay
         ? "The visible layer is terrain-shaped and repo-anonymized, but the pack is still evaluator-curated rather than a raw naturalistic incident slice."
         : isCandidateTightReplay
         ? "This tighter candidate replay variant reduces repo identity and file-path leakage by replacing concrete paths with terrain-shaped investigation surfaces."
@@ -255,14 +261,18 @@ export function runReplaySuite(
         : isTightReplay
         ? "This tighter replay variant weakens file-level leakage, but it still uses evaluator-designed ambiguity augmentation rather than raw incident capture."
         : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
-      isDegradedEvidenceReplay
+      isMixedReplay
+        ? "This pack is useful as an early regime-boundary benchmark, but it is still small and does not yet test compound-deserving cases."
+        : isDegradedEvidenceReplay
         ? "This pack is useful as a wedge benchmark for adaptive commitment under degraded evidence, not as a balanced mixed-regime debugging benchmark."
         : isCandidateTightReplay
         ? "The current v0.6c-tight visible layer is stricter than the base candidate pass, but it still stops short of pure issue-text, log, and repro-note framing."
         : isCandidateReplay
         ? "The current v0.6c visible layer is still partially truth-adjacent because most cases retain changed-surface entry points rather than issue-text-only framing."
         : null,
-      isDegradedEvidenceReplay
+      isMixedReplay
+        ? "The augmentation is used only on the explore-deserving side of the pack; the prune-deserving cases remain relatively clean to preserve the regime boundary test."
+        : isDegradedEvidenceReplay
         ? "The augmentation is deliberate on these cases because the benchmark is trying to preserve the degraded-evidence topology of the real incidents, not flatten them into clean one-step debugging stories."
         : isCandidateTightReplay
         ? "The augmentation is deliberate on the deceptive cases: delayed signals and false-positive fix families remain to test hidden-dependency handling under lower leakage."
@@ -271,7 +281,9 @@ export function runReplaySuite(
         : isTightReplay
         ? "The augmentation is deliberate: misleading telemetry, delayed decisive signals, and false-positive fix families are injected to test ambiguity handling."
         : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
-      isDegradedEvidenceReplay
+      isMixedReplay
+        ? "This result is more meaningful than a one-sided wedge because the router succeeds on both sides of the explore-versus-prune boundary without changing the underlying routing logic."
+        : isDegradedEvidenceReplay
         ? "This result is strong for the specific wedge because routed policy cleanly separates from fixed narrowing on all five cases, but it should not be read as a broad all-debugging win."
         : isCandidateTightReplay
         ? "This result is encouraging because the broader replay-expansion set remains discriminative after a meaningful visible-layer tightening pass."

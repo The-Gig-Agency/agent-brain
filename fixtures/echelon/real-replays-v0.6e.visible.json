@@ -1,0 +1,181 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6e",
+  "purpose": "Mixed real-world replay pack with both explore-deserving degraded cases and prune-deserving narrow contract or sequencing cases.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "ciq-bf61b23",
+      "repo": "withheld-service-d",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Auto-fix appeared to work but final state drifted after re-fetch",
+      "symptom": "A reconciliation flow reported progress after an auto-fix step, but later state checks still diverged.",
+      "visible_evidence": [
+        "The same workflow both mutates state and re-fetches it later",
+        "A first apparent correction may not reflect the final settled state",
+        "This looks like degraded evidence rather than a simple one-pass handler bug"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "reconciliation auto-fix loop",
+          "follow-up re-fetch verification step"
+        ],
+        "repro_style": "re-fetch ambiguity / partial fix history / conflicting telemetry",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "single auto-fix success condition"
+      },
+      "success_criteria": [
+        "identify why apparent fix progress did not guarantee final convergence",
+        "propose a fix family consistent with the landed re-fetch and auto-fix changes"
+      ],
+      "notes": "Explore-deserving degraded-evidence case."
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "withheld-service-e",
+      "repo_local_path": "withheld",
+      "stack": "typescript/node",
+      "title": "Approval flow returned an ambiguous 200",
+      "symptom": "An approval flow returned HTTP 200, but the result could not safely be treated as a successful approval.",
+      "visible_evidence": [
+        "The surface status code suggests success while the contract signal remains ambiguous",
+        "The safe fix is about interpretation and fail-closed behavior, not just transport success",
+        "This is a conflicting-telemetry case where naive narrowing can trust the wrong signal"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "approval response interpreter",
+          "base URL selection for remote approval call"
+        ],
+        "repro_style": "ambiguous success / fail-closed response contract",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "HTTP status is 200",
+          "payload may omit an explicit success signal"
+        ],
+        "false_positive_fix_family": "treat any 200 as success"
+      },
+      "success_criteria": [
+        "identify why a nominally successful response still required fail-closed handling",
+        "propose a fix family consistent with the landed contract interpretation change"
+      ],
+      "notes": "Explore-deserving conflicting-telemetry case."
+    },
+    {
+      "id": "cg-1036",
+      "repo": "withheld-service-f",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Rollover allowances stopped working after refresh and publisher updates",
+      "symptom": "Allowance rollover behavior failed after later refresh or publisher-update activity even though earlier flows looked correct.",
+      "visible_evidence": [
+        "The bug spans task flow, helper logic, and publisher update behavior",
+        "It has the shape of a partial-fix or stale-state problem rather than a single local decrement issue",
+        "The correct move may require following the post-refresh state path, not just the immediate limit math"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "publisher refresh task",
+          "allowance rollover helper",
+          "publisher synchronization surface"
+        ],
+        "repro_style": "stale-state rollover / partial-fix propagation",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "local allowance arithmetic only"
+      },
+      "success_criteria": [
+        "identify why the rollover logic broke after later state changes",
+        "propose a fix family consistent with the landed multi-surface patch"
+      ],
+      "notes": "Explore-deserving stale-state case."
+    },
+    {
+      "id": "cg-987",
+      "repo": "withheld-service-a",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Refresh did not restore expected allowances",
+      "symptom": "Refreshing a limit window did not restore the expected allowances.",
+      "visible_evidence": [
+        "The bug sits in a scheduled or background refresh path",
+        "The failure depends on task ordering and rollover conditions",
+        "This looks more like stale-state sequencing than broad propagation"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "limit expiration task"
+        ],
+        "repro_style": "stale-state refresh / task sequencing ambiguity",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "find why refresh and rollover behavior diverged from expected limits",
+        "align with the landed task-level fix direction"
+      ],
+      "notes": "Prune-deserving compact operational logic case."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "withheld-service-b",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Incorrect counts from handler response mapping",
+      "symptom": "Counts and collections returned from a handler were wrong because response fields were mapped incorrectly.",
+      "visible_evidence": [
+        "The failure is a contract-drift problem between an upstream response and local mapping logic",
+        "The system is reading the wrong collection or total fields rather than failing transport altogether",
+        "This should reward narrow contract inspection more than broad exploration"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "response mapping handler"
+        ],
+        "repro_style": "response-shape mismatch / mapping contract drift",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the response-field mapping mismatch",
+        "match the fix direction in the handler layer"
+      ],
+      "notes": "Prune-deserving mapping contract case."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "withheld-service-g",
+      "repo_local_path": "withheld",
+      "stack": "python/backend",
+      "title": "Field length mismatch between related response models",
+      "symptom": "A field length mismatch between related response models caused failures.",
+      "visible_evidence": [
+        "The issue is a schema inconsistency between two related response fields",
+        "The likely fix involves model and migration alignment rather than broad workflow exploration",
+        "This is a clean narrow contract case"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "model definition",
+          "migration layer",
+          "admin or test verification surface"
+        ],
+        "repro_style": "schema mismatch / migration-backed fix",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify the schema inconsistency",
+        "confirm the fix direction through model, migration, and test changes"
+      ],
+      "notes": "Prune-deserving schema alignment case."
+    }
+  ]
+}

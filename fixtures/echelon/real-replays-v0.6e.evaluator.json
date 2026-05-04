@@ -1,0 +1,120 @@
+{
+  "dataset_name": "debugging-real-replays-v0.6e",
+  "purpose": "Evaluator-only truth for the mixed real-world replay pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "ciq-bf61b23",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "bf61b23063bed5fa46fdbd1a073a8802c41a00a3",
+      "start_ref": "790e0098a6c57aa815af26a17d4c41431db93fa9",
+      "likely_fix_files": [
+        "supabase/functions/reconcile-campaign-publishers/index.ts"
+      ],
+      "expected_failure_mode": "partial fix followed by misleading re-fetch state in reconciliation workflow",
+      "patch_family_judgment": [
+        "fix should address both auto-fix progress handling and the follow-up re-fetch logic",
+        "fix should not treat first apparent convergence as final correctness"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Explore-deserving degraded-evidence case."
+    },
+    {
+      "id": "acp-9b20f69",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "9b20f69513e0aa457218a98b7e560cbf5260e4b8",
+      "start_ref": "39354a329306096237f90f7ee3d3cb204e07fa97",
+      "likely_fix_files": [
+        "installer/approve.ts",
+        "installer/cli-registry.ts",
+        "tests/approve.spec.ts"
+      ],
+      "expected_failure_mode": "ambiguous success response treated too optimistically in approval flow",
+      "patch_family_judgment": [
+        "fix should require an explicit success signal and fail closed on ambiguous 200 responses",
+        "fix should align approval path configuration with ACP_BASE_URL and contract-safe interpretation"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Explore-deserving conflicting-telemetry case."
+    },
+    {
+      "id": "cg-1036",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "7ff7fcffd47587a688da37c9fa107383d2b6ec9e",
+      "start_ref": "cee3770d0db7b47d2608ee738db32cc91d65bfbe",
+      "likely_fix_files": [
+        "creatorsgift/clients/tasks.py",
+        "creatorsgift/influencers/helpers.py",
+        "creatorsgift/shared/tools/publishers.py",
+        "creatorsgift/clients/tests/test_api_serializers.py"
+      ],
+      "expected_failure_mode": "stale-state rollover allowances broken after refresh and publisher sync changes",
+      "patch_family_judgment": [
+        "fix should align limit creation and rollover behavior across task, helper, and publisher update surfaces",
+        "fix should address delayed stale-state behavior rather than only local arithmetic"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Explore-deserving stale-state case."
+    },
+    {
+      "id": "cg-987",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "8a0614237b023f42f3dc9f7eb8f029afee545021",
+      "start_ref": "196d086bb4f0f5681120cd0512ceb45f48fc283c",
+      "likely_fix_files": [
+        "creatorsgift/orders/tasks.py"
+      ],
+      "expected_failure_mode": "refresh rollover not applied in expired-order task flow",
+      "patch_family_judgment": [
+        "fix should move or restore allowance rollover handling to the correct refresh or expiration step",
+        "fix should remain localized to task ordering and conditional rollover behavior"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Prune-deserving compact operational logic case."
+    },
+    {
+      "id": "ciq-95356ae",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "95356aefedf5cb8ceba215cd677ae0d4032d08d8",
+      "start_ref": "a80e6d53b6d5c0dadd5dbefd542eee4a9e746465",
+      "likely_fix_files": [
+        "supabase/functions/manage/ciq-handlers.ts"
+      ],
+      "expected_failure_mode": "CIQ response-shape mapping mismatch for collections and totals",
+      "patch_family_judgment": [
+        "fix should align handler field names to the actual CIQ response structure",
+        "fix should correct both collection keys and total-count extraction"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Prune-deserving mapping contract case."
+    },
+    {
+      "id": "hfc-2",
+      "repo": "The-Gig-Agency/hfc-scoring-engine",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/hfc-scoring-engine",
+      "pr_number": 2,
+      "pr_url": "https://github.com/The-Gig-Agency/hfc-scoring-engine/pull/2",
+      "merge_commit_sha": "6400b8ae3a7f9c2d743aa72a4c6eb4e6da8f98e8",
+      "start_ref": "8f5a0eb018c2c5328e556778f9043caad164ef34",
+      "merged_at": "2022-09-26T12:07:34Z",
+      "likely_fix_files": [
+        "scoringengine/models.py",
+        "scoringengine/migrations/0022_alter_answer_response_text.py",
+        "scoringengine/admin.py",
+        "tests/test_admin.py"
+      ],
+      "expected_failure_mode": "schema mismatch / field length inconsistency",
+      "patch_family_judgment": [
+        "fix should align Lead.answers.response with Recommendation.response",
+        "fix should be confirmed through model, migration, and test changes"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Prune-deserving clean schema alignment case."
+    }
+  ]
+}
