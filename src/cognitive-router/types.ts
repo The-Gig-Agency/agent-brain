@@ -137,7 +137,7 @@ export type HiddenDebugActionEffect = {
   observations: DebugObservation[];
   success: boolean;
   retryable: boolean;
-  requires_signal?: boolean;
+  signal_threshold?: number;
 };
 
 export type DebugVisibleInput = {
@@ -315,5 +315,11 @@ export type DebuggingCoreV01Report = {
     case_id: string;
     routed: DebugRunResult;
     baselines: DebugRunResult[];
+    diagnostics: {
+      routed_first_three_actions: string[];
+      fixed_heuristic_first_three_actions: string[];
+      routed_cost_before_first_strong_signal: number | null;
+      fixed_heuristic_cost_before_first_strong_signal: number | null;
+    };
   }>;
 };

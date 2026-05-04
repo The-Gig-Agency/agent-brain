@@ -17,6 +17,10 @@ type CaseSpec = {
   budget: number;
   terrain: TerrainProfile;
   stratum?: "train" | "holdout";
+  logSignalFamily?: DebugFamily;
+  logSignalStrength?: 1 | 2;
+  falsePositiveInspectFamilies?: DebugFamily[];
+  successSignalThreshold?: number;
 };
 
 function familyLabel(family: DebugFamily): string {
@@ -56,6 +60,8 @@ function createCase(spec: CaseSpec): DebugEvalCase {
   ];
 
   const effects: Record<string, HiddenDebugActionEffect> = {};
+  const logSignalFamily = spec.logSignalFamily ?? spec.rootCause;
+  const logSignalStrength = spec.logSignalStrength ?? 1;
 
   effects["inspect:logs"] = {
     action_id: "inspect:logs",
@@ -64,10 +70,10 @@ function createCase(spec: CaseSpec): DebugEvalCase {
     observations: [
       createObservation(
         `${spec.caseId}:logs:root`,
-        spec.rootCause,
+        logSignalFamily,
         "positive",
-        1,
-        `Logs weakly implicate ${familyLabel(spec.rootCause)} behavior.`,
+        logSignalStrength,
+        `Logs weakly implicate ${familyLabel(logSignalFamily)} behavior.`,
       ),
     ],
   };
@@ -91,6 +97,16 @@ function createCase(spec: CaseSpec): DebugEvalCase {
                 `Inspection shows strong evidence of ${familyLabel(family)} as the failing path.`,
               ),
             ]
+          : spec.falsePositiveInspectFamilies?.includes(family)
+            ? [
+                createObservation(
+                  `${spec.caseId}:${family}:false-positive`,
+                  family,
+                  "positive",
+                  1,
+                  `Inspection produces weak but misleading evidence for ${familyLabel(family)}.`,
+                ),
+              ]
           : [
               createObservation(
                 `${spec.caseId}:${family}:negative`,
@@ -102,11 +118,10 @@ function createCase(spec: CaseSpec): DebugEvalCase {
             ],
     };
 
-    effects[fixId] = {
+    const fixEffect: HiddenDebugActionEffect = {
       action_id: fixId,
       success: family === spec.rootCause,
       retryable: family !== spec.rootCause,
-      requires_signal: family === spec.rootCause,
       observations:
         family === spec.rootCause
           ? [
@@ -128,6 +143,10 @@ function createCase(spec: CaseSpec): DebugEvalCase {
               ),
             ],
     };
+    if (family === spec.rootCause) {
+      fixEffect.signal_threshold = spec.successSignalThreshold ?? 1;
+    }
+    effects[fixId] = fixEffect;
   }
 
   const hiddenTruth: DebugHiddenTruth = {
@@ -292,6 +311,46 @@ export const DEBUGGING_V1_HOLDOUT_CASES: DebugEvalCase[] = [
 export const DEBUGGING_CORE_V01_CASES: DebugEvalCase[] = DEBUGGING_V1_CASES.filter((debugCase) =>
   ["debug-v1-01", "debug-v1-02", "debug-v1-03", "debug-v1-06", "debug-v1-10"].includes(debugCase.case_id),
 );
+
+export const DEBUGGING_CORE_V02_CASES: DebugEvalCase[] = [
+  ...DEBUGGING_CORE_V01_CASES,
+  createCase({
+    caseId: "debug-core-v02-01",
+    title: "Misleading dependency clue hides version failure",
+    prompt: "The logs point at a dependency problem, but the real breakage may come from a version mismatch deeper in the stack.",
+    rootCause: "version",
+    distractors: ["dependency", "artifact"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "dependency",
+    falsePositiveInspectFamilies: ["dependency"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v02-02",
+    title: "Cache-looking signal masks stale-state bug",
+    prompt: "Users see stale behavior and the first clue points at cache invalidation, but that clue may be misleading.",
+    rootCause: "stale_state",
+    distractors: ["cache", "logic"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "high"),
+    logSignalFamily: "cache",
+    falsePositiveInspectFamilies: ["cache"],
+    successSignalThreshold: 3,
+  }),
+  createCase({
+    caseId: "debug-core-v02-03",
+    title: "Permission-looking symptom masks secret-scope issue",
+    prompt: "A deploy fails with auth-like symptoms, but the visible permission path may be a false lead.",
+    rootCause: "secret_scope",
+    distractors: ["permission", "env"],
+    budget: 8,
+    terrain: debuggingTerrain("explore", "high", "medium"),
+    logSignalFamily: "permission",
+    falsePositiveInspectFamilies: ["permission"],
+    successSignalThreshold: 3,
+  }),
+];
 
 export function getHiddenEffect(debugCase: DebugEvalCase, actionId: string): HiddenDebugActionEffect {
   const effect = debugCase.hidden_truth.effects[actionId];

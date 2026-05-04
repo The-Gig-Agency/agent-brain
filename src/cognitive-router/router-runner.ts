@@ -189,6 +189,19 @@ function chooseRoutedAction(debugCase: DebugEvalCase, state: RuntimeState) {
       return logsAction;
     }
 
+    if (view.inferredFamily && !view.strongSignal) {
+      const alternativeInspect = chooseCheapestAction(
+        view,
+        (action) =>
+          action.kind === "inspect" &&
+          action.family !== view.inferredFamily &&
+          !view.executedActionIds.includes(action.id),
+      );
+      if (alternativeInspect) {
+        return alternativeInspect;
+      }
+    }
+
     if (view.inferredFamily) {
       const targetedInspect = chooseCheapestAction(
         view,
@@ -300,7 +313,7 @@ function executeAction(
   const effect = getHiddenEffect(debugCase, action.id);
   const signalBeforeAction = state.clueScores[action.family] ?? 0;
   const emittedObservations = effect.success
-    ? !effect.requires_signal || signalBeforeAction > 0
+    ? signalBeforeAction >= (effect.signal_threshold ?? 0)
       ? effect.observations
       : [
           {
@@ -322,9 +335,8 @@ function executeAction(
     const delta = observation.polarity === "positive" ? observation.strength : -observation.strength;
     state.clueScores[observation.family] += delta;
   }
-  const familySignal = state.clueScores[action.family] ?? 0;
 
-  if (effect.success && (!effect.requires_signal || signalBeforeAction > 0)) {
+  if (effect.success && signalBeforeAction >= (effect.signal_threshold ?? 0)) {
     state.success = true;
   } else if (action.kind === "fix") {
     state.failedFamilies[action.family] += 1;

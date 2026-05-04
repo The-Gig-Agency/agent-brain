@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { DEBUGGING_CORE_V01_CASES, DEBUGGING_V1_CASES, DEBUGGING_V1_HOLDOUT_CASES } from "./debugging-world.js";
+import { DEBUGGING_CORE_V01_CASES, DEBUGGING_CORE_V02_CASES, DEBUGGING_V1_CASES, DEBUGGING_V1_HOLDOUT_CASES } from "./debugging-world.js";
 import { runDebugCase } from "./router-runner.js";
+import { costBeforeFirstStrongSignal, firstThreeActions } from "./trace.js";
 import type {
   BaselinePolicyId,
   DebugEvalCase,
@@ -119,14 +120,22 @@ export function runDebuggingHoldoutSuite(): DebuggingSuiteReport {
 }
 
 export function runDebuggingCoreV01Suite(): DebuggingCoreV01Report {
-  const routedRuns = DEBUGGING_CORE_V01_CASES.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
+  return runFocusedCoreSuite("debugging-core-v0.1", DEBUGGING_CORE_V01_CASES);
+}
+
+export function runDebuggingCoreV02Suite(): DebuggingCoreV01Report {
+  return runFocusedCoreSuite("debugging-core-v0.2", DEBUGGING_CORE_V02_CASES);
+}
+
+function runFocusedCoreSuite(suiteId: string, cases: DebugEvalCase[]): DebuggingCoreV01Report {
+  const routedRuns = cases.map((debugCase) => runDebugCase(debugCase, "routed_policy"));
   const comparedBaselines: Exclude<BaselinePolicyId, "routed_policy">[] = [
     "naive_retry",
     "always_compound",
     "fixed_heuristic",
   ];
   const baselineRuns = Object.fromEntries(
-    comparedBaselines.map((baseline) => [baseline, DEBUGGING_CORE_V01_CASES.map((debugCase) => runDebugCase(debugCase, baseline))]),
+    comparedBaselines.map((baseline) => [baseline, cases.map((debugCase) => runDebugCase(debugCase, baseline))]),
   ) as Record<Exclude<BaselinePolicyId, "routed_policy">, DebugRunResult[]>;
 
   const routedSuccess = successRate(routedRuns);
@@ -145,12 +154,12 @@ export function runDebuggingCoreV01Suite(): DebuggingCoreV01Report {
   };
 
   return {
-    suite_id: "debugging-core-v0.1",
+    suite_id: suiteId,
     generated_at: new Date().toISOString(),
     go_no_go: Object.values(criteria).every(Boolean),
     criteria,
     summary: {
-      case_count: DEBUGGING_CORE_V01_CASES.length,
+      case_count: cases.length,
       routed_success_rate: routedSuccess,
       fixed_heuristic_success_rate: fixedSuccess,
       routed_average_cost: routedCost,
@@ -169,10 +178,14 @@ export function runDebuggingCoreV01Suite(): DebuggingCoreV01Report {
       always_compound: baselineRuns.always_compound,
       fixed_heuristic: baselineRuns.fixed_heuristic,
     }).filter((entry) => ["routed_policy", "naive_retry", "always_compound", "fixed_heuristic"].includes(entry.policy_id)),
-    cases: DEBUGGING_CORE_V01_CASES.map((debugCase, index) => {
+    cases: cases.map((debugCase, index) => {
       const routed = routedRuns[index];
       if (!routed) {
-        throw new Error(`Missing routed run for v0.1 case ${debugCase.case_id}`);
+        throw new Error(`Missing routed run for focused case ${debugCase.case_id}`);
+      }
+      const fixedHeuristic = baselineRuns.fixed_heuristic[index];
+      if (!fixedHeuristic) {
+        throw new Error(`Missing fixed_heuristic run for focused case ${debugCase.case_id}`);
       }
       return {
         case_id: debugCase.case_id,
@@ -180,10 +193,16 @@ export function runDebuggingCoreV01Suite(): DebuggingCoreV01Report {
         baselines: comparedBaselines.map((baseline) => {
           const result = baselineRuns[baseline][index];
           if (!result) {
-            throw new Error(`Missing ${baseline} run for v0.1 case ${debugCase.case_id}`);
+            throw new Error(`Missing ${baseline} run for focused case ${debugCase.case_id}`);
           }
           return result;
         }),
+        diagnostics: {
+          routed_first_three_actions: firstThreeActions(routed.trace),
+          fixed_heuristic_first_three_actions: firstThreeActions(fixedHeuristic.trace),
+          routed_cost_before_first_strong_signal: costBeforeFirstStrongSignal(routed.trace),
+          fixed_heuristic_cost_before_first_strong_signal: costBeforeFirstStrongSignal(fixedHeuristic.trace),
+        },
       };
     }),
   };

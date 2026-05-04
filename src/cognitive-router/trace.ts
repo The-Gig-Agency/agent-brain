@@ -50,6 +50,29 @@ export function measureDeadEndPersistence(trace: RouterTraceEvent[]): number {
   return maxStreak;
 }
 
+export function firstThreeActions(trace: RouterTraceEvent[]): string[] {
+  return trace
+    .filter((event) => event.type === "action")
+    .slice(0, 3)
+    .map((event) => event.action_id);
+}
+
+export function costBeforeFirstStrongSignal(trace: RouterTraceEvent[]): number | null {
+  let cost = 0;
+
+  for (const event of trace) {
+    if (event.type === "action") {
+      cost += event.cost;
+    }
+
+    if (event.type === "observation" && event.observation.polarity === "positive" && event.observation.strength >= 2) {
+      return cost;
+    }
+  }
+
+  return null;
+}
+
 export function detectFalseConvergence(result: DebugRunResult): boolean {
   return !result.success && result.trace.some((event) => event.type === "transition");
 }
