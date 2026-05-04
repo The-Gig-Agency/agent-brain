@@ -9,3 +9,5 @@ export * from "./router-runner.js";
 export * from "./benchmark-runner.js";
 export * from "./replay-dataset.js";
 export * from "./replay-evaluator.js";
+export * from "./media-decision.js";
+export * from "./media-evaluator.js";

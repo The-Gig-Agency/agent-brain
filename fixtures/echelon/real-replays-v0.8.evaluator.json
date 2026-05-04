@@ -1,0 +1,182 @@
+{
+  "dataset_name": "debugging-real-replays-v0.8",
+  "purpose": "Evaluator-only truth for cross-repo TGA and ACEDGE v0.8 replay pack.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "v08-og-404-fallback",
+      "repo": "The-Gig-Agency/four-visions-big-commerce",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/four-visions-big-commerce",
+      "merge_commit_sha": "193c1c9",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/ordergroove-enable-product/index.ts"
+      ],
+      "expected_failure_mode": "partner API method contract drift required deterministic PATCH-to-POST fallback with explicit diagnostics",
+      "patch_family_judgment": [
+        "fix should separate deterministic method mismatch from transient transport failures",
+        "fix should preserve fallback behavior and explicit logging for contract violations"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Mined from OrderGroove PATCH 404 fallback incident."
+    },
+    {
+      "id": "v08-auth-legacy-migration",
+      "repo": "The-Gig-Agency/four-visions-big-commerce",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/four-visions-big-commerce",
+      "merge_commit_sha": "81b4c53",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "src/contexts/AuthContext.tsx",
+        "src/pages/Auth.tsx"
+      ],
+      "expected_failure_mode": "legacy account migration state diverged from runtime auth flow, causing post-login instability",
+      "patch_family_judgment": [
+        "fix should align migration state with active auth-session transitions",
+        "fix should not stop at route-level redirect patches"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Mined from legacy Supabase account migration auth fix."
+    },
+    {
+      "id": "v08-reset-password-diagnostics",
+      "repo": "The-Gig-Agency/four-visions-big-commerce",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/four-visions-big-commerce",
+      "merge_commit_sha": "5373489",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/bigcommerce-reset-password/index.ts",
+        "supabase/migrations/20251125000000_add_bc_auth_tables.sql"
+      ],
+      "expected_failure_mode": "reset flow failed due to combined function-level validation and schema-level setup drift",
+      "patch_family_judgment": [
+        "fix should treat function config and schema consistency as one incident family",
+        "fix should improve deterministic validation and cleanup diagnostics"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Mined from reset-password diagnostics and migration hardening."
+    },
+    {
+      "id": "v08-postgrest-numeric-coercion",
+      "repo": "acedge123/creator-licensing-hub",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creator-licensing-hub",
+      "merge_commit_sha": "860d5ab",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "src/hooks/useMarketplaceContent.ts"
+      ],
+      "expected_failure_mode": "numeric coercion mismatch in joined PostgREST query mapping corrupted local output values",
+      "patch_family_judgment": [
+        "fix should remain localized to join-query type coercion and mapping behavior",
+        "fix should avoid broad data-model redesign"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Mined from PostgREST coercion bug fix."
+    },
+    {
+      "id": "v08-brand-profiles-rls",
+      "repo": "acedge123/creator-licensing-hub",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creator-licensing-hub",
+      "merge_commit_sha": "467de87",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/policies/brand_profiles.sql"
+      ],
+      "expected_failure_mode": "brand profile access denied due to one RLS branch mismatch",
+      "patch_family_judgment": [
+        "fix should narrow to policy branch correction",
+        "fix should preserve intended role boundaries"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Mined from brand_profiles RLS fix."
+    },
+    {
+      "id": "v08-rls-recursion",
+      "repo": "acedge123/text-safety-watchdog",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/text-safety-watchdog",
+      "merge_commit_sha": "ccc8e79",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/migrations/20250722205353-421380dd-7f55-41d6-8211-b7c061965d1f.sql"
+      ],
+      "expected_failure_mode": "recursive RLS policy evaluation collapsed moderation data access",
+      "patch_family_judgment": [
+        "fix should isolate recursive policy logic and preserve authorization intent",
+        "fix should remain migration and policy scoped"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Mined from RLS recursion incident."
+    },
+    {
+      "id": "v08-manage-meta-actions",
+      "repo": "acedge123/tga-crm",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/tga-crm",
+      "merge_commit_sha": "bd3d797",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/manage/adapters/supabase-audit.ts",
+        "supabase/functions/manage/adapters/supabase-db.ts"
+      ],
+      "expected_failure_mode": "manage adapter metadata contract drift caused runtime action-shape failures",
+      "patch_family_judgment": [
+        "fix should align metadata schema across audit and db adapters",
+        "fix should remain adapter-contract scoped"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Mined from meta.actions adapter contract fix."
+    },
+    {
+      "id": "v08-edge-send-failure",
+      "repo": "acedge123/tga-crm",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/tga-crm",
+      "merge_commit_sha": "197665d",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/google-sheets-creator-gifts/index.ts"
+      ],
+      "expected_failure_mode": "edge invocation path failed despite valid source data due to dispatch-contract inconsistency",
+      "patch_family_judgment": [
+        "fix should separate payload validity from invocation-contract correctness",
+        "fix should preserve deterministic diagnostics for request-send failures"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Mined from failed request-to-edge-function incident."
+    },
+    {
+      "id": "v08-admin-redirect-loop",
+      "repo": "acedge123/live-nation-demo",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/live-nation-demo",
+      "merge_commit_sha": "2fedc2a",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "src/contexts/AdminAuthContext.tsx",
+        "src/pages/AdminPanel.tsx",
+        "src/services/publisherAccountsService.ts"
+      ],
+      "expected_failure_mode": "successful authentication collided with conflicting redirect and state-transition logic",
+      "patch_family_judgment": [
+        "fix should reconcile auth-state transition and navigation flow together",
+        "fix should avoid bypass patterns that hide state inconsistencies"
+      ],
+      "hidden_expected_regime_override": "explore",
+      "notes": "Mined from admin redirect conflict fix."
+    },
+    {
+      "id": "v08-token-header-contract",
+      "repo": "The-Gig-Agency/mom-walk-connect",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/mom-walk-connect",
+      "merge_commit_sha": "509fb3e",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/leadscore/index.ts"
+      ],
+      "expected_failure_mode": "integration auth failed due to outbound header scheme mismatch",
+      "patch_family_judgment": [
+        "fix should narrow to auth header contract in request construction",
+        "fix should preserve deterministic validation for auth-scheme mismatches"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "notes": "Mined from Token header contract fix."
+    }
+  ]
+}

@@ -2,6 +2,13 @@
 
 Shared concept and product docs for agent cognition, routing, orchestration, and related future-system ideas.
 
+## Quickstart
+
+```bash
+npm install
+npm run check
+```
+
 ## Current Contents
 
 - [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md)
@@ -14,6 +21,8 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - [`docs/cognitive-router/spec/failed-path-memory.md`](docs/cognitive-router/spec/failed-path-memory.md)
 - [`docs/cognitive-router/spec/prompt-contract.md`](docs/cognitive-router/spec/prompt-contract.md)
 - [`docs/cognitive-router/spec/eval-framework.md`](docs/cognitive-router/spec/eval-framework.md)
+- [`docs/cognitive-router/spec/media-decision-contract.md`](docs/cognitive-router/spec/media-decision-contract.md)
+- [`docs/cognitive-router/spec/media-operator-report-template.md`](docs/cognitive-router/spec/media-operator-report-template.md)
 - `src/cognitive-router/`: starter TypeScript types, scoring logic, and benchmark cases
 - `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
 - `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
@@ -92,3 +101,42 @@ This is intentionally small and deterministic:
 - `npm run eval:replays:v0.6d`
 - `npm run eval:replays:v0.6e`
 - `npm run eval:replays:v0.6f`
+- `npm run eval:replays:v0.7`
+- `npm run eval:replays:v0.7a`
+- `npm run eval:replays:v0.7b`
+- `npm run eval:replays:v0.8`
+- `npm run eval:media:v0.1`
+
+## Where eval reports go
+
+Eval runs write a timestamped JSON report under `reports/<suite-id>/...json`.
+
+Important: `reports/` is intentionally **gitignored** (local run artifacts), so don’t expect these files to show up in commits unless you explicitly change that policy.
+
+Example (local file path):
+
+```text
+reports/real-replays-v0.7/real-replays-v0.7-2026-05-04T18-16-46.237Z.json
+```
+
+## Replay fixtures layout (router-visible vs evaluator-only)
+
+Real replay packs are split into two fixtures under `fixtures/echelon/`:
+
+- `*.visible.json`: what the router is allowed to see (issue-like context, symptoms, partial evidence)
+- `*.evaluator.json`: hidden labels/expectations used only for scoring (expected regime, likely fix files, notes)
+
+## How to add a new real replay pack version
+
+Follow the existing `v0.7` pattern:
+
+- **Add fixtures**
+  - `fixtures/echelon/real-replays-vX.Y.visible.json`
+  - `fixtures/echelon/real-replays-vX.Y.evaluator.json`
+- **Add a runner**
+  - `src/cognitive-router/run-real-replays-vX.Y.ts` calling `runReplaySuite("real-replays-vX.Y.visible.json", "real-replays-vX.Y.evaluator.json", "real-replays-vX.Y")`
+  - It should write to `reports/real-replays-vX.Y`
+- **Add an npm script**
+  - In `package.json`: `"eval:replays:vX.Y": "npm run build && node dist/cognitive-router/run-real-replays-vX.Y.js"`
+- **Run it**
+  - `npm run eval:replays:vX.Y`

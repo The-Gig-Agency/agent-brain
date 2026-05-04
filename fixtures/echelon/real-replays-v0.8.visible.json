@@ -1,0 +1,308 @@
+{
+  "dataset_name": "debugging-real-replays-v0.8",
+  "purpose": "Cross-repo TGA and ACEDGE operational realism pack with mixed explore-vs-prune incidents mined from real fixes.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "v08-og-404-fallback",
+      "repo": "withheld-bigcommerce-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "PATCH looked correct but partner API only accepted POST on one path",
+      "symptom": "Product enable requests intermittently failed with 404 on the partner endpoint even though auth and payload looked valid.",
+      "visible_evidence": [
+        "Same endpoint shape sometimes accepts equivalent payloads under a different method",
+        "Failure looks transport-like, but request construction and fallback behavior both matter",
+        "A naive retry loop improves nothing when method mismatch is deterministic"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "ordergroove enable-product function",
+          "partner request builder",
+          "fallback method handler"
+        ],
+        "repro_style": "remote call fails on one method and succeeds on method fallback",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "auth checks and payload validation pass",
+          "404 suggests route issue but does not reveal method contract drift"
+        ],
+        "false_positive_fix_family": "add generic retries and treat rate or flake as root cause"
+      },
+      "success_criteria": [
+        "identify method-contract mismatch as a first-class cause",
+        "preserve explicit fallback behavior and diagnostics for deterministic 404 method failures"
+      ],
+      "notes": "Inspired by four-visions-big-commerce method fallback incident."
+    },
+    {
+      "id": "v08-auth-legacy-migration",
+      "repo": "withheld-bigcommerce-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/react",
+      "title": "Login looked successful but migration-era account state still broke session flow",
+      "symptom": "Users could authenticate but failed to land in a stable signed-in state due to legacy account mapping and auth flow divergence.",
+      "visible_evidence": [
+        "Auth appears to complete, then follow-up state diverges",
+        "Behavior differs by account history and migration path",
+        "A UI-only redirect patch masks deeper identity mapping mismatch"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "auth context state transition",
+          "legacy account migration bridge",
+          "auth page handoff"
+        ],
+        "repro_style": "first signal looks fixed until later session checks fail",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "patch route redirect only and declare auth stable"
+      },
+      "success_criteria": [
+        "separate initial auth success from durable session correctness",
+        "align migration mapping and runtime auth state transition behavior"
+      ],
+      "notes": "Inspired by legacy Supabase migration auth fixes."
+    },
+    {
+      "id": "v08-reset-password-diagnostics",
+      "repo": "withheld-bigcommerce-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Password reset failed in production with partial clues across function and migration layers",
+      "symptom": "Reset flow failures surfaced as generic errors while real causes spanned function configuration and backing auth table setup.",
+      "visible_evidence": [
+        "Function logs show incomplete error extraction",
+        "Configuration checks and migration alignment both influence outcome",
+        "One local fix surface improves symptoms but not full reliability"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "reset-password function",
+          "function config validator",
+          "auth migration tables"
+        ],
+        "repro_style": "multi-surface incident where infra and function logic both contribute",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "environment_confusion": [
+          "different environments surface different error signatures"
+        ],
+        "false_positive_fix_family": "tune only function logging and skip migration-level consistency"
+      },
+      "success_criteria": [
+        "preserve joint debugging across function and schema surfaces",
+        "improve deterministic validation before treating reset flow as healthy"
+      ],
+      "notes": "Inspired by bigcommerce reset-password hardening change."
+    },
+    {
+      "id": "v08-postgrest-numeric-coercion",
+      "repo": "withheld-creator-licensing-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/react",
+      "title": "Marketplace join query returned wrong values due to numeric coercion mismatch",
+      "symptom": "Joined marketplace content looked present but numeric fields were interpreted incorrectly in app logic.",
+      "visible_evidence": [
+        "Rows return successfully but local output fields are wrong",
+        "Mismatch is concentrated in one query-to-mapper path",
+        "Fix is likely narrow and deterministic once coercion behavior is understood"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "marketplace content hook",
+          "join query mapper"
+        ],
+        "repro_style": "query succeeds but typed output values are inconsistent",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify coercion mismatch in one join-query mapping path",
+        "apply narrow type handling fix without broad architectural rewrite"
+      ],
+      "notes": "Inspired by PostgREST numeric coercion fix."
+    },
+    {
+      "id": "v08-brand-profiles-rls",
+      "repo": "withheld-creator-licensing-service",
+      "repo_local_path": "withheld",
+      "stack": "sql/supabase",
+      "title": "Brand profile access failed from one policy edge",
+      "symptom": "Users with expected access could not read brand profile records due to an RLS policy gap.",
+      "visible_evidence": [
+        "Permission behavior fails deterministically for a specific role path",
+        "No broad application failure outside policy-gated surfaces",
+        "Likely fix path is isolated to one policy definition"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "brand_profiles policy",
+          "role-to-policy mapping"
+        ],
+        "repro_style": "consistent access-denied behavior from one RLS branch",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify localized RLS gap",
+        "fix policy branch without broad app-layer changes"
+      ],
+      "notes": "Inspired by brand_profiles RLS fix."
+    },
+    {
+      "id": "v08-rls-recursion",
+      "repo": "withheld-moderation-service",
+      "repo_local_path": "withheld",
+      "stack": "sql/supabase",
+      "title": "Moderation dashboard failed due to recursive RLS evaluation",
+      "symptom": "Flagged-content views intermittently collapsed because policy checks recursively referenced protected paths.",
+      "visible_evidence": [
+        "Failure reproduces at policy evaluation time",
+        "App-level data fetch appears normal outside affected table path",
+        "Most likely fix is in one migration policy branch"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "RLS migration policy file",
+          "policy helper function"
+        ],
+        "repro_style": "policy recursion causing data fetch failure",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "pinpoint recursion in policy conditions",
+        "deliver narrow policy correction and keep permission intent intact"
+      ],
+      "notes": "Inspired by text-safety-watchdog recursion incident."
+    },
+    {
+      "id": "v08-manage-meta-actions",
+      "repo": "withheld-crm-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Manage endpoint returned runtime errors from metadata shape mismatch",
+      "symptom": "Manage-layer requests failed because action metadata shape diverged between audit and DB adapters.",
+      "visible_evidence": [
+        "Failure appears in manage pipeline even when upstream authorization succeeds",
+        "Error is tied to one metadata object family across two adapters",
+        "Likely fix is concentrated in adapter contract alignment"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "manage supabase-audit adapter",
+          "manage supabase-db adapter"
+        ],
+        "repro_style": "contract mismatch in adapter metadata path",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify metadata schema drift in adapter layer",
+        "ship narrow contract-alignment fix across touched adapters"
+      ],
+      "notes": "Inspired by tga-crm meta.actions fix."
+    },
+    {
+      "id": "v08-edge-send-failure",
+      "repo": "withheld-crm-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Gift export flow failed to send edge request despite valid source data",
+      "symptom": "Request dispatch to an edge function failed in production while source records and trigger logic looked correct.",
+      "visible_evidence": [
+        "Local data checks pass but downstream call path fails",
+        "Failure signature points at invocation handling rather than gift row content",
+        "A one-line retry can obscure root cause if transport contract is wrong"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "google-sheets creator gifts function",
+          "edge function invocation helper",
+          "request payload builder"
+        ],
+        "repro_style": "dispatch path failure with ambiguous transport vs contract signals",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "misleading_telemetry": [
+          "source gift rows are valid and complete",
+          "failure appears after payload generation"
+        ],
+        "false_positive_fix_family": "add retries only and classify as transient network noise"
+      },
+      "success_criteria": [
+        "separate payload validity from invocation contract correctness",
+        "preserve diagnostics that distinguish deterministic call-shape errors from transient transport failures"
+      ],
+      "notes": "Inspired by edge request-send failure fix."
+    },
+    {
+      "id": "v08-admin-redirect-loop",
+      "repo": "withheld-live-admin-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/react",
+      "title": "Admin login kept bouncing despite successful authentication",
+      "symptom": "Admins authenticated successfully but were redirected in loops due to conflicting navigation and auth state assumptions.",
+      "visible_evidence": [
+        "Token/session exists, yet route guard still redirects",
+        "Multiple redirect mechanisms interact",
+        "Patch in one guard can make another path regress"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "admin auth context",
+          "admin protected route",
+          "admin panel navigation"
+        ],
+        "repro_style": "authentication succeeds but navigation convergence fails",
+        "can_run_locally": "unknown"
+      },
+      "replay_augmentation": {
+        "delayed_decisive_signal": true,
+        "conflicting_evidence": true,
+        "false_positive_fix_family": "hardcode one redirect and bypass state reconciliation"
+      },
+      "success_criteria": [
+        "resolve redirect conflict across auth and navigation layers",
+        "avoid window-level redirects that hide unresolved state transitions"
+      ],
+      "notes": "Inspired by admin redirect conflict fix."
+    },
+    {
+      "id": "v08-token-header-contract",
+      "repo": "withheld-momwalk-service",
+      "repo_local_path": "withheld",
+      "stack": "typescript/edge-function",
+      "title": "Inbound auth failed because header contract used the wrong token scheme",
+      "symptom": "Outbound requests were rejected until auth header construction switched to the expected token format.",
+      "visible_evidence": [
+        "Payload and route are valid but auth check fails consistently",
+        "Issue concentrates in one request-header builder",
+        "Likely a narrow fix once provider auth contract is confirmed"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "outbound auth header builder",
+          "integration request sender"
+        ],
+        "repro_style": "deterministic auth rejection from header scheme mismatch",
+        "can_run_locally": "unknown"
+      },
+      "success_criteria": [
+        "identify auth header format mismatch",
+        "apply compact contract-correct fix in request construction layer"
+      ],
+      "notes": "Inspired by Token header contract fix."
+    }
+  ]
+}

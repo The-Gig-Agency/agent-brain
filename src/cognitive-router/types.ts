@@ -438,3 +438,61 @@ export type ReplayDatasetReport = {
   caveats: string[];
   cases: ReplayCaseReport[];
 };
+
+export type MediaEntityLevel =
+  | "account"
+  | "campaign"
+  | "adset"
+  | "ad"
+  | "keyword"
+  | "audience"
+  | "creative";
+
+export type MediaChannel = "meta" | "google" | "mixed";
+export type MediaIntentLayer = "brand" | "nonbrand" | "retargeting" | "prospecting" | "mixed";
+export type MediaPrimaryGoal = "scale" | "efficiency" | "learning" | "cleanup" | "recovery";
+export type SignalQuality = "low" | "medium" | "high";
+export type SaturationRisk = "low" | "medium" | "high";
+export type TrackingConfidence = "low" | "medium" | "high";
+
+export type MediaRecommendedAction =
+  | "explore"
+  | "prune"
+  | "hold"
+  | "scale"
+  | "diagnose"
+  | "reallocate"
+  | "test_next";
+
+export type MediaDecisionInput = {
+  entity_level: MediaEntityLevel;
+  channel: MediaChannel;
+  intent_layer: MediaIntentLayer;
+  primary_goal: MediaPrimaryGoal;
+  spend_share: number;
+  cpl_vs_target: number;
+  cpc_trend: number;
+  ctr_trend: number;
+  conversion_volume: number;
+  budget_utilization: number;
+  signal_quality: SignalQuality;
+  saturation_risk: SaturationRisk;
+  tracking_confidence: TrackingConfidence;
+  blockers?: string[];
+  missing_information?: string[];
+};
+
+export type MediaDecisionRecommendation = {
+  recommended_action: MediaRecommendedAction;
+  action_confidence: number;
+  rationale: string[];
+  regime_alignment: {
+    primary_regime: SearchRegime;
+    secondary_regime: SearchRegime | null;
+    transition_candidate: SearchRegime | null;
+  };
+  inferred_terrain: TerrainProfile;
+  evidence_requirements: string[];
+  blockers: string[];
+  missing_information: string[];
+};

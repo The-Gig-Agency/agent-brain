@@ -1,0 +1,180 @@
+{
+  "dataset_name": "media-decision-v0.1",
+  "purpose": "Initial media router evaluation pack with six core action classes and operator-facing expected recommendations.",
+  "cases": [
+    {
+      "id": "media-01-brand-healthy-capped",
+      "title": "Google-heavy brand campaign is efficient but volume is capped",
+      "expected_action": "explore",
+      "acceptable_actions": ["explore", "test_next"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "google",
+        "intent_layer": "brand",
+        "primary_goal": "scale",
+        "spend_share": 0.62,
+        "cpl_vs_target": 0.78,
+        "cpc_trend": 0.05,
+        "ctr_trend": 0.01,
+        "conversion_volume": 28,
+        "budget_utilization": 0.97,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "high",
+        "missing_information": [
+          "nonbrand expansion inventory by match type",
+          "creative-variant coverage for expansion cohorts"
+        ]
+      },
+      "expected_operator_recommendations": {
+        "keep": ["brand campaign budget floor", "winning branded keyword set"],
+        "cut": ["broad expansion spend without controlled test design"],
+        "test_next": ["launch nonbrand expansion cell with strict CPA guardrails"]
+      }
+    },
+    {
+      "id": "media-02-clear-loser-branch",
+      "title": "High-spend adset is far above CPL target with clear loser branch",
+      "expected_action": "prune",
+      "acceptable_actions": ["prune", "reallocate"],
+      "expected_confidence_band": "high",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "adset",
+        "channel": "meta",
+        "intent_layer": "prospecting",
+        "primary_goal": "efficiency",
+        "spend_share": 0.31,
+        "cpl_vs_target": 1.42,
+        "cpc_trend": 0.18,
+        "ctr_trend": -0.14,
+        "conversion_volume": 74,
+        "budget_utilization": 0.94,
+        "signal_quality": "high",
+        "saturation_risk": "high",
+        "tracking_confidence": "high"
+      },
+      "expected_operator_recommendations": {
+        "keep": ["top-performing retargeting adset"],
+        "cut": ["losing prospecting adset with persistent weak conversion efficiency"],
+        "test_next": ["replacement audience branch with capped exploratory budget"]
+      }
+    },
+    {
+      "id": "media-03-tracking-ambiguity",
+      "title": "Mixed performance signal with uncertain tracking integrity",
+      "expected_action": "diagnose",
+      "acceptable_actions": ["diagnose", "hold"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "account",
+        "channel": "mixed",
+        "intent_layer": "mixed",
+        "primary_goal": "recovery",
+        "spend_share": 1,
+        "cpl_vs_target": 1.08,
+        "cpc_trend": 0.04,
+        "ctr_trend": -0.02,
+        "conversion_volume": 19,
+        "budget_utilization": 0.83,
+        "signal_quality": "low",
+        "saturation_risk": "medium",
+        "tracking_confidence": "low",
+        "blockers": ["pixel deduplication mismatch", "offline conversion lag > 48h"]
+      },
+      "expected_operator_recommendations": {
+        "keep": ["current budget caps while instrumentation is unstable"],
+        "cut": ["aggressive scaling decisions until tracking confidence recovers"],
+        "test_next": ["measurement integrity checklist and controlled recon run"]
+      }
+    },
+    {
+      "id": "media-04-healthy-winner",
+      "title": "Winner campaign has strong efficiency and adequate signal quality",
+      "expected_action": "scale",
+      "acceptable_actions": ["scale", "hold"],
+      "expected_confidence_band": "high",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "meta",
+        "intent_layer": "retargeting",
+        "primary_goal": "scale",
+        "spend_share": 0.26,
+        "cpl_vs_target": 0.72,
+        "cpc_trend": 0.01,
+        "ctr_trend": 0.06,
+        "conversion_volume": 141,
+        "budget_utilization": 0.71,
+        "signal_quality": "high",
+        "saturation_risk": "low",
+        "tracking_confidence": "high"
+      },
+      "expected_operator_recommendations": {
+        "keep": ["high-converting retargeting campaign structure"],
+        "cut": ["manual throttling that limits known winners without risk signal"],
+        "test_next": ["incremental budget lift with daily guardrail checks"]
+      }
+    },
+    {
+      "id": "media-05-fragmented-meta-structure",
+      "title": "Meta account is fragmented and obscures winners across duplicated branches",
+      "expected_action": "reallocate",
+      "acceptable_actions": ["reallocate", "prune"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "account",
+        "channel": "meta",
+        "intent_layer": "mixed",
+        "primary_goal": "cleanup",
+        "spend_share": 1,
+        "cpl_vs_target": 1.18,
+        "cpc_trend": 0.11,
+        "ctr_trend": -0.09,
+        "conversion_volume": 52,
+        "budget_utilization": 0.98,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "medium",
+        "missing_information": ["canonical winner map by audience x creative family"]
+      },
+      "expected_operator_recommendations": {
+        "keep": ["stable winner clusters with consistent CPA"],
+        "cut": ["duplicated low-signal branches consuming budget"],
+        "test_next": ["consolidated budget map by winner tier before next scaling pass"]
+      }
+    },
+    {
+      "id": "media-06-learning-pocket",
+      "title": "Prospecting creative performance is noisy but not yet conclusive",
+      "expected_action": "test_next",
+      "acceptable_actions": ["test_next", "explore"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "creative",
+        "channel": "meta",
+        "intent_layer": "prospecting",
+        "primary_goal": "learning",
+        "spend_share": 0.09,
+        "cpl_vs_target": 1.03,
+        "cpc_trend": 0.07,
+        "ctr_trend": -0.03,
+        "conversion_volume": 24,
+        "budget_utilization": 0.67,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "medium"
+      },
+      "expected_operator_recommendations": {
+        "keep": ["current best-performing creative baseline"],
+        "cut": ["large budget swings before another controlled test iteration"],
+        "test_next": ["next creative variant test with fixed spend and stop-loss criteria"]
+      }
+    }
+  ]
+}
