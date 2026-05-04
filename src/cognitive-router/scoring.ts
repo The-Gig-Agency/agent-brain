@@ -1,6 +1,7 @@
 import {
   SEARCH_REGIMES,
   type FieldConfidence,
+  type MemoryScoringContext,
   type RegimeDefinition,
   type RegimeRecommendation,
   type SearchRegime,
@@ -8,9 +9,9 @@ import {
   type TerrainProfile,
 } from "./types.js";
 
-type DimensionWeightTable = {
-  [K in keyof TerrainProfile]?: Partial<Record<TerrainProfile[K], Partial<Record<SearchRegime, number>>>>;
-};
+type DimensionWeightTable = Partial<
+  Record<keyof TerrainProfile, Partial<Record<string, Partial<Record<SearchRegime, number>>>>>
+>;
 
 type TransitionRule = {
   candidate: SearchRegime;
@@ -172,7 +173,43 @@ export function getRegimeDefinitions(): RegimeDefinition[] {
   return SEARCH_REGIMES.map((regime) => REGIME_DEFINITIONS[regime]);
 }
 
-export function scoreTerrain(profile: TerrainProfile): RegimeRecommendation {
+function applyMemoryAdjustments(
+  scores: Record<SearchRegime, number>,
+  reasons: Record<SearchRegime, string[]>,
+  context?: MemoryScoringContext,
+) {
+  if (!context) {
+    return;
+  }
+
+  if ((context.repeated_failed_path_count ?? 0) > 0) {
+    scores.explore += 1;
+    scores.compound -= 1;
+    reasons.explore.push("memory: repeated_failed_path_count (+1)");
+    reasons.compound.push("memory: repeated_failed_path_count (-1)");
+  }
+
+  if ((context.disproven_family_count ?? 0) >= 2) {
+    scores.prune += 2;
+    reasons.prune.push("memory: disproven_family_count (+2)");
+  }
+
+  if ((context.strong_signal_family_count ?? 0) >= 1) {
+    scores.compound += 2;
+    scores.explore -= 1;
+    reasons.compound.push("memory: strong_signal_family_count (+2)");
+    reasons.explore.push("memory: strong_signal_family_count (-1)");
+  }
+
+  if (context.drift_detected) {
+    scores.explore += 1;
+    scores.compound -= 1;
+    reasons.explore.push("memory: drift_detected (+1)");
+    reasons.compound.push("memory: drift_detected (-1)");
+  }
+}
+
+export function scoreTerrain(profile: TerrainProfile, context?: MemoryScoringContext): RegimeRecommendation {
   const scores = createEmptyScoreMap();
   const reasons: Record<SearchRegime, string[]> = {
     prune: [],
@@ -203,6 +240,8 @@ export function scoreTerrain(profile: TerrainProfile): RegimeRecommendation {
       reasons[regime].push(`${field}=${String(fieldValue)} (${weight > 0 ? "+" : ""}${weight})`);
     }
   }
+
+  applyMemoryAdjustments(scores, reasons, context);
 
   const breakdown = SEARCH_REGIMES.map((regime) => ({
     regime,

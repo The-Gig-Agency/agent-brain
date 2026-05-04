@@ -62,6 +62,39 @@ Compare against:
 
 This is the best near-term realism test.
 
+## Dataset contract
+
+Every runnable case should separate router-visible input from evaluator-only truth.
+
+Shape:
+
+```json
+{
+  "case_id": "debug-v1-01",
+  "input_context": {
+    "prompt": "string",
+    "terrain": {},
+    "budget": 10,
+    "available_actions": []
+  },
+  "hidden_truth": {
+    "root_cause": "string",
+    "effects": {}
+  }
+}
+```
+
+The router may only read:
+- `case_id`
+- `input_context`
+
+The evaluator may read:
+- `hidden_truth`
+- final run trace
+- baseline traces
+
+This separation is required to keep the eval actually blinded.
+
 ## Baselines
 
 At minimum:
@@ -70,6 +103,12 @@ At minimum:
 - always-compound
 - fixed heuristic policy
 - naive retry loop
+
+Baseline contract:
+- every baseline operates over the same visible action space as the routed policy
+- every baseline spends from the same cost budget
+- every baseline emits the same output trace schema
+- no baseline gets privileged access to hidden truth
 
 Echelon should beat at least one simple baseline on a real wedge, or it is not yet paying for itself.
 

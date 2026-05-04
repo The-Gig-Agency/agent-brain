@@ -2,3 +2,8 @@ export * from "./types.js";
 export * from "./scoring.js";
 export * from "./benchmarks.js";
 export * from "./evaluator.js";
+export * from "./trace.js";
+export * from "./debugging-world.js";
+export * from "./baselines.js";
+export * from "./router-runner.js";
+export * from "./benchmark-runner.js";

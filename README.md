@@ -15,6 +15,7 @@ Shared concept and product docs for agent cognition, routing, orchestration, and
 - [`docs/cognitive-router/spec/prompt-contract.md`](docs/cognitive-router/spec/prompt-contract.md)
 - [`docs/cognitive-router/spec/eval-framework.md`](docs/cognitive-router/spec/eval-framework.md)
 - `src/cognitive-router/`: starter TypeScript types, scoring logic, and benchmark cases
+- `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
 
 ## Purpose
 
@@ -41,6 +42,11 @@ The repo now includes a minimal TypeScript foundation for the cognitive router:
 - `src/cognitive-router/scoring.ts`
 - `src/cognitive-router/benchmarks.ts`
 - `src/cognitive-router/evaluator.ts`
+- `src/cognitive-router/debugging-world.ts`
+- `src/cognitive-router/baselines.ts`
+- `src/cognitive-router/router-runner.ts`
+- `src/cognitive-router/benchmark-runner.ts`
+- `src/cognitive-router/run-debugging-v1.ts`
 - `src/cognitive-router/index.ts`
 
 This is intentionally small and deterministic:
@@ -50,3 +56,9 @@ This is intentionally small and deterministic:
 - transition-candidate logic
 - benchmark cases for evaluation work
 - a simple benchmark evaluator for exact and acceptable-match scoring
+- a debugging-first synthetic eval engine with executable baselines
+
+## Commands
+
+- `npm run check`
+- `npm run eval:debugging`

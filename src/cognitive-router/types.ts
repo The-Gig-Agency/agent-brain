@@ -92,3 +92,183 @@ export type BenchmarkCase = {
   acceptable_regimes: SearchRegime[];
   notes: string;
 };
+
+export type DebugFamily =
+  | "dependency"
+  | "version"
+  | "test_flake"
+  | "regression"
+  | "env"
+  | "secret_scope"
+  | "cache"
+  | "logic"
+  | "validation"
+  | "downstream_api"
+  | "race"
+  | "stale_state"
+  | "retry_policy"
+  | "outage"
+  | "schema"
+  | "serialization"
+  | "permission"
+  | "artifact"
+  | "observability";
+
+export type DebugActionKind = "inspect" | "fix" | "stabilize";
+
+export type VisibleDebugAction = {
+  id: string;
+  label: string;
+  family: DebugFamily;
+  kind: DebugActionKind;
+  cost: number;
+};
+
+export type DebugObservation = {
+  id: string;
+  text: string;
+  family: DebugFamily;
+  polarity: "positive" | "negative";
+  strength: 1 | 2 | 3;
+};
+
+export type HiddenDebugActionEffect = {
+  action_id: string;
+  observations: DebugObservation[];
+  success: boolean;
+  retryable: boolean;
+  requires_signal?: boolean;
+};
+
+export type DebugVisibleInput = {
+  case_id: string;
+  title: string;
+  prompt: string;
+  terrain: TerrainProfile;
+  budget: number;
+  available_actions: VisibleDebugAction[];
+};
+
+export type DebugHiddenTruth = {
+  root_cause: DebugFamily;
+  effects: Record<string, HiddenDebugActionEffect>;
+};
+
+export type DebugEvalCase = {
+  case_id: string;
+  title: string;
+  stratum: "train" | "holdout";
+  input_context: DebugVisibleInput;
+  hidden_truth: DebugHiddenTruth;
+  expected_primary: SearchRegime;
+  acceptable_regimes: SearchRegime[];
+};
+
+export type FailedPathRecord = {
+  action_id: string;
+  family: DebugFamily;
+  reason: "failed_fix" | "negative_signal" | "budget_burn";
+  count: number;
+};
+
+export type MemoryScoringContext = {
+  repeated_failed_path_count?: number;
+  disproven_family_count?: number;
+  strong_signal_family_count?: number;
+  drift_detected?: boolean;
+};
+
+export type RouterTraceEvent =
+  | {
+      type: "regime_selected";
+      step: number;
+      regime: SearchRegime;
+      confidence: number;
+      reasons: string[];
+    }
+  | {
+      type: "action";
+      step: number;
+      action_id: string;
+      label: string;
+      family: DebugFamily;
+      kind: DebugActionKind;
+      repeated: boolean;
+      cost: number;
+    }
+  | {
+      type: "observation";
+      step: number;
+      observation: DebugObservation;
+    }
+  | {
+      type: "failed_path";
+      step: number;
+      action_id: string;
+      family: DebugFamily;
+      reason: FailedPathRecord["reason"];
+      count: number;
+    }
+  | {
+      type: "transition";
+      step: number;
+      from: SearchRegime;
+      to: SearchRegime;
+      reason: string;
+    }
+  | {
+      type: "drift_detected";
+      step: number;
+      regime: SearchRegime;
+      reason: string;
+    };
+
+export type DebugRunResult = {
+  case_id: string;
+  title: string;
+  policy_id: string;
+  predicted_regime: SearchRegime;
+  final_regime: SearchRegime;
+  confidence: number;
+  transition_recommendation: SearchRegime | null;
+  success: boolean;
+  total_cost: number;
+  repeated_failed_paths: number;
+  retries_before_success: number;
+  false_convergence: boolean;
+  action_count: number;
+  trace: RouterTraceEvent[];
+};
+
+export type BaselinePolicyId =
+  | "naive_retry"
+  | "always_explore"
+  | "always_prune"
+  | "always_compound"
+  | "fixed_heuristic"
+  | "routed_policy";
+
+export type DebuggingSuiteReport = {
+  suite_id: string;
+  generated_at: string;
+  summary: {
+    case_count: number;
+    routed_success_rate: number;
+    strongest_baseline_id: BaselinePolicyId | null;
+    strongest_baseline_success_rate: number;
+    routed_beats_strongest_baseline: boolean;
+  };
+  per_policy: Array<{
+    policy_id: BaselinePolicyId;
+    success_rate: number;
+    average_cost: number;
+    average_repeated_failed_paths: number;
+    average_retries_before_success: number;
+  }>;
+  cases: Array<{
+    case_id: string;
+    routed: DebugRunResult;
+    baselines: DebugRunResult[];
+    pass: boolean;
+  }>;
+};
