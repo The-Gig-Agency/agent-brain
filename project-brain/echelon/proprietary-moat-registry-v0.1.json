@@ -250,6 +250,23 @@
       "notes": "Same bytes as frozen-debug-v1; treat as certification when manifest ratified."
     },
     {
+      "id": "replay-v0.9-compound-partial",
+      "display_name": "Real replays v0.9 compound + containment wedge (mutable)",
+      "category": "replay_pack",
+      "license_tier": "proprietary_paid",
+      "distribution": "private_registry_or_contract",
+      "certification": false,
+      "mutable": true,
+      "case_count": 5,
+      "fixtures": [
+        "fixtures/echelon/real-replays-v0.9-compound-partial.visible.json",
+        "fixtures/echelon/real-replays-v0.9-compound-partial.evaluator.json"
+      ],
+      "npm_scripts": ["eval:replays:v0.9-compound-partial"],
+      "runner_module": "src/cognitive-router/run-real-replays-v0.9-compound-partial.ts",
+      "notes": "Compound-deserving vs containment-prune hypotheses from mined history; inference hints compound_deserving_inference / containment_preferred_inference; see replay-case-candidates-compound-partial-v0.1.md §D."
+    },
+    {
       "id": "replay-v3-mining-candidates",
       "display_name": "Real replays v3 mining candidates (single fixture)",
       "category": "replay_pack",

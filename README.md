@@ -115,6 +115,7 @@ Legal / product-shell alignment (Echelon commercial program): `project-brain/ech
 - `npm run eval:replays:v0.7a`
 - `npm run eval:replays:v0.7b`
 - `npm run eval:replays:v0.8`
+- `npm run eval:replays:v0.9-compound-partial` (mutable compound + containment wedge — not H1)
 - `npm run eval:frozen:debug:v1` (same runner as v0.8; ratified frozen-debug-v1 — see `project-brain/echelon/frozen-debug-v1-lock.md`)
 - `npm run eval:media:v0.1`
 - `npm run eval:media:v0.2` (media v2 structured readouts + `media-decision-v0.2.json`)

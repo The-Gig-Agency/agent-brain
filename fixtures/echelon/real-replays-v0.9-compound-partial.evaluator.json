@@ -1,0 +1,104 @@
+{
+  "dataset_name": "debugging-real-replays-v0.9-compound-partial",
+  "purpose": "Evaluator truth for mutable v0.9 compound/containment wedge; pairs real merge SHAs from v3 mining JSON.",
+  "visibility": "evaluator_only",
+  "cases": [
+    {
+      "id": "v09-cg-1036",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "7ff7fcf",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "gift_backend/week_reset/tasks.py",
+        "gift_backend/allowances/helpers.py",
+        "gift_backend/publishers/rollovers.py"
+      ],
+      "expected_failure_mode": "rollover allowances inconsistent after staged deploy; required coordinated fixes across tasks, helpers, publishers",
+      "patch_family_judgment": [
+        "fix stays inside rollover / allowance subsystem with stacked commits rather than exploratory searchwide changes",
+        "second-stage correction aligns publisher paths with finalized task sequencing"
+      ],
+      "hidden_expected_regime_override": "compound",
+      "hidden_ambiguity_tags": ["compound_deserving_real_ops"],
+      "notes": "Grounded posture from CG-1036 commit 7ff7fcffd47587a688da37c9fa107383d2b6ec9e."
+    },
+    {
+      "id": "v09-cg-992",
+      "repo": "The-Gig-Agency/creatorgift-backend",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/creatorgift-backend",
+      "merge_commit_sha": "b6b0f8e",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "gift_backend/ingestion/csv_pipeline.py",
+        "gift_backend/limits/models.py",
+        "gift_backend/limits/service.py"
+      ],
+      "expected_failure_mode": "CSV ingestion omitted downstream limit setup unlike default flow — chained fixes inside ingestion/limit boundaries",
+      "patch_family_judgment": [
+        "stack corrections so CSV ingestion converges parity with canonical onboarding",
+        "avoid treating as flaky infrastructure before ingestion parity is enforced"
+      ],
+      "hidden_expected_regime_override": "compound",
+      "hidden_ambiguity_tags": ["compound_deserving_real_ops"],
+      "notes": "Grounded posture from CG-992 commit b6b0f8e0dd0dfc5d1ca134fe309969cd44d6fbaf."
+    },
+    {
+      "id": "v09-ciq-bf61b23",
+      "repo": "acedge123/ciq-automations",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/ciq-automations",
+      "merge_commit_sha": "bf61b23",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/messaging-send/index.ts",
+        "supabase/functions/_shared/repair.ts"
+      ],
+      "expected_failure_mode": "auto-fix plus re-fetch produced premature success signaling until handler sequencing tightened on same automation surface",
+      "patch_family_judgment": [
+        "compound execution on originating edge handler rather than exploratory partner investigation",
+        "align repair + authoritative read parity before declaring healthy"
+      ],
+      "hidden_expected_regime_override": "compound",
+      "hidden_ambiguity_tags": ["compound_deserving_real_ops"],
+      "notes": "Grounded posture from bf61b23063bed5fa46fdbd1a073a8802c41a00a3."
+    },
+    {
+      "id": "v09-acp-9b20f69",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "9b20f69",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "functions/hosted-login/approve/index.ts",
+        "functions/hosted-login/_shared/env.ts"
+      ],
+      "expected_failure_mode": "approve endpoint must fail closed on ambiguous upstream 200 — containment validation before any broad mesh hunting",
+      "patch_family_judgment": [
+        "prefer narrow classification + guard rails over exploratory multi-service tracing",
+        "treat ambiguous success as blocked / safe-retry state per contract"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "hidden_ambiguity_tags": ["partial_containment_fail_closed"],
+      "notes": "Grounded posture from 9b20f69513e0aa457218a98b7e560cbf5260e4b8."
+    },
+    {
+      "id": "v09-acp-2f10f7c",
+      "repo": "The-Gig-Agency/agentic-control-plane-kit",
+      "repo_local_path": "/Users/rastakit/tga-workspace/repos/agentic-control-plane-kit",
+      "merge_commit_sha": "2f10f7c",
+      "start_ref": "main",
+      "likely_fix_files": [
+        "supabase/functions/manage/adapters/supabase-audit.ts",
+        "supabase/functions/manage/_shared/env-validator.ts"
+      ],
+      "expected_failure_mode": "fail-closed audit mapping plus env validation to contain façade mismatch — narrow deterministic patch",
+      "patch_family_judgment": [
+        "halt escalation until mapper/env coherence restored",
+        "avoid broad exploratory refactors beyond adapter + validator surfaces"
+      ],
+      "hidden_expected_regime_override": "prune",
+      "hidden_ambiguity_tags": ["partial_containment_fail_closed"],
+      "notes": "Grounded posture from 2f10f7c451581829232d2643cb78a94f5a404497."
+    }
+  ]
+}

@@ -99,11 +99,13 @@ Optional (private remote, after `gh auth`):
 gh pr list --search "keyword" --limit 20
 ```
 
-### D.3 Suggested first pack slice
+### D.3 First pack slice (wired)
 
-1. **Three compound-leaning:** e.g. `cg-1036`, `cg-992`, `ciq-bf61b23`.
-2. **Two containment-leaning:** e.g. `acp-9b20f69`, `acp-2f10f7c`.
-3. Mutable fixtures + runner only; **frozen-debug-v1 untouched** until a deliberate **v2** ratification.
+**Implemented:** `fixtures/echelon/real-replays-v0.9-compound-partial.{visible,evaluator}.json` + `npm run eval:replays:v0.9-compound-partial`.
+
+1. **Three compound-leaning:** `v09-cg-1036`, `v09-cg-992`, `v09-ciq-bf61b23` (`hidden_expected_regime_override: compound`).
+2. **Two containment-leaning:** `v09-acp-9b20f69`, `v09-acp-2f10f7c` (`prune` + `containment_preferred_inference` visible hint).
+3. Mutable only; **frozen-debug-v1 untouched**.
 
 ## Related
 

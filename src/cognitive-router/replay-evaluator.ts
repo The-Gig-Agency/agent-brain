@@ -21,6 +21,43 @@ function average(values: number[]): number {
 }
 
 function inferTerrainFromReplayCase(visibleCase: ReplayVisibleCase): TerrainProfile {
+  const augmentationEarly = visibleCase.replay_augmentation;
+  if (augmentationEarly?.compound_deserving_inference) {
+    const ep = visibleCase.starting_context.entry_points.length;
+    const branchingFactor = ep >= 4 ? ("medium" as const) : ("low" as const);
+    return {
+      feedback_latency: "slow",
+      reversibility: "high",
+      uncertainty: "low",
+      branching_factor: branchingFactor,
+      adversariality: "none",
+      ruggedness: "low",
+      local_minima_risk: "low",
+      information_cost: "medium",
+      coordination_load: "low",
+      environment_stability: "stable",
+      time_horizon: "iterative",
+      mode_pressure: "compound",
+    };
+  }
+
+  if (augmentationEarly?.containment_preferred_inference) {
+    return {
+      feedback_latency: "slow",
+      reversibility: "high",
+      uncertainty: "low",
+      branching_factor: "low",
+      adversariality: "none",
+      ruggedness: "low",
+      local_minima_risk: "low",
+      information_cost: "low",
+      coordination_load: "low",
+      environment_stability: "stable",
+      time_horizon: "one_shot",
+      mode_pressure: "prune",
+    };
+  }
+
   const entryPointCount = visibleCase.starting_context.entry_points.length;
   const reproStyle = visibleCase.starting_context.repro_style.toLowerCase();
   const symptom = visibleCase.symptom.toLowerCase();
@@ -383,6 +420,7 @@ export function runReplaySuite(
   const isShopifyOperationalReplay = visibleFileName.includes("v0.7a");
   const isTutorialReplay = visibleFileName.includes("tutorial-replay");
   const isCommunityExampleReplay = visibleFileName.includes("community-example");
+  const isV09CompoundPartial = visibleFileName.includes("v0.9-compound-partial");
 
   return {
     suite_id: suiteId,
@@ -406,7 +444,9 @@ export function runReplaySuite(
         ? "Synthetic OSS tutorial pack: fictional repos/commits; for harness wiring and local smoke tests only."
         : isCommunityExampleReplay
           ? "Community schema example pack: validates contribution conventions; not a certification or realism benchmark."
-          : "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
+          : isV09CompoundPartial
+            ? "Mutable v0.9 wedge: compound + containment-prune hypotheses from mined private history; evaluator uses compound/prune overrides and visible layer uses curated inference hints (not raw incidents)."
+            : "This first replay pass evaluates routing over real bug-fix cases, not full autonomous patching.",
       isHarderAsymmetryReplay
         ? "This harder-asymmetry replay pack adds noisy prune cases and one weaker-signaled explore case while reducing direct terrain wording in the visible layer."
         : isShopifyOperationalReplay
@@ -439,7 +479,9 @@ export function runReplaySuite(
           ? "Tutorial cases intentionally mix one ambiguous-success surface with one narrow attribute boundary; not a realism or discrimination benchmark."
           : isCommunityExampleReplay
             ? "Community example uses synthetic docs-site stories; contributor packs must follow community-replay-pack-spec-v0.1.md."
-            : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
+            : isV09CompoundPartial
+              ? "Compound rows set compound_deserving_inference so scoring can reveal compound regimes; containment rows use containment_preferred_inference toward prune — tighten by replacing hints with richer issue text when ready."
+              : "The visible fixture is still somewhat truth-adjacent because it includes changed-file-derived entry points from the GitHub trail.",
       isMixedReplay
         ? "This pack is useful as an early regime-boundary benchmark, but it is still small and does not yet test compound-deserving cases."
         : isDegradedEvidenceReplay
@@ -467,7 +509,9 @@ export function runReplaySuite(
           ? "Do not use tutorial replay metrics for headline product or benchmark claims."
           : isCommunityExampleReplay
             ? "Do not treat community-example metrics as product certification; signing and registry govern commercial lanes."
-            : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
+            : isV09CompoundPartial
+              ? "Do not cite v0.9-compound-partial for headline claims; frozen-debug-v1 (H1) remains the certification replay lane."
+              : "A stronger v0.6+ replay pass should replace changed-file hints with issue text, logs, and reproduction signals only.",
       isHarderAsymmetryReplay
         ? "This result matters only if the router still separates explore from prune after the visible layer becomes less explicit and the prune side becomes noisier."
         : isShopifyOperationalReplay
@@ -489,7 +533,7 @@ export function runReplaySuite(
         ? "This result suggests the replay advantage is not solely a repository-fingerprint effect, but it is still an augmented benchmark rather than a raw naturalistic incident benchmark."
         : isTightReplay
         ? "This result is more discriminative than the raw replay pass, but it is still an augmented replay benchmark rather than a fully naturalistic one."
-        : isTutorialReplay || isCommunityExampleReplay
+        : isTutorialReplay || isCommunityExampleReplay || isV09CompoundPartial
           ? null
           : "This first replay set is currently useful as a substrate and sanity check, but not yet strongly discriminative against compact baselines.",
     ].filter((value): value is string => Boolean(value)),

@@ -463,6 +463,15 @@ export type ReplayVisibleCase = {
     false_positive_fix_family?: string;
     conflicting_evidence?: boolean;
     environment_confusion?: string[];
+    /**
+     * R&D packs only: biases `inferTerrainFromReplayCase` so `scoreTerrain` can surface `compound`
+     * for evaluator-labeled stacked / same-family deepening incidents (mutable packs like v0.9-compound-partial).
+     */
+    compound_deserving_inference?: boolean;
+    /**
+     * R&D packs only: biases inference toward compact containment posture (narrow halt / validate / fail-closed).
+     */
+    containment_preferred_inference?: boolean;
   };
   success_criteria: string[];
   notes: string;

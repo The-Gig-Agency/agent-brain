@@ -1,0 +1,162 @@
+{
+  "dataset_name": "debugging-real-replays-v0.9-compound-partial",
+  "purpose": "Mutable wedge: mined private-history cases labeled compound-deserving vs containment-prune (§D replay-case-candidates-compound-partial-v0.1.md). Not frozen.",
+  "visibility": "router_visible",
+  "cases": [
+    {
+      "id": "v09-cg-1036",
+      "repo": "withheld-python-marketplace-backend",
+      "repo_local_path": "withheld",
+      "stack": "python/django",
+      "title": "Weekly rollover allowances behaved incorrectly after partially successful rollout",
+      "symptom": "Allowance balances looked fixed in staging but rollover edge cases failed again once tasks and publishers ran in production sequencing.",
+      "visible_evidence": [
+        "First patch improved one failure mode but rollover path still inconsistent across week boundaries",
+        "Tasks, helpers, and publisher-facing logic all participate in week reset behavior",
+        "Follow-up commit in same module completed the stabilization — not a broad codebase search exercise"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "gift_campaign tasks week rollover",
+          "allowance rollup helpers",
+          "publisher-facing allowance broadcast"
+        ],
+        "repro_style": "sequenced deploy reveals second failure after first localized fix landed",
+        "can_run_locally": "sometimes"
+      },
+      "replay_augmentation": {
+        "compound_deserving_inference": true,
+        "false_positive_fix_family": "treat as one-off Django task flake and widen search across unrelated cron"
+      },
+      "success_criteria": [
+        "treat rollover as one incident family spanning tasks + helpers + publishers",
+        "plan second coordinated change in same subsystem rather than exploratory repo-wide hunt"
+      ],
+      "notes": "Mined posture from CG-1036 (creator-gift rollover); withheld visible identity."
+    },
+    {
+      "id": "v09-cg-992",
+      "repo": "withheld-python-marketplace-backend",
+      "repo_local_path": "withheld",
+      "stack": "python/django",
+      "title": "CSV ingestion path omitted downstream limit setup vs normal ingestion",
+      "symptom": "Limits silently missing when onboarding via CSV bulk path while GUI flow behaved correctly.",
+      "visible_evidence": [
+        "Two ingestion flows should converge on identical downstream bookkeeping",
+        "Initial fix surfaced one missing guard but quotas still inconsistent until second tight patch",
+        "Patch family stays inside ingestion pipeline and limit models — not exploratory architecture work"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "bulk CSV ingestion task",
+          "limit allocation service",
+          "post-ingestion reconciliation hook"
+        ],
+        "repro_style": "first fix improves symptoms; second chained fix aligns CSV path with default flow",
+        "can_run_locally": "often"
+      },
+      "replay_augmentation": {
+        "compound_deserving_inference": true,
+        "false_positive_fix_family": "chase intermittent DB locking as flake across unrelated schemas"
+      },
+      "success_criteria": [
+        "bind CSV ingestion to same downstream guarantees as canonical flow",
+        "execute stacked corrective patches in ingestion/limit surfaces before broadening blame"
+      ],
+      "notes": "Mined posture from CG-992; withheld identity."
+    },
+    {
+      "id": "v09-ciq-bf61b23",
+      "repo": "withheld-ciq-edge-automations",
+      "repo_local_path": "withheld",
+      "stack": "typescript/supabase-edge",
+      "title": "Auto-fix plus re-fetch made progress look healthy before final inconsistent state surfaced",
+      "symptom": "Handler reported repair success early; consolidated read still disagreed until follow-up tightening in same automation path.",
+      "visible_evidence": [
+        "Re-fetch semantics mean first green check is insufficient for truth",
+        "Second commit in same handler family aligned auto-fix sequencing with authoritative read contract",
+        "Problem stays inside messaging automation edge boundary — deepen execution there before expanding blast radius"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "automation messaging handler auto-fix branch",
+          "post-repair reconcile fetch helper",
+          "contract tests for repaired payload parity"
+        ],
+        "repro_style": "stacked corrections on single edge surface after deceptive early success",
+        "can_run_locally": "limited"
+      },
+      "replay_augmentation": {
+        "compound_deserving_inference": true,
+        "false_positive_fix_family": "open broad partner API investigation before locking handler sequencing"
+      },
+      "success_criteria": [
+        "sequence auto-fix / re-fetch / verification as one execution story",
+        "avoid premature exploration away from originating handler surface"
+      ],
+      "notes": "Posture from CIQ bf61b23 (auto-fix & re-fetch); withheld identity."
+    },
+    {
+      "id": "v09-acp-9b20f69",
+      "repo": "withheld-gateway-control-plane",
+      "repo_local_path": "withheld",
+      "stack": "typescript/node",
+      "title": "Approve path had to fail closed when upstream returned nominally-successful but ambiguous state",
+      "symptom": "Operator saw HTTP 200 but payload indicated indeterminate approval — safest behavior is containment, not deepening investigation across entire mesh.",
+      "visible_evidence": [
+        "Spec requires explicit guarded outcome; ambiguous success must route to bounded blocked path",
+        "Fix tightens approve handler validation and avoids treating ambiguous 200 as progress",
+        "Validation change is narrowly scoped gateway logic — containment-first posture"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "hosted approve gateway handler",
+          "environment base URL normalization",
+          "response classification guard"
+        ],
+        "repro_style": "narrow contract validation to halt unsafe approvals",
+        "can_run_locally": "sometimes"
+      },
+      "replay_augmentation": {
+        "containment_preferred_inference": true,
+        "false_positive_fix_family": "expand multi-service trace hunt before enforcing fail-closed classification"
+      },
+      "success_criteria": [
+        "classify ambiguous success as blocked / retry-safe path per contract",
+        "keep remediation localized to approve handler + validation layer"
+      ],
+      "notes": "Posture from ACP 9b20f69 ambiguous 200 fail-closed; withheld identity."
+    },
+    {
+      "id": "v09-acp-2f10f7c",
+      "repo": "withheld-gateway-control-plane",
+      "repo_local_path": "withheld",
+      "stack": "typescript/deno",
+      "title": "Public audit mapping facade looked OK while env + internal mapper state diverged",
+      "symptom": "Hosted login pipeline surfaced benign-looking mapping while privileged audit path would mis-route until env validation tightened.",
+      "visible_evidence": [
+        "Fail-closed auditing requires env coherence before widening user-facing experimentation",
+        "Patch tightens mapper + env validators together in compact surface",
+        "Avoid exploratory refactors across unrelated identity components until containment holds"
+      ],
+      "starting_context": {
+        "entry_points": [
+          "hosted audit mapper adapter",
+          "env parity validator",
+          "internal mapping coherence check"
+        ],
+        "repro_style": "validate internal-external facade mismatch and halt escalation until fixed narrow mapping",
+        "can_run_locally": "often"
+      },
+      "replay_augmentation": {
+        "containment_preferred_inference": true,
+        "false_positive_fix_family": "broad exploratory rewrite of authentication UX before fixing mapper coherence"
+      },
+      "success_criteria": [
+        "align mapper + env truth before progressing hosted workflow variants",
+        "prefer compact validation patch over scatter-shot exploration"
+      ],
+      "notes": "Posture from ACP 2f10f7c fail-closed audit mapping + env validation; withheld identity."
+    }
+  ]
+}
