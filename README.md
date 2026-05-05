@@ -9,6 +9,8 @@ npm install
 npm run check
 ```
 
+**Clean clone / agents:** `npm run check` runs `tsc` from this package’s **devDependencies** (`typescript` is not assumed globally installed). If `tsc` is missing, run `npm install` or `npm ci` first, and avoid `npm install --omit=dev` for this repo. In CI, prefer `npm ci` then `npm run check`.
+
 ## Current Contents
 
 - [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md)
