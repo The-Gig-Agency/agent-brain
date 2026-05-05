@@ -52,6 +52,7 @@
 - real replays v0.6e findings: `project-brain/echelon/findings-real-replays-v0.6e.md`
 - real replays v0.6f findings: `project-brain/echelon/findings-real-replays-v0.6f.md`
 - real replays v0.8 findings: `project-brain/echelon/findings-real-replays-v0.8.md`
+- replay case candidates (compound + partial containment): `project-brain/echelon/replay-case-candidates-compound-partial-v0.1.md`
 - media decision v0.1 findings: `project-brain/echelon/findings-media-decision-v0.1.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
