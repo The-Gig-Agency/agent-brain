@@ -41,4 +41,4 @@ Same as frozen-debug-v1: **no in-place edits** to `media-decision-v0.1.json` for
 ## Related
 
 - Program protocol: `adaptive-commitment-control-protocol-v0.1.md`
-- Findings (informational): `findings-media-decision-v0.1.md`
+- Findings (informational): `archive/findings-media-decision-v0.1.md`

@@ -86,7 +86,7 @@ This is intentionally small and deterministic (terrain scoring, replay harness w
 - `npm run eval:frozen:media:v1` (same runner as media v0.1; ratified frozen-media-v1 — see `project-brain/echelon/frozen-media-v1-lock.md`)
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)
-- `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see `findings-ablation-matrix-v0.1.md`)
+- `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see [`project-brain/echelon/archive/findings-ablation-matrix-v0.1.md`](project-brain/echelon/archive/findings-ablation-matrix-v0.1.md))
 
 Cycle governance templates (copy each cycle): `project-brain/echelon/operating-cadence-checklist-v0.1.md`, `cycle-note-template-v0.1.md`, `cycle-appendix-negatives-template-v0.1.md`; promotion rubric: `promotion-decision-rubric-v0.1.md`.
 

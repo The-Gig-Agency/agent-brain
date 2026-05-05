@@ -1,6 +1,6 @@
 # echelon — Links
 
-**Navigation:** start with [`README.md`](README.md) (tiers). This file lists **every** linked doc.
+**Navigation:** start with [`README.md`](README.md) (tiers). This file lists **every** linked doc. Superseded research log + **recommended chronological order**: [`archive/README.md`](archive/README.md).
 
 - brief: `project-brain/echelon/brief.md`
 - decisions: `project-brain/echelon/decisions.md`
@@ -22,40 +22,41 @@
 - frozen lanes manifest v1: `project-brain/echelon/frozen-lanes-manifest-v1.json`
 - frozen-debug-v1 lock: `project-brain/echelon/frozen-debug-v1-lock.md`
 - frozen-media-v1 lock: `project-brain/echelon/frozen-media-v1-lock.md`
-- transition candidate lane v0.1 findings: `project-brain/echelon/findings-transition-candidate-v0.1.md`
-- transition candidate lane v0.2 findings: `project-brain/echelon/findings-transition-candidate-v0.2.md`
-- ablation matrix v0.1 findings: `project-brain/echelon/findings-ablation-matrix-v0.1.md`
+- archive hub (superseded plans/findings — chronological order): `project-brain/echelon/archive/README.md`
+- transition candidate lane v0.1 findings: `project-brain/echelon/archive/findings-transition-candidate-v0.1.md`
+- transition candidate lane v0.2 findings: `project-brain/echelon/archive/findings-transition-candidate-v0.2.md`
+- ablation matrix v0.1 findings: `project-brain/echelon/archive/findings-ablation-matrix-v0.1.md`
 - promotion decision rubric v0.1: `project-brain/echelon/promotion-decision-rubric-v0.1.md`
 - cycle appendix (negatives / regressions) template v0.1: `project-brain/echelon/cycle-appendix-negatives-template-v0.1.md`
 - cycle note template v0.1: `project-brain/echelon/cycle-note-template-v0.1.md`
 - operating cadence checklist v0.1: `project-brain/echelon/operating-cadence-checklist-v0.1.md`
 - eval v2: `project-brain/echelon/eval-v2.md`
-- v0.1 debugging core: `project-brain/echelon/v0.1-debugging-core.md`
-- v0.2 debugging core: `project-brain/echelon/v0.2-debugging-core.md`
-- v0.3 adversarial tests: `project-brain/echelon/v0.3-adversarial-tests.md`
-- v0.4 plan: `project-brain/echelon/v0.4-plan.md`
-- real replays v1: `project-brain/echelon/real-replays-v1.md`
-- real replays v2 candidates: `project-brain/echelon/real-replays-v2-candidates.md`
+- v0.1 debugging core: `project-brain/echelon/archive/v0.1-debugging-core.md`
+- v0.2 debugging core: `project-brain/echelon/archive/v0.2-debugging-core.md`
+- v0.3 adversarial tests: `project-brain/echelon/archive/v0.3-adversarial-tests.md`
+- v0.4 plan: `project-brain/echelon/archive/v0.4-plan.md`
+- real replays v1: `project-brain/echelon/archive/real-replays-v1.md`
+- real replays v2 candidates: `project-brain/echelon/archive/real-replays-v2-candidates.md`
 - real replays v3 mining: `project-brain/echelon/real-replays-v3-mining.md`
-- v0.6f plan: `project-brain/echelon/v0.6f-plan.md`
-- v0.7 operational realism plan: `project-brain/echelon/v0.7-operational-realism-plan.md`
+- v0.6f plan: `project-brain/echelon/archive/v0.6f-plan.md`
+- v0.7 operational realism plan: `project-brain/echelon/archive/v0.7-operational-realism-plan.md`
 - test design anti-bias: `project-brain/echelon/test-design-anti-bias.md`
-- debugging v1 findings: `project-brain/echelon/findings-debugging-v1.md`
-- debugging core v0.2 findings: `project-brain/echelon/findings-debugging-core-v0.2.md`
-- debugging core v0.3 findings: `project-brain/echelon/findings-debugging-core-v0.3.md`
-- debugging core v0.4 findings: `project-brain/echelon/findings-debugging-core-v0.4.md`
-- debugging core v0.5 findings: `project-brain/echelon/findings-debugging-core-v0.5.md`
-- real replays v1 findings: `project-brain/echelon/findings-real-replays-v1.md`
-- real replays v0.6a tight findings: `project-brain/echelon/findings-real-replays-v0.6a-tight.md`
-- real replays v0.6b diverse findings: `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`
-- real replays v0.6c candidate findings: `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`
-- real replays v0.6c tight findings: `project-brain/echelon/findings-real-replays-v0.6c-tight.md`
-- real replays v0.6d findings: `project-brain/echelon/findings-real-replays-v0.6d.md`
-- real replays v0.6e findings: `project-brain/echelon/findings-real-replays-v0.6e.md`
-- real replays v0.6f findings: `project-brain/echelon/findings-real-replays-v0.6f.md`
+- debugging v1 findings: `project-brain/echelon/archive/findings-debugging-v1.md`
+- debugging core v0.2 findings: `project-brain/echelon/archive/findings-debugging-core-v0.2.md`
+- debugging core v0.3 findings: `project-brain/echelon/archive/findings-debugging-core-v0.3.md`
+- debugging core v0.4 findings: `project-brain/echelon/archive/findings-debugging-core-v0.4.md`
+- debugging core v0.5 findings: `project-brain/echelon/archive/findings-debugging-core-v0.5.md`
+- real replays v1 findings: `project-brain/echelon/archive/findings-real-replays-v1.md`
+- real replays v0.6a tight findings: `project-brain/echelon/archive/findings-real-replays-v0.6a-tight.md`
+- real replays v0.6b diverse findings: `project-brain/echelon/archive/findings-real-replays-v0.6b-diverse.md`
+- real replays v0.6c candidate findings: `project-brain/echelon/archive/findings-real-replays-v0.6c-candidates.md`
+- real replays v0.6c tight findings: `project-brain/echelon/archive/findings-real-replays-v0.6c-tight.md`
+- real replays v0.6d findings: `project-brain/echelon/archive/findings-real-replays-v0.6d.md`
+- real replays v0.6e findings: `project-brain/echelon/archive/findings-real-replays-v0.6e.md`
+- real replays v0.6f findings: `project-brain/echelon/archive/findings-real-replays-v0.6f.md`
 - real replays v0.8 findings: `project-brain/echelon/findings-real-replays-v0.8.md`
 - replay case candidates (compound + partial containment): `project-brain/echelon/replay-case-candidates-compound-partial-v0.1.md` — wired mutable pack: `eval:replays:v0.9-compound-partial`
-- media decision v0.1 findings: `project-brain/echelon/findings-media-decision-v0.1.md`
+- media decision v0.1 findings: `project-brain/echelon/archive/findings-media-decision-v0.1.md`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
 - terrain schema: `docs/cognitive-router/spec/terrain-schema.md`

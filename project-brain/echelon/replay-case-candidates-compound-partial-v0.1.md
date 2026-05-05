@@ -38,7 +38,7 @@
 
 **Metrics (existing hooks, not new theory):**
 
-- **Debugging / transition lanes:** `partial_resolution_handling` and related aggregates in `transition-candidate-metrics.ts` (see `findings-transition-candidate-v0.1.md`).
+- **Debugging / transition lanes:** `partial_resolution_handling` and related aggregates in `transition-candidate-metrics.ts` (see `archive/findings-transition-candidate-v0.1.md`).
 - **Replay reports:** today emphasize **hidden regime match**; for partial-resolution packs add **evaluator notes** + future report fields for **regret / recovery cost** when you extend `ReplayCaseReport` (per v0.8 “best next move”).
 
 **Important:** The current replay evaluator does **not** yet encode “containment success” as a first-class pass bit — these cases still clarify **what to mine** and **how human raters should label** before you extend schemas.

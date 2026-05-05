@@ -22,7 +22,9 @@ Living in **`docs/cognitive-router/spec/`** (also mirrored in OSS export): terra
 
 ## Replay & eval history (archive)
 
-Incremental **findings** and **plans** (`findings-*`, `v0.*`, `real-replays-*`) are **research log**, not mandatory reading path. Prefer:
+Older **plans** and **findings** live under **`archive/`**. Start with **[`archive/README.md`](archive/README.md)** for purpose and **chronological reading order**.
+
+**Findings**, versioned **plans**, and **`real-replays-*` notes** are **research log**: active threads stay in this folder; superseded material is in **`archive/`**. Neither path is mandatory reading. Prefer:
 
 - Latest real-replay framing: **`findings-real-replays-v0.8.md`**
 - Operational governance: **`operating-cadence-checklist-v0.1.md`**, **`promotion-decision-rubric-v0.1.md`**, cycle templates in `links.md`
