@@ -15,30 +15,14 @@ npm run check
 
 ## Current Contents
 
-- [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md)
-- [`docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md)
-- [`docs/cognitive-router/spec/terrain-schema.md`](docs/cognitive-router/spec/terrain-schema.md)
-- [`docs/cognitive-router/spec/regime-library.md`](docs/cognitive-router/spec/regime-library.md)
-- [`docs/cognitive-router/spec/regime-failure-modes.md`](docs/cognitive-router/spec/regime-failure-modes.md)
-- [`docs/cognitive-router/spec/regime-transitions.md`](docs/cognitive-router/spec/regime-transitions.md)
-- [`docs/cognitive-router/spec/scoring-model.md`](docs/cognitive-router/spec/scoring-model.md)
-- [`docs/cognitive-router/spec/failed-path-memory.md`](docs/cognitive-router/spec/failed-path-memory.md)
-- [`docs/cognitive-router/spec/prompt-contract.md`](docs/cognitive-router/spec/prompt-contract.md)
-- [`docs/cognitive-router/spec/eval-framework.md`](docs/cognitive-router/spec/eval-framework.md)
-- [`docs/cognitive-router/spec/media-decision-contract.md`](docs/cognitive-router/spec/media-decision-contract.md)
-- [`docs/cognitive-router/spec/media-operator-report-template.md`](docs/cognitive-router/spec/media-operator-report-template.md)
-- `src/cognitive-router/`: starter TypeScript types, scoring logic, and benchmark cases
-- `project-brain/echelon/`: agent-focused MVP brief, roadmap, and eval-v2 notes
-- `project-brain/echelon/v0.3-adversarial-tests.md`: the current falsification-oriented debugging-core pass
-- `project-brain/echelon/v0.4-plan.md`: the current hardening plan for stronger baselines and holdout tests
-- `project-brain/echelon/real-replays-v1.md`: the first real-case replay dataset notes
-- `project-brain/echelon/real-replays-v2-candidates.md`: the next mined replay-expansion set from private repo history
-- `project-brain/echelon/real-replays-v3-mining.md`: the next degraded-evidence mining pass for real replay candidates
-- `project-brain/echelon/findings-real-replays-v0.6b-diverse.md`: the first replay pass that preserves separation after reducing repo and org fingerprinting in the visible layer
-- `project-brain/echelon/findings-real-replays-v0.6c-candidates.md`: the first broader replay-expansion pass over a new mined private-repo candidate set
-- `project-brain/echelon/findings-real-replays-v0.6c-tight.md`: the tightened replay-visible rerun of the broader v0.6c candidate set
-- `project-brain/echelon/findings-real-replays-v0.6d.md`: the degraded-evidence replay wedge focused on misleading incidents, conflicting telemetry, and delayed root causes
-- `project-brain/echelon/findings-real-replays-v0.6e.md`: the first mixed real-world replay pack that tests the explore-versus-prune boundary
+| Layer | Where |
+|--------|--------|
+| Architecture | [`docs/architecture-guardrails.md`](docs/architecture-guardrails.md) |
+| Router concept + specs | [`docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md) · **`docs/cognitive-router/spec/`** (terrain, regimes, transitions, scoring, eval, media) |
+| Echelon program (tiered hub) | [`project-brain/echelon/README.md`](project-brain/echelon/README.md) — proof, charter, OSS/commercial; **[`project-brain/echelon/links.md`](project-brain/echelon/links.md)** indexes all notes |
+| Code | **`src/cognitive-router/`** — types, scoring, benchmarks, replay harness, eval runners (`npm run eval:*`) |
+
+Historical replay/findings bullets were moved off this page to reduce duplication; follow the Echelon **README** or **links**.
 
 ## Purpose
 
@@ -72,26 +56,7 @@ The repo now includes a minimal TypeScript foundation for the cognitive router:
 - `src/cognitive-router/run-debugging-v1.ts`
 - `src/cognitive-router/index.ts`
 
-This is intentionally small and deterministic:
-
-- typed terrain and regime models
-- a weighted scoring engine
-- transition-candidate logic
-- benchmark cases for evaluation work
-- a simple benchmark evaluator for exact and acceptable-match scoring
-- a debugging-first synthetic eval engine with executable baselines
-- an adversarial `v0.3` suite for permutation, transition-ablation, and misleading-evidence tests
-- a `v0.4` hardening pass with anti-broadening traps, one stronger baseline, and generated holdout cases
-- a `v0.5` control-oriented pass with anti-transition traps, transition-regret metrics, and replay-style cases
-- split real-replay fixtures for router-visible versus evaluator-only debugging cases
-- a first replay evaluator for real merged bug-fix cases, with explicit caveats about current truth-adjacent visible context
-- a tighter `v0.6a` replay pass with weaker visible clues and deliberate ambiguity augmentation
-- a `v0.6b` replay pass that keeps the ambiguity but reduces repository and organization fingerprinting in the router-visible layer
-- a `v0.6c` replay-expansion pass that broadens the real-case mix and recovers separation on hidden-dependency bugs
-- a `v0.6c-tight` replay pass that weakens repo and file-path leakage while preserving the broader real-case signal
-- a `v0.6d` degraded-evidence replay wedge that stress-tests adaptive commitment against fixed narrowing
-- a `v0.6e` mixed replay pack that tests whether the router can distinguish real explore-deserving from prune-deserving cases
-- a `v0.6f` harder-asymmetry pack that adds noisy prune cases and weaker-signaled explore cases while making the visible layer read less like labeled terrain
+This is intentionally small and deterministic (terrain scoring, replay harness with visible/evaluator split, synthetic debugging suites, many versioned **`eval:replays:v*`** lanes — see **`package.json`** and Echelon [`eval-v2.md`](project-brain/echelon/eval-v2.md)).
 
 ## Commands
 
@@ -101,8 +66,7 @@ This is intentionally small and deterministic:
 - `npm run eval:replays:tutorial` (synthetic tutorial replay smoke test; safe for open-core extraction)
 - `npm run eval:replays:community-example` (community pack schema example; see `project-brain/echelon/community-replay-pack-spec-v0.1.md`)
 - `npm run check:community-pack-spec` (validation + anti-impersonation selftest for TGA-239)
-
-Legal / product-shell alignment (Echelon commercial program): `project-brain/echelon/legal-repo-hygiene-checklist-v0.1.md` (TGA-240), `project-brain/echelon/echelon-product-shell-alignment-v0.1.md` (TGA-241).
+- Legal / shell alignment index: [`project-brain/echelon/README.md`](project-brain/echelon/README.md) · TGA-240 / TGA-241 docs linked there
 - `npm run eval:replays`
 - `npm run eval:replays:tight`
 - `npm run eval:replays:diverse`

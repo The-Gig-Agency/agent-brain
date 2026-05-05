@@ -1,5 +1,7 @@
 # echelon — Links
 
+**Navigation:** start with [`README.md`](README.md) (tiers). This file lists **every** linked doc.
+
 - brief: `project-brain/echelon/brief.md`
 - decisions: `project-brain/echelon/decisions.md`
 - adaptive commitment control charter v0.1: `project-brain/echelon/adaptive-commitment-control-charter-v0.1.md`
