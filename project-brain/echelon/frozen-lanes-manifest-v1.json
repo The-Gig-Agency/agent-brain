@@ -5,7 +5,8 @@
   "agent_brain": {
     "repo": "The-Gig-Agency/agent-brain",
     "implementation_commit_resolve": "git log -1 --format=%H -- project-brain/echelon/frozen-lanes-manifest-v1.json",
-    "note": "Use the resolved SHA as the paired router+evaluator+lock snapshot for frozen v1. After push, optionally tag that commit (e.g. frozen-lanes-v1). Any change to frozen fixtures or pass-threshold semantics requires frozen-*-v2."
+    "canonical_claims_table": "project-brain/echelon/canonical-claims-and-frozen-lanes-v0.1.md",
+    "note": "Use the resolved SHA as the paired router+evaluator+lock snapshot for frozen v1. After push, optionally tag that commit (e.g. frozen-lanes-v1). Any change to frozen fixtures or pass-threshold semantics requires frozen-*-v2. Headline claim → eval mapping: see canonical_claims_table."
   },
   "frozen_debug_v1": {
     "tag": "frozen-debug-v1",

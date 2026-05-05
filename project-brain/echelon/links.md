@@ -16,6 +16,7 @@
 - Echelon product shell alignment v0.1 (TGA-241): `project-brain/echelon/echelon-product-shell-alignment-v0.1.md`
 - Router core service upgrades (media + debugging roadmap): `project-brain/echelon/router-core-service-upgrades-v0.1.md` — YouTrack umbrella [TGA-242](https://youtrack.thegig.agency/issue/TGA-242) ([TGA-243](https://youtrack.thegig.agency/issue/TGA-243) media · [TGA-244](https://youtrack.thegig.agency/issue/TGA-244) debugging · [TGA-245](https://youtrack.thegig.agency/issue/TGA-245) decision artifact hygiene)
 - Decision artifact template (ticket / PR): `project-brain/echelon/decision-artifact-template-v0.1.md`
+- canonical claims + frozen headline lanes (v0.1): `project-brain/echelon/canonical-claims-and-frozen-lanes-v0.1.md`
 - frozen lanes manifest v1: `project-brain/echelon/frozen-lanes-manifest-v1.json`
 - frozen-debug-v1 lock: `project-brain/echelon/frozen-debug-v1-lock.md`
 - frozen-media-v1 lock: `project-brain/echelon/frozen-media-v1-lock.md`
