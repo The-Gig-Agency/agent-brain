@@ -49,7 +49,61 @@
 
 1. Build **mutable** pack first (e.g. `real-replays-v0.9-compound-candidates`) — **do not** touch **frozen-debug-v1** until ratified as v2.
 2. Per case: one primary **`hidden_expected_regime_override`**; for compound rows, add reviewer checklist: “Would **explore** be mis-calibrated optimism?” “Would **prune-only** miss stacked work?”
-3. Cross-link miner protocol: `real-replays-v3-mining.md`, `test-design-anti-bias.md`.
+3. Cross-link miner protocol: `real-replays-v3-mining.md`, **machine-readable list** `fixtures/echelon/real-replays-v3-mining-candidates.json`, `test-design-anti-bias.md`.
+
+---
+
+## D. Option 1 — private history (no public GitHub scour)
+
+Use **local clones** + issue/PR/commit text already tied to your mining JSON — not a crawl of public GitHub.
+
+### D.1 Corpus you already mined
+
+All rows below are in **`fixtures/echelon/real-replays-v3-mining-candidates.json`** (`commit_sha`, `repo_local_path`). A human still **ratifies** regime labels when writing `visible`/`evaluator` replay fixtures.
+
+**Hypothesis — compound trials first** (stacked / delayed / same-family depth):
+
+| ID | Repo family | Why compound-leaning |
+|----|-------------|----------------------|
+| `cg-1036` | creatorgift-backend | Partial-fix / rollover / non-stationary state; likely **multi-touch** closure. |
+| `cg-992` | creatorgift-backend | Ingestion skips downstream setup — **delayed dependency chain**. |
+| `ciq-bf61b23` | ciq-automations | Auto-fix + re-fetch — **first correction ≠ final truth**; deepen same flow. |
+| `acp-faf5153` | agentic-control-plane-kit | Path/URL normalization — downstream symptom, **composed fix**. |
+
+**Hypothesis — partial containment first** / fail-closed (often **`prune`** + extended metrics later):
+
+| ID | Repo family | Why containment-leaning |
+|----|-------------|---------------------------|
+| `acp-9b20f69` | agentic-control-plane-kit | **Fails closed on ambiguous 200** — correctness = bound unsafe success. |
+| `acp-2f10f7c` | agentic-control-plane-kit | Fail-closed audit mapping + env validation — **stop bad public state**. |
+| `acp-f79bf6c` | agentic-control-plane-kit | Hosted login → **explicit blocked result** vs misleading progress. |
+
+**Contrast / second wave** for explore–prune stress (weaker default for **`compound`**): `ciq-6adf83e`, `ciq-7eefd8d`, `acp-e7eebcc`, `cg-981`, `cg-995`, `cg-1013`, `ciq-a072b65` — see `terrain_tags` in JSON.
+
+### D.2 Local git commands (per candidate)
+
+Run in the clone path from JSON (yours may differ from the template `repo_local_path`):
+
+```bash
+cd <repo_local_path_from_json>
+git show --stat <commit_sha>
+git show <commit_sha> --no-patch --format=%B
+git log --oneline <commit_sha>~6..<commit_sha>
+```
+
+Look for: follow-up commits, same-issue reopen, “still broken after”, part 2 deploy, revert-then-fix, ordered migrations.
+
+Optional (private remote, after `gh auth`):
+
+```bash
+gh pr list --search "keyword" --limit 20
+```
+
+### D.3 Suggested first pack slice
+
+1. **Three compound-leaning:** e.g. `cg-1036`, `cg-992`, `ciq-bf61b23`.
+2. **Two containment-leaning:** e.g. `acp-9b20f69`, `acp-2f10f7c`.
+3. Mutable fixtures + runner only; **frozen-debug-v1 untouched** until a deliberate **v2** ratification.
 
 ## Related
 
