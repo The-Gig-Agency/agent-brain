@@ -1,0 +1,361 @@
+{
+  "dataset_name": "media-decision-boundary-v0.1",
+  "purpose": "Boundary-pressure pack (mutable): hold, mixed-channel reallocation, explore-vs-scale vs prune-vs-reallocate tensions, and out-of-sample-style profiles — not frozen-media-v1.",
+  "cases": [
+    {
+      "id": "boundary-hold-retargeting-narrow-stable",
+      "title": "Retargeting adset: CPL hugs target, delivery stable — avoid churn cuts",
+      "expected_action": "hold",
+      "acceptable_actions": ["hold", "prune"],
+      "expected_confidence_band": "high",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "adset",
+        "channel": "meta",
+        "intent_layer": "retargeting",
+        "primary_goal": "efficiency",
+        "spend_share": 0.19,
+        "cpl_vs_target": 0.99,
+        "cpc_trend": 0.03,
+        "ctr_trend": 0.02,
+        "conversion_volume": 86,
+        "budget_utilization": 0.74,
+        "signal_quality": "high",
+        "saturation_risk": "low",
+        "tracking_confidence": "high",
+        "statistical_reliability": {
+          "impressions": 420000,
+          "conversions": 120,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["retargeting adset pacing near goal"],
+        "cut": [],
+        "test_next": ["optional micro-read on creative fatigue only if efficiency drifts beyond band"]
+      }
+    },
+    {
+      "id": "boundary-hold-keyword-near-target",
+      "title": "Paid search keyword group: textbook near-target plateau",
+      "expected_action": "hold",
+      "acceptable_actions": ["hold", "diagnose"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "keyword",
+        "channel": "google",
+        "intent_layer": "nonbrand",
+        "primary_goal": "efficiency",
+        "spend_share": 0.07,
+        "cpl_vs_target": 1.02,
+        "cpc_trend": -0.01,
+        "ctr_trend": 0.02,
+        "conversion_volume": 44,
+        "budget_utilization": 0.68,
+        "signal_quality": "high",
+        "saturation_risk": "low",
+        "tracking_confidence": "high",
+        "statistical_reliability": {
+          "impressions": 180000,
+          "conversions": 44,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["core converting keyword theme"],
+        "cut": [],
+        "test_next": []
+      }
+    },
+    {
+      "id": "boundary-explore-vs-scale-brand-capped",
+      "title": "Brand search efficient but capped — expansion uncertainty before heroic scale",
+      "expected_action": "explore",
+      "acceptable_actions": ["explore", "test_next"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "google",
+        "intent_layer": "brand",
+        "primary_goal": "scale",
+        "spend_share": 0.58,
+        "cpl_vs_target": 0.85,
+        "cpc_trend": 0.04,
+        "ctr_trend": 0.01,
+        "conversion_volume": 41,
+        "budget_utilization": 0.97,
+        "signal_quality": "high",
+        "saturation_risk": "medium",
+        "tracking_confidence": "high",
+        "missing_information": [
+          "nonbrand incremental inventory pools by match-type",
+          "creative coverage for outbound expansion cohorts"
+        ],
+        "statistical_reliability": {
+          "impressions": 95000,
+          "conversions": 41,
+          "reliability_tier": "moderate"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["brand halo spend that hits guardrails"],
+        "cut": ["uncapped bids without inventory proofs"],
+        "test_next": ["launch bounded nonbrand incremental cell"]
+      }
+    },
+    {
+      "id": "boundary-explore-vs-scale-saturation-temptation",
+      "title": "Prospecting CPA looks attractive but saturation high — deepen learning before scaling",
+      "expected_action": "explore",
+      "acceptable_actions": ["explore", "test_next", "prune"],
+      "expected_confidence_band": "low",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "meta",
+        "intent_layer": "prospecting",
+        "primary_goal": "scale",
+        "spend_share": 0.41,
+        "cpl_vs_target": 0.84,
+        "cpc_trend": 0.11,
+        "ctr_trend": -0.04,
+        "conversion_volume": 36,
+        "budget_utilization": 0.88,
+        "signal_quality": "medium",
+        "saturation_risk": "high",
+        "tracking_confidence": "medium",
+        "missing_information": [
+          "delivery curve after frequency soft-cap change",
+          "creative rotation readiness"
+        ],
+        "statistical_reliability": {
+          "impressions": 120000,
+          "conversions": 36,
+          "reliability_tier": "moderate"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": [],
+        "cut": [],
+        "test_next": ["frequency / creative exhaustion experiment before doubling budget"]
+      }
+    },
+    {
+      "id": "boundary-prune-vs-reallocate-branch-loser",
+      "title": "Single branch far above CPA with credible signal — pruning beats abstract realloc rhetoric",
+      "expected_action": "prune",
+      "acceptable_actions": ["prune", "diagnose"],
+      "expected_confidence_band": "high",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "adset",
+        "channel": "meta",
+        "intent_layer": "prospecting",
+        "primary_goal": "efficiency",
+        "spend_share": 0.33,
+        "cpl_vs_target": 1.44,
+        "cpc_trend": 0.16,
+        "ctr_trend": -0.12,
+        "conversion_volume": 78,
+        "budget_utilization": 0.92,
+        "signal_quality": "high",
+        "saturation_risk": "high",
+        "tracking_confidence": "high",
+        "statistical_reliability": {
+          "impressions": 310000,
+          "conversions": 78,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["control retargeting holdouts"],
+        "cut": ["losing prospecting branch"],
+        "test_next": []
+      }
+    },
+    {
+      "id": "boundary-prune-vs-reallocate-structural-duplication",
+      "title": "Meta account fragmentation — cleanup asks for realloc / consolidation over blind cuts",
+      "expected_action": "reallocate",
+      "acceptable_actions": ["reallocate", "prune"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "account",
+        "channel": "meta",
+        "intent_layer": "mixed",
+        "primary_goal": "cleanup",
+        "spend_share": 1,
+        "cpl_vs_target": 1.16,
+        "cpc_trend": 0.1,
+        "ctr_trend": -0.08,
+        "conversion_volume": 61,
+        "budget_utilization": 0.97,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "medium",
+        "missing_information": [
+          "canonical winner mapping across duplicated ad sets",
+          "creative family overlap duplicates"
+        ],
+        "statistical_reliability": {
+          "impressions": 500000,
+          "conversions": 120,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["stable winners with repeatable CPA"],
+        "cut": ["duplicated exploratory branches sipping budget"],
+        "test_next": ["consolidation map prior to reallocating budgets"]
+      }
+    },
+    {
+      "id": "boundary-multi-channel-reallocate-overlap",
+      "title": "Mixed Google + Meta account: channel overlap + blended CPA creep needs explicit shifts",
+      "expected_action": "reallocate",
+      "acceptable_actions": ["reallocate", "prune", "explore"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "account",
+        "channel": "mixed",
+        "intent_layer": "mixed",
+        "primary_goal": "efficiency",
+        "spend_share": 1,
+        "cpl_vs_target": 1.11,
+        "cpc_trend": 0.07,
+        "ctr_trend": -0.05,
+        "conversion_volume": 95,
+        "budget_utilization": 0.9,
+        "signal_quality": "high",
+        "saturation_risk": "medium",
+        "tracking_confidence": "high",
+        "missing_information": [
+          "google search vs meta prospecting attribution overlap",
+          "last-touch inflation on branded social retargeting"
+        ],
+        "statistical_reliability": {
+          "impressions": 700000,
+          "conversions": 150,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": [],
+        "cut": [],
+        "test_next": ["run channel incrementality sanity before reallocating blindly"]
+      }
+    },
+    {
+      "id": "boundary-diagnose-vs-hold-recovery-friction",
+      "title": "Recovery sprint with medium signal + instrumentation drag — blunt prune is unsafe",
+      "expected_action": "diagnose",
+      "acceptable_actions": ["diagnose", "hold"],
+      "expected_confidence_band": "low",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "google",
+        "intent_layer": "nonbrand",
+        "primary_goal": "recovery",
+        "spend_share": 0.37,
+        "cpl_vs_target": 1.09,
+        "cpc_trend": 0.06,
+        "ctr_trend": -0.03,
+        "conversion_volume": 48,
+        "budget_utilization": 0.79,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "high",
+        "blockers": ["conversion modeling lag noise", "offline import delay >72h"],
+        "statistical_reliability": {
+          "impressions": 210000,
+          "conversions": 48,
+          "reliability_tier": "moderate"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": ["baseline spend until measurement stabilizes"],
+        "cut": ["large structural cuts before reconciling attribution"],
+        "test_next": ["measurement remediation checklist"]
+      }
+    },
+    {
+      "id": "oos-discrete-vertical-prospect-learning",
+      "title": "(OOS profile) Discrete manufacturing vertical prospecting pack — unfamiliar priors favor learning motions",
+      "expected_action": "test_next",
+      "acceptable_actions": ["test_next", "explore", "diagnose"],
+      "expected_confidence_band": "low",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "campaign",
+        "channel": "google",
+        "intent_layer": "prospecting",
+        "primary_goal": "learning",
+        "spend_share": 0.29,
+        "cpl_vs_target": 1.05,
+        "cpc_trend": 0.08,
+        "ctr_trend": -0.05,
+        "conversion_volume": 19,
+        "budget_utilization": 0.62,
+        "signal_quality": "medium",
+        "saturation_risk": "medium",
+        "tracking_confidence": "medium",
+        "missing_information": [
+          "industry-validated benchmarks for CPL",
+          "seasonality controls for capex-buying committees"
+        ],
+        "statistical_reliability": {
+          "impressions": 48000,
+          "conversions": 19,
+          "reliability_tier": "weak"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": [],
+        "cut": [],
+        "test_next": ["tight GEO / audience split experiment with predetermined stop-loss"]
+      }
+    },
+    {
+      "id": "oos-regional-buy-behavior-drift-mixed-social",
+      "title": "(OOS profile) Regional buyer drift with mixed placements — realloc before automation",
+      "expected_action": "reallocate",
+      "acceptable_actions": ["reallocate", "explore", "prune"],
+      "expected_confidence_band": "medium",
+      "minimum_rationale_points": 2,
+      "input": {
+        "entity_level": "account",
+        "channel": "mixed",
+        "intent_layer": "mixed",
+        "primary_goal": "efficiency",
+        "spend_share": 1,
+        "cpl_vs_target": 1.13,
+        "cpc_trend": 0.05,
+        "ctr_trend": -0.02,
+        "conversion_volume": 72,
+        "budget_utilization": 0.86,
+        "signal_quality": "high",
+        "saturation_risk": "medium",
+        "tracking_confidence": "high",
+        "missing_information": [
+          "tiktok incremental vs meta blended conversion overlap",
+          "regional blackout windows distorting pacing"
+        ],
+        "statistical_reliability": {
+          "impressions": 360000,
+          "conversions": 72,
+          "reliability_tier": "strong"
+        }
+      },
+      "expected_operator_recommendations": {
+        "keep": [],
+        "cut": [],
+        "test_next": []
+      }
+    }
+  ]
+}

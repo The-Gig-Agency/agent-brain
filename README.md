@@ -83,6 +83,7 @@ This is intentionally small and deterministic (terrain scoring, replay harness w
 - `npm run eval:frozen:debug:v1` (same runner as v0.8; ratified frozen-debug-v1 — see `project-brain/echelon/frozen-debug-v1-lock.md`)
 - `npm run eval:media:v0.1`
 - `npm run eval:media:v0.2` (media v2 structured readouts + `media-decision-v0.2.json`)
+- `npm run eval:media:boundary:v0.1` (mutable boundary pack: hold / multi-channel realloc / explore–scale & prune–reallocate stress + OOS-style profiles — see `fixtures/echelon/media-decision-boundary-v0.1.json`)
 - `npm run eval:frozen:media:v1` (same runner as media v0.1; ratified frozen-media-v1 — see `project-brain/echelon/frozen-media-v1-lock.md`)
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)

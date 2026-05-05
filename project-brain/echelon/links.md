@@ -57,6 +57,7 @@
 - real replays v0.8 findings: `project-brain/echelon/findings-real-replays-v0.8.md`
 - replay case candidates (compound + partial containment): `project-brain/echelon/replay-case-candidates-compound-partial-v0.1.md` — wired mutable pack: `eval:replays:v0.9-compound-partial`
 - media decision v0.1 findings: `project-brain/echelon/archive/findings-media-decision-v0.1.md`
+- media boundary pack v0.1 (mutable stress / OOS-style): `fixtures/echelon/media-decision-boundary-v0.1.json` · `npm run eval:media:boundary:v0.1`
 - roadmap: `project-brain/echelon/roadmap.md`
 - architecture guardrails: `docs/architecture-guardrails.md`
 - terrain schema: `docs/cognitive-router/spec/terrain-schema.md`

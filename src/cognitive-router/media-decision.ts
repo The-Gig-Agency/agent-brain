@@ -52,6 +52,16 @@ function textHints(items: string[] | undefined, patterns: string[]): boolean {
   return patterns.some((pattern) => haystack.includes(pattern));
 }
 
+/** Recovery mode with medium signal and explicit instrumentation friction — diagnose/hold over blunt prune. */
+function recoveryMeasurementFriction(input: MediaDecisionInput): boolean {
+  return (
+    input.primary_goal === "recovery" &&
+    input.tracking_confidence !== "low" &&
+    input.signal_quality !== "high" &&
+    (input.blockers?.length ?? 0) >= 1
+  );
+}
+
 function deriveModePressure(input: MediaDecisionInput): TerrainProfile["mode_pressure"] {
   if (input.tracking_confidence === "low" || input.signal_quality === "low") {
     return "explore";
@@ -206,6 +216,62 @@ function applyMediaHeuristics(scores: Record<MediaRecommendedAction, number>, in
     rationale.push("Rising CPC with declining CTR suggests creative or audience fatigue diagnostics.");
   }
 
+  const fatigueSlope = input.cpc_trend > 0.12 && input.ctr_trend < -0.05;
+  const stableNearTarget =
+    !fatigueSlope &&
+    input.cpl_vs_target >= 0.93 &&
+    input.cpl_vs_target <= 1.05 &&
+    input.tracking_confidence !== "low" &&
+    input.signal_quality === "high" &&
+    input.saturation_risk !== "high" &&
+    input.conversion_volume >= 35 &&
+    Math.abs(input.cpc_trend) <= 0.07 &&
+    Math.abs(input.ctr_trend) <= 0.07 &&
+    input.primary_goal === "efficiency" &&
+    (input.entity_level === "adset" || input.entity_level === "keyword" || input.entity_level === "audience");
+
+  if (stableNearTarget) {
+    scores.hold += 6;
+    scores.prune -= 2;
+    rationale.push("Delivery is steady with CPL tightly near target at narrow scope; hold avoids needless churn absent a fresh degradation cue.");
+  }
+
+  if (recoveryMeasurementFriction(input)) {
+    scores.diagnose += 5;
+    scores.hold += 3;
+    scores.prune -= 3;
+    rationale.push("Recovery with medium signal and instrumentation friction favors diagnose or guarded hold ahead of blunt cuts.");
+  }
+
+  const multiChannelBudgetShiftSignal =
+    input.channel === "mixed" &&
+    input.entity_level === "account" &&
+    (input.primary_goal === "efficiency" || input.primary_goal === "cleanup") &&
+    input.tracking_confidence !== "low" &&
+    input.cpl_vs_target >= 1.02 &&
+    input.cpl_vs_target < 1.28 &&
+    textHints(input.missing_information, ["channel", "google", "meta", "tiktok", "split", "search", "social", "attribution", "overlap"]);
+
+  if (multiChannelBudgetShiftSignal) {
+    scores.reallocate += 6;
+    scores.prune += 1;
+    rationale.push("Efficiency strain across mixed channels implies reallocating before aggressive branch removal.");
+  }
+
+  const saturationScaleTension =
+    input.primary_goal === "scale" &&
+    input.saturation_risk === "high" &&
+    input.cpl_vs_target <= 0.9 &&
+    input.signal_quality !== "low" &&
+    !(input.cpc_trend > 0.14 && input.ctr_trend < -0.08);
+
+  if (saturationScaleTension) {
+    scores.explore += 5;
+    scores.test_next += 4;
+    scores.prune -= 3;
+    rationale.push("Saturation risk is high despite attractive CPL, so explore or structure the next test before scaling hard.");
+  }
+
   if (input.budget_utilization >= 0.95 && input.primary_goal === "scale") {
     scores.reallocate += 2;
     rationale.push("Budget is near fully utilized, so scaling likely requires reallocating spend.");
@@ -230,6 +296,12 @@ function applyMediaHeuristics(scores: Record<MediaRecommendedAction, number>, in
     scores.test_next += 2;
     scores.explore += 1;
     rationale.push("Primary goal is learning, so test_next and explore actions get preference.");
+    if (input.cpl_vs_target <= 1.12 && input.signal_quality !== "high") {
+      scores.test_next += 4;
+      scores.explore += 3;
+      scores.prune -= 3;
+      rationale.push("CPL sits in an ambiguous band with imperfect signal — prefer a disciplined next variant over blunt pruning.");
+    }
   } else if (input.primary_goal === "cleanup") {
     scores.prune += 1;
     if (input.entity_level === "account" || input.entity_level === "campaign") {
@@ -314,6 +386,10 @@ function calibrateActionConfidence(
 
   if (action === "diagnose" && input.tracking_confidence === "low") {
     confidence = Math.max(confidence, 0.52);
+  }
+
+  if (action === "diagnose" && recoveryMeasurementFriction(input)) {
+    confidence = Math.max(confidence, 0.46);
   }
 
   return clampConfidence(confidence);

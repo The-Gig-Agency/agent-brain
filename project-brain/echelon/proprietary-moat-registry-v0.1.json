@@ -375,6 +375,19 @@
       "notes": "TGA-243 dev pack; not frozen — frozen-media-v1 remains on v0.1 fixture."
     },
     {
+      "id": "media-decision-boundary-v0.1",
+      "display_name": "Media decision boundary stress pack v0.1",
+      "category": "lab_derived",
+      "license_tier": "internal_rnd",
+      "distribution": "internal_git_only",
+      "certification": false,
+      "mutable": true,
+      "fixtures": ["fixtures/echelon/media-decision-boundary-v0.1.json"],
+      "npm_scripts": ["eval:media:boundary:v0.1"],
+      "runner_module": "src/cognitive-router/run-media-eval-boundary-v0.1.ts",
+      "notes": "Follows findings-media-decision-v0.1 best-next move: hold, mixed-channel realloc, explore/scale and prune/reallocate boundaries, OOS-style profiles — not H2 / frozen lane."
+    },
+    {
       "id": "community-example-v0.1",
       "display_name": "Community replay schema example v0.1",
       "category": "tutorial_pack",
