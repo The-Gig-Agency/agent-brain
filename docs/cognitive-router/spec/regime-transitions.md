@@ -26,6 +26,26 @@ Examples:
 - diffusion should become convergence
 - experimentation should become momentum
 
+## Compound as transition behavior (not a personality)
+
+**Compound is not a temperament the router always “likes.”** It names a **warranted deepening move** along a trajectory, usually after transitions or evidence updates — not a default label on static terrain.
+
+Treat compounding as helpful when:
+
+- evidence is **partial but strengthening**
+- **local fixes interact** (one surface changes the interpretation of another)
+- **broader synthesis** across those interactions is justified
+
+Do **not** expect compounding to be the systematically favored outcome when:
+
+- the right move is **simple containment**
+- **obvious pruning** or narrow elimination settles the incident
+- a **stable local fix** is sufficient and revisiting hypotheses would be theater
+
+That **asymmetry is desirable**: routed control should shine when deepening is structurally justified, and should **often lose or tie** simple baselines on genuinely compact stops — matching eval reality better than forcing compound everywhere.
+
+Implementations combine **momentary terrain scores** with **transition rules and memory**, not regime-as-personality assignment at `t = 0` alone.
+
 ## Canonical Transition Patterns
 
 ### `explore -> prune`

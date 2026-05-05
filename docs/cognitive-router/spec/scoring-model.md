@@ -54,6 +54,8 @@ Prefer when:
 - `environment_stability` is stable
 - execution consistency matters more than more search
 
+Also read in light of **`regime-transitions.md`** (*Compound as transition behavior*): static weights approximate “deepen vs keep searching”; **momentary compound scores should not eclipse** situations where containment, obvious prune, or a stable narrow fix is the intellectually honest answer — transitions and asymmetric baselines carry that discrimination.
+
 ### `coordinate`
 
 Prefer when:

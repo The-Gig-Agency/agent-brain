@@ -94,6 +94,8 @@ Related algorithm inspirations:
 - exploitation phases in bandit systems
 - local optimization under stable assumptions
 
+**Conceptual stance:** treat compounding as **transition-level behavior** (when to deepen after partial evidence steadies, interactions appear, or synthesis is justified), not as a personality that should win on every incident. Simple containment, obvious pruning, and clean local fixes may correctly favor shorter, non-compounding policies — see `regime-transitions.md` (*Compound as transition behavior*).
+
 ### 4. Adversarial Or Multi-Agent Reasoning
 
 Use when:
