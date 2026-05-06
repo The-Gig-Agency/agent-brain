@@ -15,3 +15,4 @@ export * from "./replay-evaluator.js";
 export * from "./media-decision.js";
 export * from "./media-decision-v2.js";
 export * from "./media-evaluator.js";
+export * from "./strategy-layer.js";
