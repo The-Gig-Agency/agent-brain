@@ -18,8 +18,6 @@ into:
 - SDR prospecting surface mapping
 - recommendation output contract
 
-This is the missing layer between the router and a usable product.
-
 ## Shape
 
 `terrain -> regime -> strategy family -> algorithm -> parameters -> recommendation`
@@ -27,85 +25,85 @@ This is the missing layer between the router and a usable product.
 ### Design rules
 
 - Keep **1 primary** and **1 counter/secondary** by default.
-- Only add a third option when confidence is low or terrain is mixed.
+- Add alternatives as full recommendation paths, not string labels.
 - Favor concrete operating rules over decorative algorithm naming.
 - Make every suggestion cash out into behavior.
 - Each strategy family needs a parameter schema, not just a name.
-- Recommendation output should be structured, with alternatives carrying the same fields as the primary path.
+- Strategy families should be more specific than regimes, so one regime can support multiple family variants.
 
 ## Strategy families
 
-### prune
+### prune_broad_discovery
 
-Purpose, narrow the search space and remove weak branches.
+Purpose, start wide, then cull weak branches without collapsing the search too early.
 
 Typical algorithms:
 
 - branch and bound
 - beam search
+
+### prune_threshold_filtering
+
+Purpose, apply hard cutoffs when the evidence is already strong enough.
+
+Typical algorithms:
+
 - hypothesis elimination
-- ranking and thresholding
-- constraint satisfaction
+- threshold ranking
 
-Best when:
+### explore_hypothesis_search
 
-- branching factor is high
-- evidence is strong enough to cut
-- downside of keeping dead branches is high
+Purpose, generate competing explanations and compare them actively.
 
-### explore
+Typical algorithms:
 
-Purpose, gather information and expand hypothesis coverage.
+- active learning
+- perturb-and-test loops
+
+### explore_probe_learning
+
+Purpose, use structured tests to learn quickly in uncertain terrain.
 
 Typical algorithms:
 
 - Bayesian optimization
 - bandits
-- hypothesis generation
-- active learning
-- perturb-and-test loops
 
-Best when:
+### compound_incremental_refinement
 
-- uncertainty is high
-- feedback is fast enough to learn from attempts
-- information is valuable
-
-### compound
-
-Purpose, deepen the strongest known path and compound gains.
+Purpose, improve the current path in small, compounding steps.
 
 Typical algorithms:
 
+- incremental refinement
 - gradient descent
+
+### compound_execution_momentum
+
+Purpose, preserve forward motion once the path is working.
+
+Typical algorithms:
+
 - momentum
 - curriculum learning
-- exploitation-first policies
-- incremental refinement
 
-Best when:
+### coordinate_multi_actor_planning
 
-- signal is already good
-- environment is stable
-- the main gain is execution depth
+Purpose, reason across actors, dependencies, and handoffs.
 
-### coordinate
+Typical algorithms:
 
-Purpose, model multiple agents, incentives, or interfaces.
+- multi-agent planning
+- mixture of experts
+
+### coordinate_protocol_design
+
+Purpose, define the rules of coordination explicitly.
 
 Typical algorithms:
 
 - game theory
-- mixture of experts
-- negotiation / protocol design
-- multi-agent planning
-- incentive-aware routing
-
-Best when:
-
-- strategic behavior matters
-- coordination load is high
-- the bottleneck is not just search, but alignment across actors
+- protocol design
 
 ## Algorithm registry
 
@@ -145,7 +143,7 @@ Each family should also declare its shared `parameter_schema` so the router can 
 - pipeline review, **prune** or **coordinate** depending on bottleneck
 - territory / segmentation, **explore** then **prune**
 
-Each surface mapping should resolve to a full recommendation object, not just a regime pair:
+Each surface mapping resolves to a full recommendation object:
 
 - `primary_regime`
 - `secondary_regime`
@@ -160,20 +158,7 @@ Each surface mapping should resolve to a full recommendation object, not just a 
 
 ## Output contract
 
-The recommendation output should include:
-
-- `primary_regime`
-- `secondary_regime`
-- `opposing_regime`
-- `strategy_family`
-- `primary_algorithm`
-- `secondary_algorithm`
-- `operating_rules`
-- `rationale`
-- `alternatives`
-- `confidence`
-
-`alternatives` should be structured objects, not string labels, so each fallback can be inspected, compared, and logged.
+`alternatives` should be structured recommendation paths, not string labels, so each fallback can be inspected, compared, and logged.
 
 ## Implementation note
 
