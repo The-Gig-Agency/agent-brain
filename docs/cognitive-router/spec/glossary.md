@@ -1,8 +1,14 @@
 # Cognitive router — glossary (v1)
 
-Canonical definitions for orchestration, eval, and router specs. If a ticket or PR uses a term below, it should match this glossary unless the ticket explicitly overrides it.
+Canonical definitions for orchestration, eval, and router specs (**AB-33** vocabulary: regime, **mode**, **role**, **strategy family**, **algorithm**, traces). If a ticket or PR uses a term below, it should match this glossary unless the ticket explicitly overrides it.
 
-**Related:** [`orchestration-contract.md`](./orchestration-contract.md) · [`terrain-schema.md`](./terrain-schema.md) · [`regime-library.md`](./regime-library.md) · [`regime-transitions.md`](./regime-transitions.md) · [`eval-framework.md`](./eval-framework.md)
+**Related:** [`orchestration-contract.md`](./orchestration-contract.md) · [`terrain-schema.md`](./terrain-schema.md) · [`regime-library.md`](./regime-library.md) · [`regime-transitions.md`](./regime-transitions.md) · [`eval-framework.md`](./eval-framework.md) · [`COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](../COGNITIVE_ROUTER_APP_CONCEPT_V1.md)
+
+---
+
+### Term stack (do not conflate)
+
+**Terrain** (signals) → **`scoreTerrain`** → **search regime** (four labels) → **strategy family** (taxonomy under a regime) → **algorithm** (concrete parameterized procedure). **Mode** is defined below and is **not** interchangeable with **search regime** or **mode pressure** without qualification.
 
 ---
 
@@ -11,9 +17,20 @@ Canonical definitions for orchestration, eval, and router specs. If a ticket or 
 | Term | Meaning |
 |------|--------|
 | **Search regime** | One of `prune`, `explore`, `compound`, `coordinate` — the discrete search posture used by the router and debugging harness. See `SEARCH_REGIMES` in `src/cognitive-router/types.ts` and [`regime-library.md`](./regime-library.md). |
+| **Mode** | **Disambiguated label** — do not overload. (1) **In specs, tickets, and APIs** prefer **`search regime`**, **`strategy family`**, or **`algorithm`** instead of bare “mode” unless you mean (2) or (3). (2) **`Mode pressure`** means only the terrain field `TerrainProfile.mode_pressure` (see row below) — never shorten that to “mode” in technical writing. (3) **In product / concept prose** (e.g. [`COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](../COGNITIVE_ROUTER_APP_CONCEPT_V1.md)), “mode” may describe informal operator stance; before implementation, map that prose to **`search regime`** and/or **`strategy family`** explicitly. |
+| **Mode pressure** | A **terrain dimension** only: `TerrainProfile.mode_pressure` in `types.ts` — biases scoring toward explore / prune / compound / coordinate style pressure. **Not** a strategy family, not an algorithm, and not the same as colloquial “mode”. |
 | **Terrain** | A **`TerrainProfile`**: structured dimensions (feedback latency, uncertainty, branching factor, ruggedness, mode pressure, …) describing the problem *surface* for scoring. Full field list: [`terrain-schema.md`](./terrain-schema.md). |
 | **Terrain assessment** | Broader input bundle when routing from narrative or tooling; feeds into regime recommendation. Distinct from a single **debug case**’s frozen `input_context.terrain`. |
-| **Mode pressure** | A terrain dimension (`TerrainProfile.mode_pressure`) that biases which regime family the scorer favors (e.g. explore vs prune vs compound). |
+
+## Strategy family and algorithm (AB-2 track)
+
+These terms name the **layers beneath search regime** for product-facing routing (SDR and other adapters). They are **not** implemented as first-class runtime types in the **debugging_world_v1** orchestration slice yet; tickets **AB-12**–**AB-15** own the canonical catalogs and shapes.
+
+| Term | Meaning |
+|------|--------|
+| **Strategy family** | A **named pattern under a search regime**: a stable taxonomy bucket that groups related ways of attacking a problem *before* picking a concrete procedure. Example shape: “under `explore`, broad discovery vs targeted refinement” (illustrative only — real ids and per-regime lists live in **AB-12**). **Not** a search regime by itself; **not** a single algorithm; **not** the same as **debug family** (see **Debug family** in Actions). |
+| **Algorithm** | A **concrete, parameterized procedure** selected after (or alongside) a strategy family: named id, inputs, defaults, costs, and prerequisites (**AB-13** registry). Multiple algorithms may map to one strategy family; one algorithm should not silently stand in for a whole regime. Distinct from **`scoreTerrain`** (which scores terrain into regimes, not algorithms). |
+| **Algorithm registry** | The authoritative catalog tying **algorithm ids** to parameter schemas and documentation (**AB-13**). Consumers (internal API, AB-5) should treat registry ids as the stable reference, not ad hoc strings. |
 
 ## Scoring and recommendations
 
@@ -47,6 +64,7 @@ Canonical definitions for orchestration, eval, and router specs. If a ticket or 
 | Term | Meaning |
 |------|--------|
 | **Debug action** | An operator-visible action (`inspect`, `fix`, …) with `id`, `cost`, `family`, `kind` on a debug case. |
+| **Debug family** | A **`DebugFamily`** value: defect / signal taxonomy for **synthetic debugging** cases (`debugging-world.ts`, `types.ts`). Used for clues, actions, and observations in the eval harness. **Not** a **strategy family** (product routing under a regime) and **not** an **algorithm**. |
 | **Clue / family signal** | Per-**`DebugFamily`** scores updated from observation polarity/strength after actions; used for “strong signal” heuristics in the runner. |
 | **Observation** | Emitted **`DebugObservation`** on the legacy trace after an action (positive/negative signal tied to a family). |
 | **Hidden effect** | Simulator outcome for an action (`getHiddenEffect` in `debugging-world.ts`); not visible to the routed policy as ground truth. |
