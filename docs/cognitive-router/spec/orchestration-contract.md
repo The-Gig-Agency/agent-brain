@@ -1,0 +1,72 @@
+# Runtime orchestration contract (v1)
+
+**Status:** Draft aligned with AB-39 — canonical spec for the first vertical slice.  
+**Glossary:** [`glossary.md`](./glossary.md)
+
+## 1. Vertical slice (v1)
+
+- **Slice id:** `debugging_world_v1`
+- **Scope:** A single **`DebugEvalCase`** executed via `runDebugCase(..., "routed_policy", options)` in `src/cognitive-router/router-runner.ts`.
+- **Out of scope (v1):** Multi-agent distribution, hosted service orchestration, LLM-specific tool loops, media/replay harnesses as first-class orchestration clients (they keep their own contracts until explicitly merged).
+
+## 2. Lifecycle (v1)
+
+1. **Initialize** runtime state from case terrain + budget (`createRuntimeState`).
+2. **Emit** initial regime selection on the legacy router trace (`regime_selected` at step `0`).
+3. **Repeat** until success, budget exhausted, or **max steps** (see §4):
+   - Choose and execute one visible action (`executeAction`).
+   - If routed policy and transitions enabled, evaluate **regime transition** (`maybeTransition`).
+4. **Terminate** with `DebugRunResult`.
+
+## 3. Trace contracts
+
+### 3.1 Legacy: `RouterTraceEvent[]` (`trace`)
+
+Unchanged for backward compatibility — actions, observations, `transition`, `drift_detected`, `failed_path`, etc.
+
+### 3.2 Orchestration: `orchestration_trace_v1`
+
+- **Schema id:** `orchestration_trace_v1` (constant `ORCHESTRATION_TRACE_SCHEMA_ID` in `src/cognitive-router/orchestration-trace-v1.ts`).
+- **Presence:** `DebugRunResult.orchestration_trace` is set **only** when `policy_id === "routed_policy"`.
+- **Minimum event types (v1):**
+  - `run_start` — `case_id`, `vertical_slice_id: "debugging_world_v1"`, `policy_id`, `schema_id`.
+  - `recommendation` — snapshot from `scoreTerrain` after memory ablation: primary, secondary, opposing, confidence, `transition_candidate`.
+  - `counter_regime_note` — active regime vs **opposing** regime from the recommendation, with a short explanatory note.
+  - `transition_applied` — when active regime changes: `from`, `to`, `trigger`, `detail` (mirrors legacy `transition.reason` semantics).
+  - `drift_signal` — when legacy `drift_detected` fires (compound without strong signal branch).
+  - `run_end` — `success`, `final_regime`, `total_steps`, `total_cost`.
+
+**Extensibility:** Add new `type` discriminators only with a schema bump (e.g. `orchestration_trace_v2`) once consumers exist.
+
+## 4. Transition knobs (v1)
+
+Fixed constants live in **`src/cognitive-router/orchestration-transition-constants.ts`** (`ORCHESTRATION_V1`). Not a user-facing config surface.
+
+| Constant | Role |
+|----------|------|
+| `MAX_STEPS_PER_RUN` | Hard cap on routed steps per case. |
+| `MIN_PRIMARY_CONFIDENCE_FOR_REGIME_SWITCH` | Minimum scored confidence before dynamic primary can override active regime (confidence gate). |
+| `STRONG_FAMILY_SIGNAL_MARGIN` | Margin between top and second clue families for “strong signal” heuristics. |
+
+## 5. Transition triggers (`transition_applied.trigger`)
+
+| Trigger | When (v1) |
+|---------|-----------|
+| `strong_family_signal` | Explore → prune when strong family signal appears. |
+| `targeted_inspect_compound` | Prune → compound when narrow + targeted inspect satisfied (or ablation allows skip). |
+| `compound_drift_recovery` | Compound → explore when compounded path fails for inferred/root family. |
+| `scoring_confidence_gate` | Active regime follows scored primary when confidence ≥ gate and gating not disabled. |
+| `other` | Reserved — should not occur in v1 default branches. |
+
+## 6. Implementation map
+
+| Concern | Module |
+|---------|--------|
+| Step loop + legacy trace | `router-runner.ts` |
+| v1 constants | `orchestration-transition-constants.ts` |
+| v1 trace types + helpers | `orchestration-trace-v1.ts` |
+| Result field | `DebugRunResult.orchestration_trace` in `types.ts` |
+
+## 7. Consumers
+
+Evaluators and reports may read `orchestration_trace` alongside `trace` for richer narratives. Frozen lanes that predate this field may ignore it.

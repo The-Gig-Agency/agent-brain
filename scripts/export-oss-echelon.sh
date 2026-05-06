@@ -21,6 +21,8 @@ FILES=(
   debugging-world.ts
   baselines.ts
   router-runner.ts
+  orchestration-transition-constants.ts
+  orchestration-trace-v1.ts
   benchmark-runner.ts
   replay-dataset.ts
   replay-evaluator.ts

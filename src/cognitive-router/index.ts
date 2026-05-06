@@ -7,6 +7,8 @@ export * from "./trace.js";
 export * from "./debugging-world.js";
 export * from "./baselines.js";
 export * from "./router-runner.js";
+export * from "./orchestration-transition-constants.js";
+export * from "./orchestration-trace-v1.js";
 export * from "./benchmark-runner.js";
 export * from "./replay-dataset.js";
 export * from "./replay-evaluator.js";

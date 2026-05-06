@@ -1,3 +1,5 @@
+import type { OrchestrationTraceEventV1 } from "./orchestration-trace-v1.js";
+
 export const FEEDBACK_LATENCIES = ["fast", "medium", "slow"] as const;
 export const REVERSIBILITY_VALUES = ["high", "medium", "low"] as const;
 export const UNCERTAINTY_VALUES = ["low", "medium", "high"] as const;
@@ -245,6 +247,8 @@ export type DebugRunResult = {
   false_convergence: boolean;
   action_count: number;
   trace: RouterTraceEvent[];
+  /** Present when `policy_id === "routed_policy"` — structured orchestration log (AB-39). */
+  orchestration_trace?: OrchestrationTraceEventV1[];
 };
 
 /** Strip specific memory bumps inside `scoreTerrain` (for one-factor ablations). */

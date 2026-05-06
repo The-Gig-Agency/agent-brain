@@ -1,5 +1,13 @@
 import { chooseBaselineAction, type RuntimeStateView } from "./baselines.js";
 import { getHiddenEffect } from "./debugging-world.js";
+import { ORCHESTRATION_V1 } from "./orchestration-transition-constants.js";
+import {
+  appendCounterRegimeNote,
+  appendRecommendationSnapshot,
+  ORCHESTRATION_TRACE_SCHEMA_ID,
+  type OrchestrationTraceEventV1,
+  type OrchestrationTransitionTriggerV1,
+} from "./orchestration-trace-v1.js";
 import {
   countHysteresis,
   countRepeatedFailedPaths,
@@ -30,6 +38,8 @@ type RuntimeState = {
   budgetRemaining: number;
   totalCost: number;
   observations: RouterTraceEvent[];
+  /** Populated only for `routed_policy` runs — `orchestration_trace_v1` stream (AB-39). */
+  orchestrationTrace: OrchestrationTraceEventV1[] | null;
   clueScores: Record<DebugFamily, number>;
   failedFamilies: Record<DebugFamily, number>;
   failedActions: Record<string, number>;
@@ -77,7 +87,7 @@ function getTopFamily(scores: Record<DebugFamily, number>): { family: DebugFamil
   const margin = top[1] - (second?.[1] ?? 0);
   return {
     family: top[0],
-    strongSignal: margin >= 2,
+    strongSignal: margin >= ORCHESTRATION_V1.STRONG_FAMILY_SIGNAL_MARGIN,
   };
 }
 
@@ -87,6 +97,7 @@ function createRuntimeState(debugCase: DebugEvalCase): RuntimeState {
     budgetRemaining: debugCase.input_context.budget,
     totalCost: 0,
     observations: createEmptyTrace(),
+    orchestrationTrace: null,
     clueScores: createFamilyRecord(),
     failedFamilies: createFamilyRecord(),
     failedActions: {},
@@ -173,14 +184,29 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options:
         }
       : undefined;
   const recommendation = scoreTerrain(debugCase.input_context.terrain, memoryContext, memoryAblation);
+  const orch = state.orchestrationTrace;
+
+  if (orch) {
+    appendRecommendationSnapshot(orch, state.step, recommendation);
+    appendCounterRegimeNote(
+      orch,
+      state.step,
+      state.activeRegime,
+      recommendation.opposing_regime,
+      `Active ${state.activeRegime}; scored primary ${recommendation.primary_regime}; counter-regime lens ${recommendation.opposing_regime}.`,
+    );
+  }
+
   const { family, strongSignal } = getTopFamily(state.clueScores);
 
   let nextRegime = state.activeRegime;
   let reason = "";
+  let transitionTrigger: OrchestrationTransitionTriggerV1 = "other";
 
   if (state.activeRegime === "explore" && strongSignal && family) {
     nextRegime = "prune";
     reason = `Strong signal emerged for ${family}.`;
+    transitionTrigger = "strong_family_signal";
   } else if (
     state.activeRegime === "prune" &&
     strongSignal &&
@@ -189,6 +215,7 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options:
   ) {
     nextRegime = "compound";
     reason = `Search narrowed to ${family} after targeted inspection.`;
+    transitionTrigger = "targeted_inspect_compound";
   } else if (
     !options.disable_drift_recovery &&
     state.activeRegime === "compound" &&
@@ -196,13 +223,15 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options:
   ) {
     nextRegime = "explore";
     reason = "Current compounded path failed and needs new evidence.";
+    transitionTrigger = "compound_drift_recovery";
   } else if (
     !options.disable_confidence_gating &&
     recommendation.primary_regime !== state.activeRegime &&
-    recommendation.confidence >= 0.45
+    recommendation.confidence >= ORCHESTRATION_V1.MIN_PRIMARY_CONFIDENCE_FOR_REGIME_SWITCH
   ) {
     nextRegime = recommendation.primary_regime;
     reason = `Dynamic scoring favors ${recommendation.primary_regime}.`;
+    transitionTrigger = "scoring_confidence_gate";
   }
 
   if (nextRegime !== state.activeRegime) {
@@ -213,14 +242,33 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options:
       to: nextRegime,
       reason,
     });
+    if (orch) {
+      orch.push({
+        type: "transition_applied",
+        step: state.step,
+        from: state.activeRegime,
+        to: nextRegime,
+        trigger: transitionTrigger,
+        detail: reason,
+      });
+    }
     state.activeRegime = nextRegime;
   } else if (!options.disable_drift_recovery && state.activeRegime === "compound" && !strongSignal) {
+    const driftReason = "Compound regime active without strong current evidence.";
     appendTrace(state.observations, {
       type: "drift_detected",
       step: state.step,
       regime: state.activeRegime,
-      reason: "Compound regime active without strong current evidence.",
+      reason: driftReason,
     });
+    if (orch) {
+      orch.push({
+        type: "drift_signal",
+        step: state.step,
+        regime: state.activeRegime,
+        detail: driftReason,
+      });
+    }
   }
 }
 
@@ -410,6 +458,19 @@ export function runDebugCase(
   options: DebugRunOptions = {},
 ): DebugRunResult {
   const state = createRuntimeState(debugCase);
+  const orchestrationEnabled = policyId === "routed_policy";
+  if (orchestrationEnabled) {
+    state.orchestrationTrace = [
+      {
+        type: "run_start",
+        schema_id: ORCHESTRATION_TRACE_SCHEMA_ID,
+        case_id: debugCase.case_id,
+        vertical_slice_id: "debugging_world_v1",
+        policy_id: policyId,
+      },
+    ];
+  }
+
   appendTrace(state.observations, {
     type: "regime_selected",
     step: 0,
@@ -418,8 +479,22 @@ export function runDebugCase(
     reasons: state.initialRecommendation.breakdown[0]?.reasons ?? [],
   });
 
-  while (!state.success && state.budgetRemaining > 0 && state.step < 12) {
+  while (
+    !state.success &&
+    state.budgetRemaining > 0 &&
+    state.step < ORCHESTRATION_V1.MAX_STEPS_PER_RUN
+  ) {
     executeAction(debugCase, state, policyId, options);
+  }
+
+  if (state.orchestrationTrace) {
+    state.orchestrationTrace.push({
+      type: "run_end",
+      success: state.success,
+      final_regime: state.activeRegime,
+      total_steps: state.step,
+      total_cost: state.totalCost,
+    });
   }
 
   const result: DebugRunResult = {
@@ -444,6 +519,7 @@ export function runDebugCase(
     false_convergence: false,
     action_count: state.executedActionIds.length,
     trace: state.observations,
+    ...(state.orchestrationTrace ? { orchestration_trace: state.orchestrationTrace } : {}),
   };
 
   result.false_convergence = detectFalseConvergence(result);
