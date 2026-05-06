@@ -1,5 +1,11 @@
 import type { RegimeRecommendation, SearchRegime } from "./types.js";
 
+/**
+ * Orchestration-summary events (not a duplicate action log).
+ * Full `action` / `observation` rows stay on `DebugRunResult.trace`; correlate by `step`.
+ * See docs/cognitive-router/spec/orchestration-contract.md §3.3.
+ */
+
 /** Stable schema id for orchestration JSONL / report consumers (AB-39). */
 export const ORCHESTRATION_TRACE_SCHEMA_ID = "orchestration_trace_v1" as const;
 

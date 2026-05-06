@@ -36,7 +36,27 @@ Unchanged for backward compatibility — actions, observations, `transition`, `d
   - `drift_signal` — when legacy `drift_detected` fires (compound without strong signal branch).
   - `run_end` — `success`, `final_regime`, `total_steps`, `total_cost`.
 
-**Extensibility:** Add new `type` discriminators only with a schema bump (e.g. `orchestration_trace_v2`) once consumers exist.
+### 3.3 Design decision: orchestration trace is **summary-only** (v1)
+
+**Intent:** `orchestration_trace_v1` is **not** a second full timeline of actions and observations. It is an **orchestration-semantic** layer: what the scorer recommended, how that relates to the active regime and counter-regime, why transitions fired, and run boundaries.
+
+**Rationale**
+
+1. **Single source of truth for actions** — `DebugRunResult.trace` (`RouterTraceEvent`) already carries `action`, `observation`, `failed_path`, and legacy `transition` / `drift_detected`. Duplicating those payloads in `orchestration_trace` would drift, double storage, and complicate evaluators.
+2. **Join model** — Consumers correlate orchestration events with legacy trace rows by **`step`** (and `case_id` from `run_start`). That is the supported “wide” view: orchestration summary + trace detail.
+3. **Scope control** — AB-19 observability can grow **annotations** and **trigger taxonomy** on this stream without turning it into a replay format.
+
+**What “stand on its own” means**
+
+- For **orchestration forensics** (regime gating, counter-regime, triggers): the v1 stream is sufficient **together with** `trace`, not alone.
+- For **action-level replay** without loading `trace`: **out of scope for v1** — use `trace` or export a merged view in tooling.
+
+**Follow-up (v2+), only if product requires a self-contained artifact**
+
+- Prefer **`action_ref`** / **`observation_ref`** events (step + ids, no full payload) over duplicating `RouterTraceEvent`.
+- Alternatively a **`merged_export_v1`** tool-side format — still not required inside `orchestration_trace_v1` types until agreed.
+
+**Extensibility:** Add new `type` discriminators inside `orchestration_trace_v1` only for **orchestration-only** facts (e.g. role id, dwell timer). For action-shape changes, bump schema (e.g. `orchestration_trace_v2`) once consumers exist.
 
 ## 4. Transition knobs (v1)
 
@@ -70,3 +90,5 @@ Fixed constants live in **`src/cognitive-router/orchestration-transition-constan
 ## 7. Consumers
 
 Evaluators and reports may read `orchestration_trace` alongside `trace` for richer narratives. Frozen lanes that predate this field may ignore it.
+
+**Join rule:** interpret `orchestration_trace_v1` as **summary-only** (§3.3); pair with `trace` for full action/observation detail using shared `step` indices.
