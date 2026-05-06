@@ -30,6 +30,8 @@ This is the missing layer between the router and a usable product.
 - Only add a third option when confidence is low or terrain is mixed.
 - Favor concrete operating rules over decorative algorithm naming.
 - Make every suggestion cash out into behavior.
+- Each strategy family needs a parameter schema, not just a name.
+- Recommendation output should be structured, with alternatives carrying the same fields as the primary path.
 
 ## Strategy families
 
@@ -105,6 +107,20 @@ Best when:
 - coordination load is high
 - the bottleneck is not just search, but alignment across actors
 
+## Algorithm registry
+
+Each algorithm should declare:
+
+- `id`
+- `name`
+- `family`
+- `description`
+- `best_for`
+- `anti_pattern`
+- `parameter_schema`
+
+Each family should also declare its shared `parameter_schema` so the router can stay deterministic and inspectable.
+
 ## SDR prospecting mapping
 
 ### Common surfaces
@@ -129,6 +145,19 @@ Best when:
 - pipeline review, **prune** or **coordinate** depending on bottleneck
 - territory / segmentation, **explore** then **prune**
 
+Each surface mapping should resolve to a full recommendation object, not just a regime pair:
+
+- `primary_regime`
+- `secondary_regime`
+- `opposing_regime`
+- `strategy_family`
+- `primary_algorithm`
+- `secondary_algorithm`
+- `operating_rules`
+- `rationale`
+- `alternatives`
+- `confidence`
+
 ## Output contract
 
 The recommendation output should include:
@@ -143,6 +172,8 @@ The recommendation output should include:
 - `rationale`
 - `alternatives`
 - `confidence`
+
+`alternatives` should be structured objects, not string labels, so each fallback can be inspected, compared, and logged.
 
 ## Implementation note
 

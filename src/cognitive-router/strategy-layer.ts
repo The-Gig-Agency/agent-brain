@@ -14,6 +14,16 @@ export type AlgorithmDefinition = {
   description: string;
   best_for: string[];
   anti_pattern: string[];
+  parameter_schema: StrategyParameterDefinition[];
+};
+
+export type StrategyParameterDefinition = {
+  name: string;
+  type: "number" | "integer" | "string" | "boolean" | "enum";
+  required: boolean;
+  description: string;
+  allowed_values?: string[];
+  default?: string | number | boolean;
 };
 
 export type StrategyFamilyDefinition = {
@@ -22,7 +32,37 @@ export type StrategyFamilyDefinition = {
   description: string;
   operating_rules: string[];
   algorithms: string[];
+  parameter_schema: StrategyParameterDefinition[];
 };
+
+export type RecommendationAlternative = {
+  primary_regime: SearchRegime;
+  secondary_regime: SearchRegime | null;
+  strategy_family: StrategyFamilyId;
+  primary_algorithm: string;
+  secondary_algorithm: string | null;
+  reason: string;
+};
+
+const PRUNE_PARAMETER_SCHEMA: StrategyParameterDefinition[] = [
+  { name: "prune_threshold", type: "number", required: true, description: "Minimum score or evidence level needed to keep a branch." },
+  { name: "max_candidates", type: "integer", required: false, description: "Maximum branches retained after pruning.", default: 5 },
+];
+
+const EXPLORE_PARAMETER_SCHEMA: StrategyParameterDefinition[] = [
+  { name: "probe_budget", type: "integer", required: true, description: "How many probes or tests to spend before narrowing." },
+  { name: "information_gain_target", type: "number", required: false, description: "Target information gain threshold for stopping.", default: 0.7 },
+];
+
+const COMPOUND_PARAMETER_SCHEMA: StrategyParameterDefinition[] = [
+  { name: "step_size", type: "number", required: false, description: "Magnitude of each incremental improvement.", default: 0.1 },
+  { name: "stability_required", type: "boolean", required: true, description: "Whether the environment must be stable before deepening." },
+];
+
+const COORDINATE_PARAMETER_SCHEMA: StrategyParameterDefinition[] = [
+  { name: "actor_count", type: "integer", required: true, description: "Number of actors or interfaces that must be modeled." },
+  { name: "coordination_constraint", type: "string", required: false, description: "Primary coordination bottleneck to optimize for." },
+];
 
 export type StrategyRecommendation = {
   primary_regime: SearchRegime;
@@ -33,7 +73,7 @@ export type StrategyRecommendation = {
   secondary_algorithm: string | null;
   operating_rules: string[];
   rationale: string[];
-  alternatives: string[];
+  alternatives: RecommendationAlternative[];
   confidence: number;
 };
 
@@ -48,6 +88,7 @@ const STRATEGY_FAMILIES: Record<StrategyFamilyId, StrategyFamilyDefinition> = {
       "Stop broad exploration once the candidate set is narrow enough.",
     ],
     algorithms: ["branch_and_bound", "beam_search", "hypothesis_elimination", "threshold_ranking"],
+    parameter_schema: PRUNE_PARAMETER_SCHEMA,
   },
   explore: {
     id: "explore",
@@ -59,6 +100,7 @@ const STRATEGY_FAMILIES: Record<StrategyFamilyId, StrategyFamilyDefinition> = {
       "Treat uncertainty as a reason to sample, not stall.",
     ],
     algorithms: ["bayesian_optimization", "bandits", "active_learning", "perturb_and_test"],
+    parameter_schema: EXPLORE_PARAMETER_SCHEMA,
   },
   compound: {
     id: "compound",
@@ -70,6 +112,7 @@ const STRATEGY_FAMILIES: Record<StrategyFamilyId, StrategyFamilyDefinition> = {
       "Avoid reopening settled decisions unless the environment shifts.",
     ],
     algorithms: ["gradient_descent", "momentum", "curriculum_learning", "incremental_refinement"],
+    parameter_schema: COMPOUND_PARAMETER_SCHEMA,
   },
   coordinate: {
     id: "coordinate",
@@ -81,6 +124,7 @@ const STRATEGY_FAMILIES: Record<StrategyFamilyId, StrategyFamilyDefinition> = {
       "Use coordination-aware recommendations when multiple parties interact.",
     ],
     algorithms: ["game_theory", "mixture_of_experts", "multi_agent_planning", "protocol_design"],
+    parameter_schema: COORDINATE_PARAMETER_SCHEMA,
   },
 };
 
@@ -92,6 +136,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Search broadly, then eliminate branches whose bound is too weak.",
     best_for: ["high branching factor", "clear eliminators", "crowded search space"],
     anti_pattern: ["premature narrowing", "low-evidence pruning"],
+    parameter_schema: PRUNE_PARAMETER_SCHEMA,
   },
   beam_search: {
     id: "beam_search",
@@ -100,6 +145,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Keep a fixed number of promising candidates and discard the rest.",
     best_for: ["many options", "need bounded exploration", "comparative ranking"],
     anti_pattern: ["over-trimming before signal forms"],
+    parameter_schema: PRUNE_PARAMETER_SCHEMA,
   },
   hypothesis_elimination: {
     id: "hypothesis_elimination",
@@ -108,6 +154,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Remove hypotheses contradicted by evidence.",
     best_for: ["debugging", "diagnosis", "stateful failure analysis"],
     anti_pattern: ["ignoring weak but important counterevidence"],
+    parameter_schema: PRUNE_PARAMETER_SCHEMA,
   },
   threshold_ranking: {
     id: "threshold_ranking",
@@ -116,6 +163,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Rank options and cut below a decision threshold.",
     best_for: ["list filtering", "scoring", "qualifying decisions"],
     anti_pattern: ["thresholds with weak calibration"],
+    parameter_schema: PRUNE_PARAMETER_SCHEMA,
   },
   bayesian_optimization: {
     id: "bayesian_optimization",
@@ -124,6 +172,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Probe efficiently when feedback is sparse or costly.",
     best_for: ["unknown landscape", "few trials", "expensive feedback"],
     anti_pattern: ["rapid commitment in unstable terrain"],
+    parameter_schema: EXPLORE_PARAMETER_SCHEMA,
   },
   bandits: {
     id: "bandits",
@@ -132,6 +181,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Balance exploration and exploitation across competing options.",
     best_for: ["A/B-like choice sets", "adaptive selection", "early experimentation"],
     anti_pattern: ["sticking to the first idea too long"],
+    parameter_schema: EXPLORE_PARAMETER_SCHEMA,
   },
   active_learning: {
     id: "active_learning",
@@ -140,6 +190,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Ask the most informative next question or test.",
     best_for: ["uncertainty reduction", "classification", "cheap targeted probes"],
     anti_pattern: ["asking broad questions when one sharp probe would do"],
+    parameter_schema: EXPLORE_PARAMETER_SCHEMA,
   },
   perturb_and_test: {
     id: "perturb_and_test",
@@ -148,6 +199,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Change one variable and observe the effect.",
     best_for: ["debugging", "sensitivity analysis", "root-cause isolation"],
     anti_pattern: ["changing too many things at once"],
+    parameter_schema: EXPLORE_PARAMETER_SCHEMA,
   },
   gradient_descent: {
     id: "gradient_descent",
@@ -156,6 +208,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Make incremental improvements along the strongest signal.",
     best_for: ["clear objective", "stable environment", "continuous improvement"],
     anti_pattern: ["trying to optimize a moving target as if it were fixed"],
+    parameter_schema: COMPOUND_PARAMETER_SCHEMA,
   },
   momentum: {
     id: "momentum",
@@ -164,6 +217,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Carry forward useful progress and avoid oscillation.",
     best_for: ["execution depth", "repeated improvements", "building on wins"],
     anti_pattern: ["accelerating down a path after the signal has changed"],
+    parameter_schema: COMPOUND_PARAMETER_SCHEMA,
   },
   curriculum_learning: {
     id: "curriculum_learning",
@@ -172,6 +226,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Solve easier subproblems first, then increase difficulty.",
     best_for: ["skill building", "process design", "layered adoption"],
     anti_pattern: ["starting with the hardest constraint first"],
+    parameter_schema: COMPOUND_PARAMETER_SCHEMA,
   },
   incremental_refinement: {
     id: "incremental_refinement",
@@ -180,6 +235,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Refine the current path in small, compounding steps.",
     best_for: ["copy", "ops", "workflow tuning", "repeatable systems"],
     anti_pattern: ["thrashing the system with full resets"],
+    parameter_schema: COMPOUND_PARAMETER_SCHEMA,
   },
   game_theory: {
     id: "game_theory",
@@ -188,6 +244,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Reason explicitly about strategic actors and responses.",
     best_for: ["incentives", "negotiation", "competitive environments"],
     anti_pattern: ["treating strategic players like passive variables"],
+    parameter_schema: COORDINATE_PARAMETER_SCHEMA,
   },
   mixture_of_experts: {
     id: "mixture_of_experts",
@@ -196,6 +253,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Route subproblems to specialized experts.",
     best_for: ["multi-skill systems", "specialized subdomains", "mixed workloads"],
     anti_pattern: ["forcing one monolith to handle everything"],
+    parameter_schema: COORDINATE_PARAMETER_SCHEMA,
   },
   multi_agent_planning: {
     id: "multi_agent_planning",
@@ -204,6 +262,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Plan with multiple actors, dependencies, and handoffs in view.",
     best_for: ["team workflows", "handoffs", "distributed execution"],
     anti_pattern: ["ignoring interface friction"],
+    parameter_schema: COORDINATE_PARAMETER_SCHEMA,
   },
   protocol_design: {
     id: "protocol_design",
@@ -212,6 +271,7 @@ const ALGORITHMS: Record<string, AlgorithmDefinition> = {
     description: "Define communication and decision rules between actors.",
     best_for: ["governance", "collaboration rules", "workflow design"],
     anti_pattern: ["assuming cooperation without explicit structure"],
+    parameter_schema: COORDINATE_PARAMETER_SCHEMA,
   },
 };
 
@@ -265,7 +325,14 @@ export function buildStrategyRecommendation(recommendation: RegimeRecommendation
   const alternatives = recommendation.breakdown
     .filter((entry) => entry.regime !== recommendation.primary_regime)
     .slice(0, 2)
-    .map((entry) => `${entry.regime}: ${entry.reasons[0] ?? "lower score"}`);
+    .map((entry) => ({
+      primary_regime: entry.regime,
+      secondary_regime: null,
+      strategy_family: REGIME_TO_FAMILY[entry.regime],
+      primary_algorithm: pickAlgorithm(REGIME_TO_FAMILY[entry.regime], 0),
+      secondary_algorithm: null,
+      reason: entry.reasons[0] ?? "lower score",
+    }));
 
   return {
     primary_regime: recommendation.primary_regime,
@@ -283,7 +350,31 @@ export function buildStrategyRecommendation(recommendation: RegimeRecommendation
 
 export function recommendStrategyForSurface(surface: string) {
   const key = surface.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  return SDR_SURFACE_DEFAULTS[key] ?? null;
+  const match = SDR_SURFACE_DEFAULTS[key];
+  if (!match) return null;
+  const family = REGIME_TO_FAMILY[match.primary];
+  const secondaryFamily = match.secondary ? REGIME_TO_FAMILY[match.secondary] : null;
+  return {
+    primary_regime: match.primary,
+    secondary_regime: match.secondary,
+    opposing_regime: match.secondary ?? match.primary,
+    strategy_family: family,
+    primary_algorithm: pickAlgorithm(family, 0),
+    secondary_algorithm: secondaryFamily ? pickAlgorithm(secondaryFamily, 0) : null,
+    operating_rules: STRATEGY_FAMILIES[family].operating_rules,
+    rationale: [`surface=${key}`, `primary_regime=${match.primary}`, `secondary_regime=${match.secondary ?? "none"}`],
+    alternatives: [
+      {
+        primary_regime: match.secondary ?? match.primary,
+        secondary_regime: null,
+        strategy_family: secondaryFamily ?? family,
+        primary_algorithm: pickAlgorithm(secondaryFamily ?? family, 0),
+        secondary_algorithm: null,
+        reason: "default counter or fallback path",
+      },
+    ],
+    confidence: 0.6,
+  } satisfies StrategyRecommendation;
 }
 
 export function explainStrategyRecommendation(recommendation: StrategyRecommendation): string[] {
