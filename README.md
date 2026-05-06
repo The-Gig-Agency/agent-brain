@@ -21,6 +21,7 @@ npm run check
 | Router concept + specs | [`docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md) · **`docs/cognitive-router/spec/`** (terrain, regimes, transitions, scoring, eval, media) |
 | Echelon program (tiered hub) | [`project-brain/echelon/README.md`](project-brain/echelon/README.md) — proof, charter, OSS/commercial; **[`project-brain/echelon/links.md`](project-brain/echelon/links.md)** indexes all notes |
 | Code | **`src/cognitive-router/`** — types, scoring, benchmarks, replay harness, eval runners (`npm run eval:*`) |
+| Internal recommend HTTP (v1) | **`src/server/`** — `POST /v1/recommend` (see [`docs/api/router-recommend-v1.yaml`](docs/api/router-recommend-v1.yaml), [`src/server/README.md`](src/server/README.md)) |
 
 Historical replay/findings bullets were moved off this page to reduce duplication; follow the Echelon **README** or **links**.
 
@@ -88,6 +89,9 @@ This is intentionally small and deterministic (terrain scoring, replay harness w
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)
 - `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see [`project-brain/echelon/archive/findings-ablation-matrix-v0.1.md`](project-brain/echelon/archive/findings-ablation-matrix-v0.1.md))
+- `npm run serve:router-recommend:v1` (internal HTTP: `POST /v1/recommend` — AB-25; auth/logging: [`src/server/README.md`](src/server/README.md))
+- `npm run smoke:router-recommend:v1` (deterministic handler smoke)
+- Example internal client (HTTP + bearer + trace id): `examples/internal/router-recommend-client.example.mjs` (AB-27)
 
 Cycle governance templates (copy each cycle): `project-brain/echelon/operating-cadence-checklist-v0.1.md`, `cycle-note-template-v0.1.md`, `cycle-appendix-negatives-template-v0.1.md`; promotion rubric: `promotion-decision-rubric-v0.1.md`.
 

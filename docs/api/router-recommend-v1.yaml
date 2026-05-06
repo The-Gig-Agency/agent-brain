@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: Agent Brain — internal router recommend API
+  version: 1.0.0
+  description: |
+    Internal HTTP contract for a single terrain assessment → regime recommendation (AB-24 / AB-25).
+    Source of truth for wire DTOs; map to `TerrainProfile` / `recommendRegime` in `src/server/`.
+    Auth: static bearer in production; see `src/server/README.md`.
+
+servers:
+  - url: http://localhost:7399
+    description: Local default (PORT / ROUTER_RECOMMEND_DEFAULT_PORT)
+
+paths:
+  /health:
+    get:
+      summary: Liveness probe (no auth)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, service]
+                properties:
+                  ok: { type: boolean, example: true }
+                  service: { type: string, example: router-recommend-v1 }
+
+  /v1/recommend:
+    post:
+      summary: Single recommendation from terrain assessment
+      parameters:
+        - in: header
+          name: X-Trace-Id
+          schema: { type: string, format: uuid }
+          required: false
+          description: Optional trace id; echoed in logs; server generates if omitted.
+        - in: header
+          name: Authorization
+          schema: { type: string, example: "Bearer <token>" }
+          required: false
+          description: Bearer token required unless server runs with ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED=true (local dev only).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendV1Request"
+      responses:
+        "200":
+          description: Recommendation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendV1Response"
+        "400":
+          description: Validation or JSON error
+        "401":
+          description: Missing or invalid bearer token
+        "403":
+          description: (reserved)
+        "413":
+          description: Body too large
+        "415":
+          description: Unsupported Content-Type
+        "503":
+          description: Server misconfigured (e.g. missing bearer token env in prod mode)
+
+components:
+  schemas:
+    TerrainDimensions:
+      type: object
+      required:
+        - feedback_latency
+        - reversibility
+        - uncertainty
+        - branching_factor
+        - adversariality
+        - ruggedness
+        - local_minima_risk
+        - information_cost
+        - coordination_load
+        - environment_stability
+        - time_horizon
+        - mode_pressure
+      properties:
+        feedback_latency: { type: string, enum: [fast, medium, slow] }
+        reversibility: { type: string, enum: [high, medium, low] }
+        uncertainty: { type: string, enum: [low, medium, high] }
+        branching_factor: { type: string, enum: [low, medium, high] }
+        adversariality: { type: string, enum: [none, some, high] }
+        ruggedness: { type: string, enum: [low, medium, high] }
+        local_minima_risk: { type: string, enum: [low, medium, high] }
+        information_cost: { type: string, enum: [low, medium, high] }
+        coordination_load: { type: string, enum: [low, medium, high] }
+        environment_stability: { type: string, enum: [stable, shifting] }
+        time_horizon: { type: string, enum: [one_shot, iterative] }
+        mode_pressure:
+          type: string
+          enum: [explore, prune, compound, escape, coordinate, create]
+
+    RecommendV1Request:
+      type: object
+      required: [problem_summary, terrain]
+      properties:
+        problem_summary: { type: string, minLength: 1 }
+        terrain:
+          $ref: "#/components/schemas/TerrainDimensions"
+        field_confidence:
+          type: object
+          additionalProperties: { type: number, minimum: 0, maximum: 1 }
+        missing_information:
+          type: array
+          items: { type: string }
+
+    RecommendV1Response:
+      type: object
+      required: [api_version, recommendation]
+      properties:
+        api_version: { type: string, enum: ["1.0.0"] }
+        recommendation:
+          type: object
+          required:
+            - primary_regime
+            - secondary_regime
+            - opposing_regime
+            - confidence
+            - transition_candidate
+            - breakdown
+          properties:
+            primary_regime:
+              type: string
+              enum: [prune, explore, compound, coordinate]
+            secondary_regime:
+              nullable: true
+              type: string
+              enum: [prune, explore, compound, coordinate]
+            opposing_regime:
+              type: string
+              enum: [prune, explore, compound, coordinate]
+            confidence: { type: number, minimum: 0, maximum: 1 }
+            transition_candidate:
+              nullable: true
+              type: string
+              enum: [prune, explore, compound, coordinate]
+            breakdown:
+              type: array
+              items:
+                type: object
+                required: [regime, score, reasons]
+                properties:
+                  regime:
+                    type: string
+                    enum: [prune, explore, compound, coordinate]
+                  score: { type: number }
+                  reasons:
+                    type: array
+                    items: { type: string }
