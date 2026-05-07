@@ -1,33 +1,24 @@
-import { buildSdrPilotRecommendRequest, recommendSdrProspectingMode, type SdrPilotInput } from "./sdr-pilot.js";
-
-const sampleInput: SdrPilotInput = {
-  org_id: "demo-org",
-  seat_id: "seat-west-1",
-  execution_scope: "seat",
-  surface: "list_building",
-  icp_completeness: "medium",
-  recent_prospect_yield: "low",
-  fit_quality: "high",
-  contact_coverage: "low",
-  territory_saturation: "medium",
-  downstream_capacity: "available",
-  active_pipeline_inventory: "low",
-  operator_note: "Good-fit accounts exist, but coverage is thin and the seat feels stuck.",
-  missing_information: ["title coverage by segment", "regional whitespace outside current list"],
-};
+import { buildSdrPilotRecommendRequest, recommendSdrProspectingMode } from "./sdr-pilot.js";
+import { SDR_PILOT_SCENARIOS_V0_1 } from "./sdr-pilot-scenarios.js";
 
 function main(): void {
-  const request = buildSdrPilotRecommendRequest(sampleInput);
-  const recommendation = recommendSdrProspectingMode(sampleInput);
+  const sample = SDR_PILOT_SCENARIOS_V0_1[0];
+  if (!sample) {
+    throw new Error("Expected at least one SDR pilot scenario");
+  }
+  const request = buildSdrPilotRecommendRequest(sample.input);
+  const recommendation = recommendSdrProspectingMode(sample.input);
 
   console.log(
     JSON.stringify(
       {
+        scenario_id: sample.id,
+        scenario_title: sample.title,
         input: {
-          org_id: sampleInput.org_id,
-          seat_id: sampleInput.seat_id,
-          execution_scope: sampleInput.execution_scope,
-          surface: sampleInput.surface,
+          org_id: sample.input.org_id,
+          seat_id: sample.input.seat_id,
+          execution_scope: sample.input.execution_scope,
+          surface: sample.input.surface,
         },
         recommend_v1_request: request.request,
         trace_summary: request.trace_summary,
