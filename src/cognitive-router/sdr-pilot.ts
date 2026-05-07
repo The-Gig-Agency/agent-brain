@@ -157,8 +157,12 @@ export function inferTerrainFromSdrPilot(input: SdrPilotInput): TerrainProfile {
   const note = normalizeNote(input.operator_note);
   const hasOperatorFriction =
     note !== null && /(stuck|blocked|saturated|narrow|quality|junk|contacts|empty)/.test(note);
+  const inventoryPressure =
+    input.downstream_capacity === "full" &&
+    input.active_pipeline_inventory === "high" &&
+    input.fit_quality === "high";
 
-  return {
+  const terrain: TerrainProfile = {
     feedback_latency:
       input.recent_prospect_yield === "high"
         ? "fast"
@@ -217,6 +221,14 @@ export function inferTerrainFromSdrPilot(input: SdrPilotInput): TerrainProfile {
     time_horizon: "iterative",
     mode_pressure: deriveModePressure(input),
   };
+
+  if (inventoryPressure) {
+    terrain.uncertainty = input.contact_coverage === "low" ? "medium" : "low";
+    terrain.information_cost = "medium";
+    terrain.local_minima_risk = terrain.local_minima_risk === "high" ? "medium" : terrain.local_minima_risk;
+  }
+
+  return terrain;
 }
 
 function decideProspectingMode(input: SdrPilotInput): ModeDecision {

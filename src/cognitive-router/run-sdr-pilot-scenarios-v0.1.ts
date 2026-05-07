@@ -33,6 +33,11 @@ function main(): void {
         scenario_count: results.length,
         mode_match_rate: results.filter((result) => result.mode_match).length / results.length,
         regime_match_rate: results.filter((result) => result.regime_match).length / results.length,
+        covered_modes: [...new Set(results.map((result) => result.actual_mode))],
+        covered_primary_regimes: [...new Set(results.map((result) => result.actual_primary_regime))],
+        mismatch_ids: results
+          .filter((result) => !result.mode_match || !result.regime_match)
+          .map((result) => result.id),
         scenarios: results,
       },
       null,
