@@ -27,6 +27,24 @@ paths:
                   ok: { type: boolean, example: true }
                   service: { type: string, example: router-recommend-v1 }
 
+  /ready:
+    get:
+      summary: Readiness probe (no auth)
+      description: Returns 503 when production auth is not configured.
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Readiness"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Readiness"
+
   /v1/recommend:
     post:
       summary: Single recommendation from terrain assessment
@@ -69,6 +87,19 @@ paths:
 
 components:
   schemas:
+    Readiness:
+      type: object
+      required: [ok, service, checks]
+      properties:
+        ok: { type: boolean }
+        service: { type: string, example: router-recommend-v1 }
+        checks:
+          type: object
+          required: [auth_configured, allow_unauthenticated]
+          properties:
+            auth_configured: { type: boolean }
+            allow_unauthenticated: { type: boolean }
+
     TerrainDimensions:
       type: object
       required:

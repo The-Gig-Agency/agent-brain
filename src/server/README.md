@@ -6,16 +6,19 @@ Thin **Node `http`** server under `src/server/` (AB-25). Wraps `recommendRegime`
 
 - OpenAPI: [`../../docs/api/router-recommend-v1.yaml`](../../docs/api/router-recommend-v1.yaml)
 - **POST** `/v1/recommend` — one JSON body → one recommendation (`api_version` in body).
-- **GET** `/health` — liveness, **no auth** (for probes).
+- **GET** `/health` — liveness, **no auth** (process is alive).
+- **GET** `/ready` — readiness, **no auth** (returns `503` when production auth is not configured).
 
 ## Run
 
 ```bash
 npm run build
-npm run serve:router-recommend:v1
+npm run start:router-recommend:v1
 ```
 
 Default port **7399** (override with `PORT`).
+
+`npm run serve:router-recommend:v1` remains as a local convenience command that builds before starting.
 
 ## Auth (AB-26)
 
@@ -35,7 +38,19 @@ If bypass is not `true` and `ROUTER_RECOMMEND_BEARER_TOKEN` is empty, the server
 
 ```bash
 npm run smoke:router-recommend:v1
+npm run smoke:router-recommend-http:v1
 ```
+
+## Railway wrapper (AB-34 / AB-35)
+
+- Build command: `npm ci && npm run build`
+- Start command: `npm run start:router-recommend:v1`
+- Health check: `GET /health`
+- Readiness check: `GET /ready`
+- Required production env: `ROUTER_RECOMMEND_BEARER_TOKEN`
+- Optional local-only env: `ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED=true`
+
+Topology and rollout notes live in [`../../docs/deploy/railway-router-recommend-v1.md`](../../docs/deploy/railway-router-recommend-v1.md).
 
 ## Internal example client (AB-27)
 

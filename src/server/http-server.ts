@@ -3,7 +3,9 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import {
   ROUTER_RECOMMEND_DEFAULT_PORT,
+  ROUTER_RECOMMEND_HEALTH_PATH,
   ROUTER_RECOMMEND_MAX_BODY_BYTES,
+  ROUTER_RECOMMEND_READY_PATH,
   ROUTER_RECOMMEND_V1_PATH,
 } from "./constants.js";
 import { recommendV1FromJsonBody } from "./recommend-v1-handler.js";
@@ -19,6 +21,15 @@ type StructuredLog = {
   status: number;
   duration_ms: number;
   message?: string;
+};
+
+type RuntimeReadiness = {
+  ok: boolean;
+  service: "router-recommend-v1";
+  checks: {
+    auth_configured: boolean;
+    allow_unauthenticated: boolean;
+  };
 };
 
 function logLine(entry: StructuredLog): void {
@@ -93,6 +104,18 @@ function checkBearerAuth(
   return { ok: true };
 }
 
+function runtimeReadiness(bearerToken: string | undefined, allowUnauthenticated: boolean): RuntimeReadiness {
+  const authConfigured = allowUnauthenticated || Boolean(bearerToken && bearerToken.length > 0);
+  return {
+    ok: authConfigured,
+    service: "router-recommend-v1",
+    checks: {
+      auth_configured: authConfigured,
+      allow_unauthenticated: allowUnauthenticated,
+    },
+  };
+}
+
 export type RouterRecommendServerOptions = {
   /** When true, skip bearer check (local dev only; AB-26). */
   allowUnauthenticated?: boolean;
@@ -134,9 +157,16 @@ export function createRouterRecommendHttpServer(options: RouterRecommendServerOp
     };
 
     try {
-      if (method === "GET" && path === "/health") {
+      if (method === "GET" && path === ROUTER_RECOMMEND_HEALTH_PATH) {
         sendJson(res, 200, { ok: true, service: "router-recommend-v1" });
         finish(200);
+        return;
+      }
+
+      if (method === "GET" && path === ROUTER_RECOMMEND_READY_PATH) {
+        const readiness = runtimeReadiness(bearerToken, allowUnauthenticated);
+        sendJson(res, readiness.ok ? 200 : 503, readiness);
+        finish(readiness.ok ? 200 : 503, readiness.ok ? undefined : "service is not ready");
         return;
       }
 

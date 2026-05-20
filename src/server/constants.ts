@@ -5,6 +5,10 @@ export type RouterRecommendApiVersion = typeof ROUTER_RECOMMEND_API_VERSION;
 
 export const ROUTER_RECOMMEND_V1_PATH = "/v1/recommend" as const;
 
+export const ROUTER_RECOMMEND_HEALTH_PATH = "/health" as const;
+
+export const ROUTER_RECOMMEND_READY_PATH = "/ready" as const;
+
 /** Default bind port when `PORT` is unset (internal dev). */
 export const ROUTER_RECOMMEND_DEFAULT_PORT = 7399;
 
