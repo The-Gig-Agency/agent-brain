@@ -21,6 +21,7 @@ import {
   measureRecoveryCostAfterWrongSwitch,
   measureUnnecessaryTransitionCost,
 } from "./trace.js";
+import { chooseRoutedRegimeAction } from "./routed-role-runners.js";
 import { scoreTerrain } from "./scoring.js";
 import type {
   BaselinePolicyId,
@@ -122,24 +123,6 @@ function runtimeView(debugCase: DebugEvalCase, state: RuntimeState): RuntimeStat
     inferredFamily: topFamily.family,
     strongSignal: topFamily.strongSignal,
   };
-}
-
-function chooseVisibleAction(
-  state: RuntimeStateView,
-  predicate: (action: RuntimeStateView["availableActions"][number]) => boolean,
-) {
-  return state.availableActions.find(predicate) ?? null;
-}
-
-function chooseCheapestAction(
-  state: RuntimeStateView,
-  predicate: (action: RuntimeStateView["availableActions"][number]) => boolean,
-) {
-  return (
-    state.availableActions
-      .filter(predicate)
-      .sort((left, right) => left.cost - right.cost)[0] ?? null
-  );
 }
 
 function deriveMemoryContext(state: RuntimeState): MemoryScoringContext {
@@ -274,85 +257,9 @@ function maybeTransition(debugCase: DebugEvalCase, state: RuntimeState, options:
 
 function chooseRoutedAction(debugCase: DebugEvalCase, state: RuntimeState) {
   const view = runtimeView(debugCase, state);
-  const logsAction = chooseVisibleAction(
-    view,
-    (action) => action.id === "inspect:logs" && !view.executedActionIds.includes(action.id),
-  );
-
-  if (state.activeRegime === "explore") {
-    if (logsAction) {
-      return logsAction;
-    }
-
-    if (view.inferredFamily && !view.strongSignal) {
-      const alternativeInspect = chooseCheapestAction(
-        view,
-        (action) =>
-          action.kind === "inspect" &&
-          action.family !== view.inferredFamily &&
-          !view.executedActionIds.includes(action.id),
-      );
-      if (alternativeInspect) {
-        return alternativeInspect;
-      }
-    }
-
-    if (view.inferredFamily) {
-      const targetedInspect = chooseCheapestAction(
-        view,
-        (action) =>
-          action.kind === "inspect" &&
-          action.family === view.inferredFamily &&
-          !view.executedActionIds.includes(action.id),
-      );
-      if (targetedInspect) {
-        return targetedInspect;
-      }
-    }
-
-    const nextInspect = chooseCheapestAction(
-      view,
-      (action) => action.kind === "inspect" && !view.executedActionIds.includes(action.id),
-    );
-    if (nextInspect) {
-      return nextInspect;
-    }
-  }
-
-  if (state.activeRegime === "prune") {
-    if (view.strongSignal && view.inferredFamily) {
-      const fix = chooseCheapestAction(
-        view,
-        (action) => action.kind === "fix" && action.family === view.inferredFamily,
-      );
-      if (fix) {
-        return fix;
-      }
-    }
-
-    if (view.inferredFamily) {
-      const inspect = chooseCheapestAction(
-        view,
-        (action) =>
-          action.kind === "inspect" &&
-          action.family === view.inferredFamily &&
-          !view.executedActionIds.includes(action.id),
-      );
-      if (inspect) {
-        return inspect;
-      }
-    }
-  }
-
-  if (state.activeRegime === "compound" && view.inferredFamily) {
-    const fix = chooseCheapestAction(view, (action) => action.kind === "fix" && action.family === view.inferredFamily);
-    if (fix) {
-      return fix;
-    }
-  }
-
-  if (state.activeRegime === "coordinate" && logsAction) {
-    return logsAction;
+  const chosen = chooseRoutedRegimeAction(state.activeRegime, view);
+  if (chosen) {
+    return chosen;
   }
 
   const fallback = chooseBaselineAction("fixed_heuristic", view);

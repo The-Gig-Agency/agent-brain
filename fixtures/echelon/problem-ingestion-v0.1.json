@@ -1,0 +1,96 @@
+{
+  "dataset_name": "problem-ingestion-v0.1",
+  "purpose": "Cross-domain AB-1 fixture pack for messy input to terrain extraction.",
+  "cases": [
+    {
+      "id": "debug-flaky-import",
+      "title": "Debugging issue with narrow technical symptoms",
+      "input": {
+        "problem_summary": "The CSV import is broken after the deploy. We have a confirmed stack trace, the failing path is narrow, and rollback is cheap if the fix is wrong.",
+        "context": "Local script, no stakeholders, fast feedback from the smoke test.",
+        "signals": ["debug root cause", "confirmed evidence", "cheap to revert"]
+      },
+      "expected_regime_hint": "prune",
+      "expected_terrain": {
+        "mode_pressure": "prune",
+        "feedback_latency": "fast",
+        "reversibility": "high",
+        "uncertainty": "low",
+        "branching_factor": "low",
+        "adversariality": "none"
+      },
+      "expected_question_fields": ["information_cost"]
+    },
+    {
+      "id": "gtm-segment-search",
+      "title": "GTM search with many possible segments",
+      "input": {
+        "problem_summary": "We have five customer segments, limited budget, weak signal, and we are not sure which market to pursue first.",
+        "context": "We need cheap probes because each full campaign is costly to test.",
+        "signals": ["unknown market", "many options", "limited budget"]
+      },
+      "expected_regime_hint": "explore",
+      "expected_terrain": {
+        "mode_pressure": "explore",
+        "uncertainty": "high",
+        "branching_factor": "high",
+        "information_cost": "high",
+        "time_horizon": "iterative"
+      },
+      "expected_question_fields": ["feedback_latency", "reversibility"]
+    },
+    {
+      "id": "org-approval-handoff",
+      "title": "Multi-team coordination bottleneck",
+      "input": {
+        "problem_summary": "The launch is blocked by legal, sales, and support handoffs. Stakeholders keep changing requirements and we need alignment before teams move.",
+        "context": "Approval chain is cross-team and the environment is shifting.",
+        "signals": ["stakeholder alignment", "handoff", "moving target"]
+      },
+      "expected_regime_hint": "coordinate",
+      "expected_terrain": {
+        "mode_pressure": "coordinate",
+        "coordination_load": "high",
+        "environment_stability": "shifting",
+        "adversariality": "some"
+      },
+      "expected_question_fields": ["reversibility", "information_cost"]
+    },
+    {
+      "id": "product-polish-loop",
+      "title": "Working flow needs iterative refinement",
+      "input": {
+        "problem_summary": "The onboarding flow works, but we need to refine and improve conversion over several sprints using live metrics.",
+        "context": "Same-day analytics make feedback fast, and changes are reversible.",
+        "signals": ["iterate", "scale what works", "stable workflow"]
+      },
+      "expected_regime_hint": "compound",
+      "expected_terrain": {
+        "mode_pressure": "compound",
+        "feedback_latency": "fast",
+        "reversibility": "high",
+        "uncertainty": "low",
+        "environment_stability": "stable",
+        "time_horizon": "iterative"
+      },
+      "expected_question_fields": ["branching_factor", "information_cost"]
+    },
+    {
+      "id": "agent-stuck-loop",
+      "title": "Agent repeatedly revisits a failed path",
+      "input": {
+        "problem_summary": "The agent is stuck in the same failed path and keeps thrashing after false starts. We need to escape the local minimum.",
+        "context": "The environment is otherwise stable, but the current strategy has false confidence.",
+        "signals": ["stuck", "local minimum", "same failed path"]
+      },
+      "expected_regime_hint": "explore",
+      "expected_terrain": {
+        "mode_pressure": "escape",
+        "ruggedness": "high",
+        "local_minima_risk": "high",
+        "environment_stability": "stable"
+      },
+      "expected_question_fields": ["feedback_latency", "information_cost"]
+    }
+  ]
+}

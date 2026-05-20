@@ -3,6 +3,11 @@
 **Status:** Draft aligned with AB-39 — canonical spec for the first vertical slice.  
 **Glossary:** [`glossary.md`](./glossary.md)
 
+**Ticket closure**
+
+- **AB-18** — Counter-regime checks and transition triggers for **live** `debugging_world_v1` runs are implemented on the `routed_policy` path in `router-runner.ts` (`maybeTransition`), with a structured **`orchestration_trace_v1`** stream (`orchestration-trace-v1.ts`) alongside the legacy `trace`. Acceptance mapping: [§8](#8-ab-18-acceptance-mapping-closed).
+- **AB-24** — Versioned **HTTP** recommendation contract is separate: OpenAPI `docs/api/router-recommend-v1.yaml` and `src/server/` (one-shot `POST /v1/recommend`); it does not duplicate the stepping orchestration stream.
+
 ## 1. Vertical slice (v1)
 
 - **Slice id:** `debugging_world_v1`
@@ -85,6 +90,7 @@ Fixed constants live in **`src/cognitive-router/orchestration-transition-constan
 | Step loop + legacy trace | `router-runner.ts` |
 | v1 constants | `orchestration-transition-constants.ts` |
 | v1 trace types + helpers | `orchestration-trace-v1.ts` |
+| v1 role runners (AB-17) | `routed-role-runners.ts` |
 | Result field | `DebugRunResult.orchestration_trace` in `types.ts` |
 
 ## 7. Consumers
@@ -92,3 +98,14 @@ Fixed constants live in **`src/cognitive-router/orchestration-transition-constan
 Evaluators and reports may read `orchestration_trace` alongside `trace` for richer narratives. Frozen lanes that predate this field may ignore it.
 
 **Join rule:** interpret `orchestration_trace_v1` as **summary-only** (§3.3); pair with `trace` for full action/observation detail using shared `step` indices.
+
+## 8. AB-18 acceptance mapping (closed)
+
+| AB-18 intent | Where it lands (v1) |
+|--------------|---------------------|
+| **Counter-regime** surfaced during runs | Each `maybeTransition` call (routed, transitions on) appends **`recommendation`** then **`counter_regime_note`**: active regime vs scorer’s **`opposing_regime`**, same `step`, with a short note. |
+| **Transition triggers** on live stepping | When the active regime changes, legacy **`trace`** gets `type: "transition"` and **`orchestration_trace`** gets **`transition_applied`** with the same `step`, `from`, `to`, plus typed **`trigger`** (§5) and `detail` aligned with the legacy `reason`. |
+| **Drift-related signals** | Compound-without-strong-signal path emits **`drift_signal`** on the orchestration stream when legacy **`drift_detected`** is recorded on `trace`. |
+| **Scope** | Applies to **`runDebugCase(..., "routed_policy")`** on **`DebugEvalCase`** from the debugging world vertical slice (`debugging_world_v1`). Not emitted for frozen baseline policies or for the HTTP recommend-only service. |
+
+**Regression check:** `npm run smoke:ab18-orchestration` runs `src/cognitive-router/run-ab18-orchestration-selftest.ts` after build.

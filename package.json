@@ -32,6 +32,7 @@
     "eval:media:v0.1": "npm run build && node dist/cognitive-router/run-media-eval-v0.1.js",
     "eval:media:v0.2": "npm run build && node dist/cognitive-router/run-media-eval-v0.2.js",
     "eval:media:boundary:v0.1": "npm run build && node dist/cognitive-router/run-media-eval-boundary-v0.1.js",
+    "eval:ingestion:v0.1": "npm run build && node dist/cognitive-router/run-problem-ingestion-v0.1.js",
     "eval:sdr:v0.1": "npm run build && node dist/cognitive-router/run-sdr-pilot-v0.1.js",
     "eval:sdr:scenarios:v0.1": "npm run build && node dist/cognitive-router/run-sdr-pilot-scenarios-v0.1.js",
     "eval:sdr:report:v0.1": "npm run build && node dist/cognitive-router/run-sdr-pilot-report-v0.1.js",
@@ -40,7 +41,9 @@
     "eval:transition-candidate:v0.2": "npm run build && node dist/cognitive-router/run-transition-candidate-v0.2.js",
     "eval:ablation-matrix:v0.1": "npm run build && node dist/cognitive-router/run-ablation-matrix-v0.1.js",
     "serve:router-recommend:v1": "npm run build && node dist/server/run-router-recommend-http-v1.js",
-    "smoke:router-recommend:v1": "npm run build && node dist/server/smoke-router-recommend-v1.js"
+    "smoke:router-recommend:v1": "npm run build && node dist/server/smoke-router-recommend-v1.js",
+    "smoke:ab18-orchestration": "npm run build && node dist/cognitive-router/run-ab18-orchestration-selftest.js",
+    "smoke:ab17-role-runners": "npm run build && node dist/cognitive-router/run-ab17-role-runners-selftest.js"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
