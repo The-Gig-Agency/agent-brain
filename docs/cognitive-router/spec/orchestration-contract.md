@@ -6,7 +6,7 @@
 **Ticket closure**
 
 - **AB-18** — Counter-regime checks and transition triggers for **live** `debugging_world_v1` runs are implemented on the `routed_policy` path in `router-runner.ts` (`maybeTransition`), with a structured **`orchestration_trace_v1`** stream (`orchestration-trace-v1.ts`) alongside the legacy `trace`. Acceptance mapping: [§8](#8-ab-18-acceptance-mapping-closed).
-- **AB-24** — Versioned **HTTP** recommendation contract is separate: OpenAPI `docs/api/router-recommend-v1.yaml` and `src/server/` (one-shot `POST /v1/recommend`); it does not duplicate the stepping orchestration stream.
+- **AB-24** — Versioned **HTTP** recommendation contract: OpenAPI `docs/api/router-recommend-v1.yaml` and `src/server/` — structured `POST /v1/recommend` (AB-25) and messy-text `POST /v1/intake-recommend` (AB-40); they do not duplicate the stepping orchestration stream.
 
 ## 1. Vertical slice (v1)
 

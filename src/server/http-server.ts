@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import {
+  ROUTER_INTAKE_RECOMMEND_V1_PATH,
   ROUTER_RECOMMEND_DEFAULT_PORT,
   ROUTER_RECOMMEND_HEALTH_PATH,
   ROUTER_RECOMMEND_MAX_BODY_BYTES,
   ROUTER_RECOMMEND_READY_PATH,
   ROUTER_RECOMMEND_V1_PATH,
 } from "./constants.js";
+import { intakeRecommendV1FromJsonBody } from "./intake-recommend-v1-handler.js";
 import { recommendV1FromJsonBody } from "./recommend-v1-handler.js";
 import type { RecommendV1ErrorWire } from "./recommend-v1-types.js";
 
@@ -124,7 +126,8 @@ export type RouterRecommendServerOptions = {
 };
 
 /**
- * Thin internal HTTP server: POST /v1/recommend only (+ GET /health). Router core stays in `recommend-v1-handler`.
+ * Thin internal HTTP server: POST /v1/recommend (structured terrain), POST /v1/intake-recommend (messy text, AB-40),
+ * GET /health, GET /ready. Router core stays in handlers.
  */
 export function createRouterRecommendHttpServer(options: RouterRecommendServerOptions = {}): Server {
   const allowUnauthenticated =
@@ -170,7 +173,7 @@ export function createRouterRecommendHttpServer(options: RouterRecommendServerOp
         return;
       }
 
-      if (method === "POST" && path === ROUTER_RECOMMEND_V1_PATH) {
+      if (method === "POST" && (path === ROUTER_RECOMMEND_V1_PATH || path === ROUTER_INTAKE_RECOMMEND_V1_PATH)) {
         const auth = checkBearerAuth(req, bearerToken, allowUnauthenticated);
         if (!auth.ok) {
           sendJson(res, auth.status, auth.body);
@@ -211,7 +214,10 @@ export function createRouterRecommendHttpServer(options: RouterRecommendServerOp
           return;
         }
 
-        const result = recommendV1FromJsonBody(parsed);
+        const result =
+          path === ROUTER_RECOMMEND_V1_PATH
+            ? recommendV1FromJsonBody(parsed)
+            : intakeRecommendV1FromJsonBody(traceId, parsed);
         if (!result.ok) {
           sendJson(res, result.status, result.body);
           finish(result.status);

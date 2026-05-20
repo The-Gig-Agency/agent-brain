@@ -25,9 +25,10 @@ The service owns HTTP, auth, request limits, structured request logs, health, an
 |-------|------|---------|
 | `GET /health` | no | Liveness only: process can answer HTTP. |
 | `GET /ready` | no | Readiness: returns `503` if production auth is not configured. |
-| `POST /v1/recommend` | bearer | Existing structured terrain assessment -> regime recommendation. |
+| `POST /v1/recommend` | bearer | Structured terrain assessment → regime recommendation. |
+| `POST /v1/intake-recommend` | bearer | Messy problem text → inferred terrain + clarification + recommendation (AB-40). |
 
-AB-40 adds the missing intake-aware route for messy problem text. Do not overload `POST /v1/recommend`; it should remain the structured terrain contract from AB-24/25.
+AB-40 adds `/v1/intake-recommend`. Do not overload `POST /v1/recommend`; it remains the structured terrain contract from AB-24/25.
 
 ## Railway commands
 
@@ -69,7 +70,7 @@ Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY
 ## Go-live checks
 
 1. Build locally: `npm run check`.
-2. Smoke handler: `npm run smoke:router-recommend:v1`.
+2. Smoke handlers: `npm run smoke:router-recommend:v1` and `npm run smoke:intake-recommend-v1`.
 3. Smoke HTTP wrapper: `npm run smoke:router-recommend-http:v1`.
 4. Smoke ops/readiness/logging: `npm run smoke:router-recommend-ops:v1`.
 5. Start locally with auth bypass only for dev:
@@ -80,10 +81,9 @@ Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY
 
 6. Confirm `GET /health` returns `200`.
 7. Confirm `GET /ready` returns `200` with bypass locally, and returns `503` if neither bypass nor bearer token is configured.
-8. In Railway, set `ROUTER_RECOMMEND_BEARER_TOKEN`, deploy, then verify `/health`, `/ready`, and an authenticated `POST /v1/recommend`.
+8. In Railway, set `ROUTER_RECOMMEND_BEARER_TOKEN`, deploy, then verify `/health`, `/ready`, and authenticated `POST /v1/recommend` and `POST /v1/intake-recommend`.
 
 ## What is intentionally not solved here
 
-- AB-40: messy text intake endpoint.
 - AB-41: edge-bot/OpenClaw workspace skill and client.
 - AB-6: live outcome learning, telemetry ingestion, and calibration loops.

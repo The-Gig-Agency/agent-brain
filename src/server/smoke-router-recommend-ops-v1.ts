@@ -149,6 +149,19 @@ async function main(): Promise<void> {
       },
       body: JSON.stringify(validRequest),
     });
+
+    await expectStatus(`${base}/v1/intake-recommend`, 200, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "X-Trace-Id": "ops-intake-trace",
+      },
+      body: JSON.stringify({
+        problem_summary:
+          "CI fails intermittently on flaky imports; we need to decide if it is a harness issue or a real regression before we ship.",
+      }),
+    });
   } finally {
     await closeServer(server);
     console.log = originalLog;
@@ -168,6 +181,13 @@ async function main(): Promise<void> {
     path: "/v1/recommend",
     status: 200,
     traceId: "ops-authorized-trace",
+    level: "info",
+  });
+  assertLog(logs, {
+    method: "POST",
+    path: "/v1/intake-recommend",
+    status: 200,
+    traceId: "ops-intake-trace",
     level: "info",
   });
 

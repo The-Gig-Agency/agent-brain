@@ -21,7 +21,7 @@ npm run check
 | Router concept + specs | [`docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md`](docs/cognitive-router/COGNITIVE_ROUTER_APP_CONCEPT_V1.md) · **`docs/cognitive-router/spec/`** (terrain, regimes, transitions, scoring, eval, media) |
 | Echelon program (tiered hub) | [`project-brain/echelon/README.md`](project-brain/echelon/README.md) — proof, charter, OSS/commercial; **[`project-brain/echelon/links.md`](project-brain/echelon/links.md)** indexes all notes |
 | Code | **`src/cognitive-router/`** — types, scoring, benchmarks, replay harness, eval runners (`npm run eval:*`) |
-| Internal recommend HTTP (v1) | **`src/server/`** — `POST /v1/recommend` (see [`docs/api/router-recommend-v1.yaml`](docs/api/router-recommend-v1.yaml), [`src/server/README.md`](src/server/README.md)) |
+| Internal recommend HTTP (v1) | **`src/server/`** — `POST /v1/recommend` (structured terrain), `POST /v1/intake-recommend` (messy text, AB-40); see [`docs/api/router-recommend-v1.yaml`](docs/api/router-recommend-v1.yaml), [`src/server/README.md`](src/server/README.md) |
 
 Historical replay/findings bullets were moved off this page to reduce duplication; follow the Echelon **README** or **links**.
 
@@ -92,11 +92,12 @@ This is intentionally small and deterministic (terrain scoring, replay harness w
 - `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see [`project-brain/echelon/archive/findings-ablation-matrix-v0.1.md`](project-brain/echelon/archive/findings-ablation-matrix-v0.1.md))
 - `npm run serve:router-recommend:v1` (internal HTTP: `POST /v1/recommend` — AB-25; auth/logging: [`src/server/README.md`](src/server/README.md))
 - `npm run smoke:router-recommend:v1` (deterministic handler smoke)
+- `npm run smoke:intake-recommend-v1` (intake handler smoke — AB-40)
 - `npm run smoke:router-recommend-http:v1` (HTTP auth/readiness smoke)
 - `npm run smoke:router-recommend-ops:v1` (readiness/auth/structured-log smoke)
 - `npm run smoke:ab18-orchestration` (routed `orchestration_trace_v1` + legacy transition alignment — AB-18)
 - `npm run smoke:ab17-role-runners` (routed regime → role runner registry — AB-17)
-- Example internal client (HTTP + bearer + trace id): `examples/internal/router-recommend-client.example.mjs` (AB-27)
+- Example internal clients: `examples/internal/router-recommend-client.example.mjs` (AB-27), `examples/internal/router-intake-recommend-client.example.mjs` (AB-40)
 
 Cycle governance templates (copy each cycle): `project-brain/echelon/operating-cadence-checklist-v0.1.md`, `cycle-note-template-v0.1.md`, `cycle-appendix-negatives-template-v0.1.md`; promotion rubric: `promotion-decision-rubric-v0.1.md`.
 

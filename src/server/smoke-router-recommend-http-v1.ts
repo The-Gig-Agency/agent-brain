@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 
-import { ROUTER_RECOMMEND_API_VERSION } from "./constants.js";
+import { ROUTER_RECOMMEND_API_VERSION, ROUTER_INTAKE_RECOMMEND_V1_PATH } from "./constants.js";
 import { createRouterRecommendHttpServer } from "./http-server.js";
 
 function listenOnRandomPort(server: Server): Promise<number> {
@@ -89,6 +89,36 @@ async function main(): Promise<void> {
   const body = await ok.json() as { api_version?: string; recommendation?: { primary_regime?: string } };
   if (body.api_version !== ROUTER_RECOMMEND_API_VERSION || !body.recommendation?.primary_regime) {
     throw new Error(`Unexpected recommendation response: ${JSON.stringify(body)}`);
+  }
+
+  const intakeUrl = `${base}${ROUTER_INTAKE_RECOMMEND_V1_PATH}`;
+  const intakeRes = await expectStatus(intakeUrl, 200, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      "X-Trace-Id": "smoke-intake-trace",
+    },
+    body: JSON.stringify({
+      problem_summary:
+        "Production deploy fails after packaging changes; could be dependency resolution or permission handling on the release host.",
+      context: "Staging only; prod works.",
+    }),
+  });
+  const intakeBody = await intakeRes.json() as {
+    api_version?: string;
+    trace_id?: string;
+    ingestion?: { terrain_profile?: { mode_pressure?: string }; regime_hint?: string };
+    recommendation?: { primary_regime?: string };
+  };
+  if (intakeBody.api_version !== ROUTER_RECOMMEND_API_VERSION) {
+    throw new Error(`Unexpected intake api_version: ${JSON.stringify(intakeBody)}`);
+  }
+  if (intakeBody.trace_id !== "smoke-intake-trace") {
+    throw new Error(`Expected trace_id echoed in body, got ${JSON.stringify(intakeBody.trace_id)}`);
+  }
+  if (!intakeBody.ingestion?.terrain_profile || !intakeBody.recommendation?.primary_regime) {
+    throw new Error(`Unexpected intake response shape: ${JSON.stringify(intakeBody)}`);
   }
 
   await closeServer(server);

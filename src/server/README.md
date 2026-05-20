@@ -1,11 +1,12 @@
 # Internal router recommend HTTP service (v1)
 
-Thin **Node `http`** server under `src/server/` (AB-25). Wraps `recommendRegime` from `src/cognitive-router` — **no routing logic in the transport layer**.
+Thin **Node `http`** server under `src/server/` (AB-25). Wraps `recommendRegime` from `src/cognitive-router` — **no routing logic in the transport layer**. **AB-40** adds messy-text intake on a separate path from structured recommend.
 
 ## Contract
 
 - OpenAPI: [`../../docs/api/router-recommend-v1.yaml`](../../docs/api/router-recommend-v1.yaml)
-- **POST** `/v1/recommend` — one JSON body → one recommendation (`api_version` in body).
+- **POST** `/v1/recommend` — one JSON body with full **terrain** dimensions → one recommendation (`api_version` in body). Structured contract (AB-24/25).
+- **POST** `/v1/intake-recommend` — **problem_summary** (+ optional `context`, `signals`) → heuristic ingestion (`ingestProblem`) → same recommendation shape, plus `trace_id`, inferred `terrain_profile`, confidences, clarification questions, and `regime_hint` (**AB-40**). Does not replace `/v1/recommend` for callers that already have terrain.
 - **GET** `/health` — liveness, **no auth** (process is alive).
 - **GET** `/ready` — readiness, **no auth** (returns `503` when production auth is not configured).
 
@@ -27,7 +28,7 @@ Default port **7399** (override with `PORT`).
 | `ROUTER_RECOMMEND_BEARER_TOKEN` | Shared secret for `Authorization: Bearer <token>`. **Required** in production-style runs unless bypass is set. |
 | `ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED` | Set to `true` to skip bearer validation (**local dev only**). |
 
-If bypass is not `true` and `ROUTER_RECOMMEND_BEARER_TOKEN` is empty, the server returns **503** on `/v1/recommend`.
+If bypass is not `true` and `ROUTER_RECOMMEND_BEARER_TOKEN` is empty, the server returns **503** on authenticated POST routes (`/v1/recommend`, `/v1/intake-recommend`).
 
 ## Observability (AB-26)
 
@@ -38,6 +39,7 @@ If bypass is not `true` and `ROUTER_RECOMMEND_BEARER_TOKEN` is empty, the server
 
 ```bash
 npm run smoke:router-recommend:v1
+npm run smoke:intake-recommend-v1
 npm run smoke:router-recommend-http:v1
 npm run smoke:router-recommend-ops:v1
 ```
@@ -54,17 +56,18 @@ npm run smoke:router-recommend-ops:v1
 
 Topology and rollout notes live in [`../../docs/deploy/railway-router-recommend-v1.md`](../../docs/deploy/railway-router-recommend-v1.md). Runtime settings live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md), and the deployment checklist lives in [`../../docs/deploy/router-recommend-observability-checklist-v1.md`](../../docs/deploy/router-recommend-observability-checklist-v1.md).
 
-## Internal example client (AB-27)
+## Internal example clients (AB-27 / AB-40)
 
 With server running (`ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED=true` **or** token set):
 
 ```bash
 node examples/internal/router-recommend-client.example.mjs
+node examples/internal/router-intake-recommend-client.example.mjs
 ```
 
 Set `ROUTER_RECOMMEND_URL`, `ROUTER_RECOMMEND_BEARER_TOKEN`, and optionally `TRACE_ID` as needed.
 
-## Scope limits (AB-25 / AB-27)
+## Scope limits (AB-25 / AB-27 / AB-40)
 
 - No batch endpoint.
-- No public SDK; service and example are **internal-facing** only.
+- No public SDK; service and examples are **internal-facing** only.
