@@ -39,10 +39,12 @@ If bypass is not `true` and `ROUTER_RECOMMEND_BEARER_TOKEN` is empty, the server
 ```bash
 npm run smoke:router-recommend:v1
 npm run smoke:router-recommend-http:v1
+npm run smoke:router-recommend-ops:v1
 ```
 
 ## Railway wrapper (AB-34 / AB-35)
 
+- Railway config: [`../../railway.json`](../../railway.json)
 - Build command: `npm ci && npm run build`
 - Start command: `npm run start:router-recommend:v1`
 - Health check: `GET /health`
@@ -50,7 +52,7 @@ npm run smoke:router-recommend-http:v1
 - Required production env: `ROUTER_RECOMMEND_BEARER_TOKEN`
 - Optional local-only env: `ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED=true`
 
-Topology and rollout notes live in [`../../docs/deploy/railway-router-recommend-v1.md`](../../docs/deploy/railway-router-recommend-v1.md).
+Topology and rollout notes live in [`../../docs/deploy/railway-router-recommend-v1.md`](../../docs/deploy/railway-router-recommend-v1.md). Runtime settings live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md), and the deployment checklist lives in [`../../docs/deploy/router-recommend-observability-checklist-v1.md`](../../docs/deploy/router-recommend-observability-checklist-v1.md).
 
 ## Internal example client (AB-27)
 

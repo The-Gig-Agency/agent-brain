@@ -45,6 +45,7 @@
     "serve:router-recommend:v1": "npm run build && node dist/server/run-router-recommend-http-v1.js",
     "smoke:router-recommend:v1": "npm run build && node dist/server/smoke-router-recommend-v1.js",
     "smoke:router-recommend-http:v1": "npm run build && node dist/server/smoke-router-recommend-http-v1.js",
+    "smoke:router-recommend-ops:v1": "npm run build && node dist/server/smoke-router-recommend-ops-v1.js",
     "smoke:ab18-orchestration": "npm run build && node dist/cognitive-router/run-ab18-orchestration-selftest.js",
     "smoke:ab17-role-runners": "npm run build && node dist/cognitive-router/run-ab17-role-runners-selftest.js"
   },

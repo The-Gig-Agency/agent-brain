@@ -1,8 +1,8 @@
 # Railway router recommend v1 topology
 
-**Tickets:** AB-34, AB-35  
+**Tickets:** AB-34, AB-35, AB-36, AB-37  
 **Service:** `router-recommend-v1`  
-**Status:** Internal hosted-service design and wrapper contract.
+**Status:** Internal hosted-service design, wrapper contract, Railway config, and ops checklist.
 
 ## Target shape
 
@@ -31,7 +31,7 @@ AB-40 adds the missing intake-aware route for messy problem text. Do not overloa
 
 ## Railway commands
 
-Recommended Railway settings:
+Recommended Railway settings are committed in [`../../railway.json`](../../railway.json):
 
 ```text
 Build command: npm ci && npm run build
@@ -64,20 +64,23 @@ Future AB-40/41 client env names:
 - Callers should pass `X-Trace-Id` when they have one; otherwise the service generates a trace id.
 - HTTP body limit is `ROUTER_RECOMMEND_MAX_BODY_BYTES` from `src/server/constants.ts`.
 
+Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md). The observability checklist lives in [`router-recommend-observability-checklist-v1.md`](router-recommend-observability-checklist-v1.md).
+
 ## Go-live checks
 
 1. Build locally: `npm run check`.
 2. Smoke handler: `npm run smoke:router-recommend:v1`.
 3. Smoke HTTP wrapper: `npm run smoke:router-recommend-http:v1`.
-4. Start locally with auth bypass only for dev:
+4. Smoke ops/readiness/logging: `npm run smoke:router-recommend-ops:v1`.
+5. Start locally with auth bypass only for dev:
 
    ```bash
    ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED=true npm run serve:router-recommend:v1
    ```
 
-5. Confirm `GET /health` returns `200`.
-6. Confirm `GET /ready` returns `200` with bypass locally, and returns `503` if neither bypass nor bearer token is configured.
-7. In Railway, set `ROUTER_RECOMMEND_BEARER_TOKEN`, deploy, then verify `/health`, `/ready`, and an authenticated `POST /v1/recommend`.
+6. Confirm `GET /health` returns `200`.
+7. Confirm `GET /ready` returns `200` with bypass locally, and returns `503` if neither bypass nor bearer token is configured.
+8. In Railway, set `ROUTER_RECOMMEND_BEARER_TOKEN`, deploy, then verify `/health`, `/ready`, and an authenticated `POST /v1/recommend`.
 
 ## What is intentionally not solved here
 
