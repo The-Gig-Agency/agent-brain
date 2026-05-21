@@ -65,6 +65,12 @@ Future AB-40/41 client env names:
 - Callers should pass `X-Trace-Id` when they have one; otherwise the service generates a trace id.
 - HTTP body limit is `ROUTER_RECOMMEND_MAX_BODY_BYTES` from `src/server/constants.ts`.
 
+## Railway build: `npm error EBUSY ... rmdir '/app/node_modules/.cache'`
+
+Nixpacks/Docker BuildKit often mounts a **cache layer** on `node_modules`. npm’s default cache under `node_modules/.cache` can then hit **`EBUSY: resource busy or locked`** during `npm ci`.
+
+**Mitigation (this repo):** `railway.json` sets **`NPM_CONFIG_CACHE=/tmp/npm-cache`** so npm keeps its cache **outside** `node_modules`. If a build still fails, clear the Railway build cache once (dashboard) or retry deploy after an incident.
+
 Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md). The observability checklist lives in [`router-recommend-observability-checklist-v1.md`](router-recommend-observability-checklist-v1.md).
 
 ## Go-live checks
@@ -85,5 +91,4 @@ Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY
 
 ## What is intentionally not solved here
 
-- AB-41: edge-bot/OpenClaw workspace skill and client.
 - AB-6: live outcome learning, telemetry ingestion, and calibration loops.

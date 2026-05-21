@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm ci && npm run build"
+    "buildCommand": "mkdir -p /tmp/npm-cache && export NPM_CONFIG_CACHE=/tmp/npm-cache && npm ci && npm run build"
   },
   "deploy": {
     "startCommand": "npm run start:router-recommend:v1",
