@@ -67,9 +67,13 @@ Future AB-40/41 client env names:
 
 ## Railway build: `npm error EBUSY ... rmdir '/app/node_modules/.cache'`
 
-Nixpacks/Docker BuildKit often mounts a **cache layer** on `node_modules`. npm’s default cache under `node_modules/.cache` can then hit **`EBUSY: resource busy or locked`** during `npm ci`.
+Nixpacks generates a **Dockerfile** with two steps: an **install** phase (`npm ci`, often with a cache on `/root/.npm`) and a **build** phase (your `railway.json` **`buildCommand`**). Railway also mounts a cache on **`/app/node_modules/.cache`** during the build `RUN`.
 
-**Mitigation (this repo):** `railway.json` sets **`NPM_CONFIG_CACHE=/tmp/npm-cache`** so npm keeps its cache **outside** `node_modules`. If a build still fails, clear the Railway build cache once (dashboard) or retry deploy after an incident.
+**Root cause:** Running **`npm ci` again inside `buildCommand`** tries to replace `node_modules` while `.cache` is a busy mount → **`EBUSY`** on `rmdir '/app/node_modules/.cache'`.
+
+**Mitigation (this repo):** `railway.json` **`buildCommand` is only `npm run build`**. Dependencies are installed in Nixpacks’ install phase; the build step only compiles TypeScript (`tsc`). Do not add a second `npm ci` there.
+
+If a build still fails, clear the Railway **build cache** once (dashboard) and redeploy.
 
 Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md). The observability checklist lives in [`router-recommend-observability-checklist-v1.md`](router-recommend-observability-checklist-v1.md).
 
