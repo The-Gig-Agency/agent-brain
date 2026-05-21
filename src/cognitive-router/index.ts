@@ -17,3 +17,4 @@ export * from "./media-decision-v2.js";
 export * from "./media-evaluator.js";
 export * from "./strategy-layer.js";
 export * from "./problem-ingestion.js";
+export * from "./outcome-events-v1.js";

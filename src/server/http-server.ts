@@ -134,7 +134,7 @@ export function createRouterRecommendHttpServer(options: RouterRecommendServerOp
     options.allowUnauthenticated ?? process.env.ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED === "true";
   const bearerToken = options.bearerToken ?? process.env.ROUTER_RECOMMEND_BEARER_TOKEN;
 
-  const server = createServer(async (req, res) => {
+  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const requestId = randomUUID();
     const traceHeader = getHeader(req, "x-trace-id");
     const traceId = traceHeader && traceHeader.length > 0 ? traceHeader : randomUUID();

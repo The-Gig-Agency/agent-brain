@@ -34,7 +34,7 @@ function closeServer(server: Server): Promise<void> {
       resolve();
       return;
     }
-    server.close((error) => {
+    server.close((error?: Error) => {
       if (error) {
         reject(error);
         return;

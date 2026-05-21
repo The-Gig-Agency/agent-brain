@@ -19,7 +19,7 @@ function listenOnRandomPort(server: Server): Promise<number> {
 
 function closeServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
-    server.close((error) => {
+    server.close((error?: Error) => {
       if (error) {
         reject(error);
         return;

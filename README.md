@@ -90,6 +90,7 @@ This is intentionally small and deterministic (terrain scoring, replay harness w
 - `npm run eval:transition-candidate:v0.1` (mutable candidate lane: transition traps + `transition_cycle_metrics` — not frozen)
 - `npm run eval:transition-candidate:v0.2` (expanded 20-case candidate lane — not frozen)
 - `npm run eval:ablation-matrix:v0.1` (one-factor primitive table: debugging + replay/media scoring harnesses — see [`project-brain/echelon/archive/findings-ablation-matrix-v0.1.md`](project-brain/echelon/archive/findings-ablation-matrix-v0.1.md))
+- `npm run smoke:outcome-events:v1` (AB-28 recommendation/outcome telemetry schema selftest)
 - `npm run serve:router-recommend:v1` (internal HTTP: `POST /v1/recommend` — AB-25; auth/logging: [`src/server/README.md`](src/server/README.md))
 - `npm run smoke:router-recommend:v1` (deterministic handler smoke)
 - `npm run smoke:intake-recommend-v1` (intake handler smoke — AB-40)
