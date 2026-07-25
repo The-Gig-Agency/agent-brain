@@ -60,28 +60,312 @@ Critical corrections incorporated into this revision:
 
 ### Updated Strategy Mapping
 
-Instead of a new `PairingStrategy` type, regime should influence the **existing** `SelectionMode`:
+Instead of a new `PairingStrategy` type, regime should influence the **existing** `SelectionMode`.
+
+**The actual current rule** (`nextPairingImpl`, ~line 579) is lane-driven, not round-driven:
 
 ```typescript
-// Regime → SelectionMode mapping
+const mode: SelectionMode =
+  sessionLane === "general"
+    ? "recognition_first"
+    : laneConfidence < 0.6
+      ? "recognition_boost"
+      : "diagnostic_first";
+```
+
+A behavior-preserving mapping must keep both branches and the `0.6` threshold:
+
+```typescript
 function regimeToSelectionMode(
   regime: SearchRegime,
+  sessionLane: Lane,
   laneConfidence: number,
 ): SelectionMode {
-  // Lane-uncertain sessions always need recognition (bootstrap)
-  if (laneConfidence < 0.4) {
-    return "recognition_first";
-  }
-  
-  // High confidence + compound regime → diagnostic (lane is settled)
-  if (regime === "compound" && laneConfidence > 0.7) {
-    return "diagnostic_first";
-  }
-  
-  // Default: blend recognition and diagnostic
-  return "recognition_boost";
+  // PRESERVED: general lane is never diagnostic-first — users need songs they know
+  if (sessionLane === "general") return "recognition_first";
+  if (laneConfidence < 0.6) return "recognition_boost";
+
+  // Only lane-confident sessions have room for regime to matter
+  return regime === "explore" ? "recognition_boost" : "diagnostic_first";
 }
 ```
+
+> **But see Gap 1 below** — `SelectionMode` alone is too coarse a lever to carry the integration.
+
+---
+
+## Pre-Implementation Gap Analysis (2026-07-25)
+
+Full re-review of this plan against `acedge123/music-dna@ef3d6b6` and `agent-brain@src/cognitive-router`. Everything below must be resolved before coding. Gaps are ordered by severity.
+
+### Gap 1 — `SelectionMode` is too coarse to carry the integration (BLOCKER)
+
+`SelectionMode` is set **once per round from `lane` and `lane_confidence`**, and `lane_confidence` is written at session start and never updated (cross-lane probes, the only thing that changed lanes mid-session, are quarantined). So within a session the mode is effectively **constant**.
+
+If regime only drives `SelectionMode`, then:
+- For `general` sessions, mode is pinned to `recognition_first` regardless of regime.
+- For lane-confident sessions, mode is pinned by a static number.
+- `mode_differs` in shadow would measure *a threshold change*, not the value of regime routing.
+
+**Resolution:** regime must drive the *scoring knobs inside* `selectPairing`, which are currently hard-coded literals:
+
+| Knob | Current literal | Location |
+|------|-----------------|----------|
+| `recogBlend` | `0.6` / `0.4` / `0` | derived from `mode` |
+| challenge boost | `1.5` | `challengeBoost` |
+| leaning-axis threshold | `15` | `leaningAxes` filter |
+| leaning-axis count | top `3` | `.slice(0, 3)` |
+| axis-need blend | `0.4 + 0.6 * axisNeed` | weight formula |
+| canon floor | `0` / `45` / `55` | `RECOGNITION_FLOORS` |
+| fork hard-filter | always on when `leaningAxes.size > 0` | `forkPool` |
+
+The strategy type should name **these** fields so the defaults are literally today's numbers:
+
+```typescript
+export type PairingKnobs = {
+  mode: SelectionMode;          // existing lever, preserved
+  recog_blend: number;          // 0..1, overrides mode-derived default
+  canon_floor: number;          // 0..100 — SAME SCALE as RECOGNITION_FLOORS
+  challenge_boost: number;      // multiplier, default 1.5
+  leaning_axis_threshold: number; // default 15
+  leaning_axis_count: number;   // default 3
+  axis_need_floor: number;      // default 0.4  (the "0.4 +" term)
+  axis_need_span: number;       // default 0.6  (the "0.6 *" term)
+  fork_filter: "hard" | "soft" | "off"; // default "hard"
+};
+
+export const LEGACY_KNOBS: PairingKnobs = {
+  mode: "diagnostic_first",
+  recog_blend: 0,
+  canon_floor: 0,
+  challenge_boost: 1.5,
+  leaning_axis_threshold: 15,
+  leaning_axis_count: 3,
+  axis_need_floor: 0.4,
+  axis_need_span: 0.6,
+  fork_filter: "hard",
+};
+```
+
+`fork_filter: "soft"` (weight instead of hard-filter) is the single highest-value explore lever, because the current hard filter collapses the pool to fork-matching pairings whenever any axis exceeds 15.
+
+> **Unit bug in current plan:** `min_canon_floor: 0.3` is on a 0–1 scale, but `RECOGNITION_FLOORS` are `0/45/55` on a 0–100 scale. As written the plan would disable the recognition floor entirely.
+
+### Gap 2 — Agent Brain's scoring is nearly a pass-through for this terrain (BLOCKER)
+
+Nine of the twelve terrain fields are hard-coded constants in the mapper. Scoring those constants through `DIMENSION_WEIGHTS` gives a fixed baseline **before any session data is considered**:
+
+| Field (constant) | explore | prune | compound | coordinate |
+|---|---|---|---|---|
+| `feedback_latency: fast` | +2 | +1 | | |
+| `reversibility: high` | +2 | +1 | | |
+| `adversariality: none` | | +1 | +1 | |
+| `information_cost: low` | +2 | +1 | | |
+| `coordination_load: low` | | +1 | +1 | |
+| `environment_stability: stable` | | +1 | +2 | |
+| `time_horizon: iterative` | +2 | | +1 | |
+| **Baseline** | **+8** | **+5** | **+5** | **0** |
+
+Meanwhile `mode_pressure` is weighted `+4` — the heaviest single weight in the table — and the mapper computes `mode_pressure` itself from confidence/bias/volatility.
+
+Consequences, all verified by hand-scoring:
+
+1. **`scoreTerrain` almost always just echoes `inferModePressure`.** The mapper is making the decision; Agent Brain is rubber-stamping it. Any claim that "Agent Brain chose the regime" is currently unearned.
+2. **Confidence is asymmetric.** `explore` can reach margin 13 (confidence clamps to 1.0), while `prune` and `compound` top out around margin 2 (confidence ≈ 0.56). Any confidence-gated logic silently biases toward explore.
+3. **`shouldTransitionRegime`'s `rec.confidence > 0.7` branch is dead code** for prune/compound.
+
+**Resolution:** either (a) accept the mapper as the decision-maker and drop `mode_pressure` to a weaker signal so the other dimensions can actually move the result, or (b) stop hard-coding the nine constants and derive at least `information_cost`, `environment_stability`, and `branching_factor` from real session data. Recommend (a) + (b): set `mode_pressure` from a *coarser* signal and let `uncertainty`/`ruggedness`/`local_minima_risk` carry the decision. Whichever is chosen, **record the expected regime distribution before shipping** so shadow data can be checked against it.
+
+### Gap 3 — Three of four transition rules can never fire (BLOCKER)
+
+`TRANSITION_RULES` evaluated against the mapper's terrain:
+
+| Rule | Condition | Status with current mapper |
+|------|-----------|----------------------------|
+| `explore → prune` | `branching_factor === "high"` | **Only rounds 0–4.** Mapper sets `branching_factor: session.round < 5 ? "high" : "medium"`, so this is unreachable from round 5 on |
+| `prune → compound` | `uncertainty === "low"` and stable | Works |
+| `compound → explore` | `shifting` OR `local_minima_risk === "high"` | **Never fires.** `environment_stability` is hard-coded `"stable"`, and `local_minima_risk: "high"` requires artist bias — but `inferModePressure` only returns `compound` when `!artistBias.biased`. The two conditions are mutually exclusive |
+| `→ coordinate` | `adversariality high` OR `coordination_load high` | **Never fires.** Both hard-coded to `none`/`low` |
+
+The `compound → explore` rule is the *safety valve that un-sticks a user locked into compounding*, and it is unreachable. This must be fixed before canary, not after.
+
+**Resolution:** drive `environment_stability` from real signal — set `"shifting"` when skip rate rises or decision times trend upward mid-session — and decouple `local_minima_risk` from the `mode_pressure` guard so both can be true at once.
+
+### Gap 4 — The Skip feature is missing from the plan entirely (BLOCKER)
+
+`skipPairingImpl` exists and is a first-class user signal meaning *"I don't recognize either song."* It:
+- adds the pairing to `probe_state.skipped_pairing_ids`, which is folded into `usedIds` and therefore **inflates `round` without producing a vector delta**;
+- sets `probe_state.wants_wider_probe = true`;
+- emits a `pairing_skipped` event.
+
+This is the strongest recognition-failure signal in the product and it maps directly onto terrain:
+
+```typescript
+export function detectSkipPressure(
+  probeState: { skipped_pairing_ids?: string[] },
+  round: number,
+): { skip_count: number; skip_rate: number; recognition_failing: boolean } {
+  const skip_count = probeState.skipped_pairing_ids?.length ?? 0;
+  const skip_rate = round > 0 ? skip_count / round : 0;
+  return { skip_count, skip_rate, recognition_failing: skip_count >= 2 || skip_rate > 0.25 };
+}
+```
+
+Wiring: `recognition_failing` should force `information_cost: "high"` (pairings the user can't engage with are expensive), push `environment_stability: "shifting"` (unblocking Gap 3), and force `mode: "recognition_first"` regardless of regime. Note the plan's confidence math is also distorted by skips, since `round` counts them but the vector does not move — a skip-heavy session looks "stuck at low confidence" purely as an artifact.
+
+### Gap 5 — Required inputs don't exist in the database
+
+| Input the plan assumes | Reality | Required work |
+|---|---|---|
+| `session.artist_frequency` | **Does not exist anywhere.** No column, no computation | Derive per round: join `choices → songs` and tally `chosen.artist`. Adds a query to `nextPairingImpl` |
+| `recentDeltas` | `applyChoice` computes `delta_vector` (line ~1110) but it is **never persisted**; `choices` has no delta column | Either add `delta_vector JSONB` to `choices` (cheap, recommended) or recompute by re-joining `song_axes` per round (expensive) |
+| `recentChoices[].ms_to_decide` | Exists on `choices` | Just needs to be selected — currently `nextPairingImpl` only selects `pairing_id` |
+| `session.round` | Derived as `usedIds.size` (choices **+ skips**) | Pass explicitly; don't recompute differently in the mapper |
+
+`nextPairingImpl` currently issues `supabase.from("choices").select("pairing_id")`. It must become `select("pairing_id, chosen_song_id, ms_to_decide, created_at")` plus an artist lookup. **This is the first real code change and it should ship with the telemetry step.**
+
+### Gap 6 — All analytics SQL references non-existent columns
+
+The rollout queries use `sessions.archetype_confidence` and `sessions.rounds`. Neither exists. Actual columns are `archetype_score`, `archetype_margin`, `archetype_flagged`, `archetype_top3`. Round count must come from `choices`.
+
+```sql
+-- CORRECTED baseline / A-B query
+SELECT
+  s.routing_mode,
+  COUNT(*)                                        AS sessions,
+  AVG(s.archetype_score)                          AS avg_archetype_score,
+  AVG(s.archetype_margin)                         AS avg_archetype_margin,
+  AVG(c.n)                                        AS avg_rounds,
+  AVG((s.completed_at IS NOT NULL)::int) * 100    AS completion_rate,
+  AVG(EXTRACT(EPOCH FROM (s.completed_at - s.started_at))) AS avg_duration_seconds
+FROM sessions s
+LEFT JOIN LATERAL (
+  SELECT COUNT(*)::int AS n FROM choices WHERE session_id = s.id
+) c ON TRUE
+WHERE s.started_at > NOW() - INTERVAL '14 days'
+GROUP BY s.routing_mode;
+```
+
+Also note `archetype_score` is a **cosine similarity, not a probability** (see `ArchetypeAssignment.score` and `fit_tier`). "+10% archetype confidence" is not a well-defined target on a cosine. Recommend switching the primary metric to `archetype_margin` (top minus runner-up), which is what actually indicates a decisive read, and tracking `archetype_flagged` rate as a guardrail.
+
+### Gap 7 — Reinventing A/B infrastructure that already exists
+
+The plan proposes a `shadow_comparisons` table, a bespoke `hashSessionId` bucketer, and new env vars. But `event_log` **already has `experiment_key` and `variant` columns**, plus `session_id`, `pairing_id`, `choice_id`, `response_time_ms`, `props`, and `client`, with RLS and an existing `recordEvent` server function.
+
+Use it:
+
+```typescript
+await recordEvent({
+  event_type: "pairing_shown",
+  session_id,
+  pairing_id,
+  experiment_key: "agent_brain_routing",
+  variant: routingMode,            // "legacy" | "shadow" | "agent-brain"
+  props: { regime, terrain, knobs, selection_reason },
+});
+```
+
+This removes a table, gets RLS for free, and makes the A/B analysis a `GROUP BY variant` over data the team already knows how to query.
+
+**Required change the plan misses:** `EVENT_TYPES` is a `z.enum` allow-list. Any new event type (e.g. `regime_shadow`) **must be added to that array** or `recordEvent` throws. Prefer reusing `pairing_shown` with `experiment_key` set, to avoid touching the enum at all.
+
+Assignment should also be **persisted on the session at creation** (`sessions.routing_mode`) rather than recomputed per request from a hash. A session must not flip arms mid-run if the rollout percentage is changed.
+
+### Gap 8 — New tables have no RLS, GRANTs, or ownership path
+
+Every table in this project follows a strict pattern: `GRANT` → `ENABLE ROW LEVEL SECURITY` → explicit policies (see `event_log`, `session_reasoning`, `test_runs`). The plan's `CREATE TABLE` statements have none, so the tables would be unreadable by `authenticated` and would trip the Supabase security linter.
+
+If `regime_events` is still wanted after Gap 7, it needs the full treatment:
+
+```sql
+CREATE TABLE public.regime_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  session_id UUID NOT NULL REFERENCES public.sessions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  round INT NOT NULL,
+  regime TEXT NOT NULL,
+  previous_regime TEXT,
+  trigger TEXT NOT NULL,
+  terrain_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rationale TEXT[] NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX idx_regime_events_session ON public.regime_events(session_id);
+
+GRANT SELECT, INSERT ON public.regime_events TO authenticated;
+GRANT ALL ON public.regime_events TO service_role;
+ALTER TABLE public.regime_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users read own regime events" ON public.regime_events
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "users insert own regime events" ON public.regime_events
+  FOR INSERT TO authenticated WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (SELECT 1 FROM public.sessions s WHERE s.id = session_id AND s.user_id = auth.uid())
+  );
+```
+
+Note `user_id` is required — the RLS pattern in this codebase scopes by user, and `regime_events` has no other ownership path.
+
+### Gap 9 — Section 2.2's rewrite silently drops production behavior
+
+The proposed `selectPairing` body in Section 2.2 is not a refactor of the real function. Compared to the shipped implementation it drops:
+
+- `differentArtist` as an **unconditional** filter. The real code always excludes same-artist matchups ("micro-comparisons inside one artist's catalog"). The plan makes it conditional on `artist_diversity_weight > 0.3`, which would start serving same-artist pairings in compound regime.
+- The **recognition floor** using `recognition.get(p.id).min_canon >= canonFloor`, including the "if the floor empties the pool, drop the floor" fallback.
+- `recogBlend` blending of `recognition_score` with `diagnostic_weight`.
+- The **fork/leaning-axes hard filter**.
+- The `selection_reason` return value — which the shadow-logging plan depends on.
+- `assertWithinLane`, and the general-lane retry fallback in `nextPairingImpl`.
+
+It also invents `isRecognizable(p)` and `isCanonSong(p)` helpers that do not exist; recognition lives in a `Map<string, RecognitionRow>` passed in from the `pairing_recognition` view, not on the candidate.
+
+**Resolution:** discard the Section 2.2 rewrite. The refactor is strictly "replace seven literals with `knobs.*` fields," nothing else. The golden test in Step 2 must assert byte-identical `selection_reason` output across a seeded RNG corpus, not merely the same pairing id.
+
+### Gap 10 — Type and correctness errors in the mapper code
+
+1. **`ModePressure` vs `SearchRegime` are conflated.** `inferModePressure` returns a `ModePressure` (a terrain *input*: `explore | prune | compound | escape | coordinate | create`). `scoreTerrain` returns a `SearchRegime` (the *output*: `prune | explore | compound | coordinate`). `RegimeShadowLog.inferred_regime` is typed as the former but consumed as the latter. Shadow logging must log **both** — `mode_pressure_in` and `regime_out` — and their disagreement is itself the signal that Agent Brain is adding value (see Gap 2).
+2. **`escape` is a real `ModePressure` value and should be used.** The plan bolts on a bespoke escape branch at round 15. Instead, return `"escape"` from `inferModePressure` for stuck sessions; the weight table already handles it (`explore +2, prune +1, compound -1`).
+3. **Wrong argument order.** After adding `recentDeltas`/`recentChoices` params, `sessionToTerrain` still calls `inferModePressure(session, config)` — passing `config` where `recentDeltas` is expected.
+4. **`MusicDNATerrainInput` is declared twice** with different shapes (once in §1.1, once in §1.2). Keep the §1.2 version.
+5. **Stale rationale string.** `recommendMusicDNARegime` still emits `"Probe flips occurred — taste landscape is rugged"` for `ruggedness === "high"`, but ruggedness no longer comes from probes.
+6. **`recognition_mode: "blended"` is not a real value.** The actual union is `diagnostic_first | recognition_boost | recognition_first`.
+7. **`detectDecisionHesitation` is computed but unused** in `inferModePressure` — it is destructured and then never read.
+
+### Gap 11 — Interaction with `shouldStop` is unspecified
+
+`shouldStop` runs **before** selection with `min_rounds = 12` and `confidence_threshold = 0.6`, and returns `done` when both are met. The plan then introduces `MAX_ROUNDS = 18` and `ESCAPE_ROUND = 15` without reconciling them.
+
+Open items: Does regime affect `shouldStop`? A compound regime arguably should be allowed to stop earlier; explore should not. If regime can extend a session past 12 rounds, that directly changes completion rate — the primary rollout metric. **Decide explicitly, and if `shouldStop` stays untouched, say so in the plan**, because "avg rounds 14 → 12" is listed as a success metric and `shouldStop` is what actually controls it.
+
+### Gap 12 — Untouched surfaces that will drift
+
+- **`docs/musicdna/api-v1.md` and `docs/musicdna/mobile_flutter_api_contract.md`** — adding `routing_mode`/`regime` to the pairing response is a contract change. Both docs need updating, and the mobile client tolerating unknown fields must be confirmed.
+- **`src/routes/api/public/test/$action.ts`** — the agent test harness calls the `*Impl` functions directly with a service-role client and a synthetic user id. Any new required argument to `nextPairingImpl` breaks it. It also has no `auth.uid()`, which matters for the RLS policies in Gap 8 (service role bypasses RLS, so this is fine — but `user_id` must still be populated explicitly).
+- **`src/routes/api/v1/e2e.test.ts`** — end-to-end test drives real sessions; will need a fixed `routing_mode` so it stays deterministic.
+- **`docs/musicdna/instrumentation.md`** — should document the new `experiment_key`/`variant` convention.
+- **Bootstrap phase** — the `sessionLane === "general" && bootstrapChoices.length < 2` branch returns *before* reaching `selectPairing`. Regime routing must not apply to bootstrap rounds; the plan never mentions this early return.
+
+### Revised Sequencing
+
+| Step | Scope | Gates on |
+|------|-------|----------|
+| **0. Data plumbing** | Add `delta_vector` to `choices`; widen the `choices` select; compute artist frequency; add `sessions.routing_mode` | — |
+| **1. Telemetry** | Log `mode_pressure_in`, `regime_out`, terrain, `selection_reason` via `event_log` with `experiment_key` | Step 0 |
+| **2. Fix mapper** | Gaps 2, 3, 4, 10 — real signals for the constant fields, reachable transitions, skip pressure, `escape` | Step 1 data |
+| **3. Knobs refactor** | Replace seven literals in `selectPairing` with `PairingKnobs`; golden test on `selection_reason` | Step 2 |
+| **4. Shadow** | Compute knobs from terrain, log divergence, keep serving legacy | Step 3 golden test green |
+| **5. Canary → A/B → Full** | As previously planned | Shadow shows meaningful, explainable divergence |
+
+Steps 0–1 are the only ones that should start before the open decisions below are settled.
+
+### Decisions Still Needed
+
+1. **Gap 2 resolution** — de-weight `mode_pressure`, or derive the nine constant terrain fields from real data? This determines whether Agent Brain is genuinely routing or just echoing the mapper.
+2. **Gap 11** — may regime change `shouldStop`? If yes, "avg rounds" stops being a clean metric.
+3. **`delta_vector` persistence** — add the column (recommended) or recompute from `song_axes`?
+4. **Primary success metric** — `archetype_margin` is the defensible choice; confirm before baselining.
 
 ---
 
@@ -109,8 +393,12 @@ export type RegimeShadowLog = {
   lane_confidence: number;
   artist_bias: { biased: boolean; count: number };
   vector_volatility: { volatile: boolean; avgMagnitude: number };
-  // Computed regime
-  inferred_regime: "explore" | "prune" | "compound";
+  // FIXED (Gap 10.1): mode_pressure (terrain INPUT) and regime (scoring OUTPUT)
+  // are different types. Log both — their disagreement is the evidence that
+  // Agent Brain's scoring table is contributing something beyond the mapper.
+  mode_pressure_in: ModePressure;   // explore|prune|compound|escape|coordinate|create
+  regime_out: SearchRegime;         // prune|explore|compound|coordinate
+  scoring_agrees: boolean;          // regime_out === mode_pressure_in
   would_use_mode: "diagnostic_first" | "recognition_boost" | "recognition_first";
   // Actual behavior
   actual_mode: "diagnostic_first" | "recognition_boost" | "recognition_first";
@@ -210,6 +498,10 @@ After 2 weeks of shadow logging:
 - If `mode_differs` < 5%, the current hard-coded logic already matches what Agent Brain recommends (or the mapper needs calibration)
 - Analyze the cases where they differ to tune thresholds
 
+**Second, independent metric (Gap 2):** track `scoring_agrees`. If `scoring_agrees` is true in ~100% of rounds, `scoreTerrain` is echoing `inferModePressure` and Agent Brain is not contributing a decision — the mapper is. That is a finding about the integration's premise, not a bug in the logging, and it should be resolved before canary.
+
+Also record the **observed regime distribution** and compare it against the distribution predicted by hand-scoring the weight table. A large divergence means the constant terrain fields are miscalibrated.
+
 ---
 
 ## Phase 1: Foundation
@@ -232,26 +524,24 @@ export type MusicDNASessionState = {
   lane: string;
   lane_confidence: number;
   probe_state: {
+    // Quarantined fields — always empty in production, kept for shape compatibility
     probes_shown: Array<{ round: number; pairing_id: string; lane: string }>;
     pending: Record<string, string>;
     lane_alignment: Record<string, { wins: number; total: number; magnitude: number; cosine_sum: number }>;
     flips: Array<{ round: number; from: string; to: string; reason: string }>;
+    // LIVE fields (Gap 4) — the skip signal is real and load-bearing
+    skipped_pairing_ids?: string[];
+    wants_wider_probe?: boolean;
   };
   used_pairing_ids: string[];
+  // NOT a database column (Gap 5). Caller must derive this per round by
+  // joining choices → songs and tallying the chosen artist.
   artist_frequency?: Record<string, number>;
 };
 
-export type MusicDNATerrainInput = {
-  session: MusicDNASessionState;
-  config?: {
-    dims?: readonly string[];
-    confidence_thresholds?: {
-      low: number;   // default 0.3
-      high: number;  // default 0.7
-    };
-    artist_bias_threshold?: number; // default 3
-  };
-};
+// NOTE (Gap 10.4): MusicDNATerrainInput is defined once, in §1.2 below.
+// It must carry recentDeltas + recentChoices, so the earlier stripped-down
+// version that used to sit here has been removed.
 
 export type MusicDNARegimeRecommendation = {
   regime: SearchRegime;
@@ -345,11 +635,18 @@ export function inferModePressure(
   // shadow mode shows "no difference" vs current hard-coded behavior.
   // Let confidence, artist bias, and ruggedness signals drive the regime.
   
+  // FIXED (Gap 10.2): "escape" is a real ModePressure value. Stuck sessions
+  // return it instead of relying on a bespoke branch bolted on at the call site.
+  if (session.round >= ESCAPE_ROUND && confidence < low) return "escape";
+
   // Artist bias detected: force exploration to break out of local minimum
   if (artistBias.biased && artistBias.count >= 4) return "explore";
   
   // High volatility + low confidence: landscape is rugged, explore more
   if (volatility.volatile && confidence < high) return "explore";
+  
+  // FIXED (Gap 10.7): hesitation was computed but never read
+  if (hesitation.hesitant && confidence < low) return "explore";
   
   // Low confidence: explore
   if (confidence < low) return "explore";
@@ -464,7 +761,8 @@ export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
     time_horizon: "iterative",
     
     // Inferred from session state
-    mode_pressure: inferModePressure(session, config),
+    // FIXED (Gap 10.3): pass deltas/choices, not config, in positions 2 and 3
+    mode_pressure: inferModePressure(session, recentDeltas, recentChoices, config),
   };
 }
 
@@ -579,8 +877,9 @@ export function recommendMusicDNARegime(
     rationale.push("Artist bias detected — adding exploration pressure");
   }
   
+  // FIXED (Gap 10.5): ruggedness no longer comes from probes (quarantined)
   if (terrain.ruggedness === "high") {
-    rationale.push("Probe flips occurred — taste landscape is rugged");
+    rationale.push("Vector volatility or decision hesitation — taste landscape is rugged");
   }
   
   // Add top scoring reasons
@@ -1723,3 +2022,18 @@ The terrain mapper is the **integration contract** — it translates your domain
   - Added: Escape transition at round 15, hard cap at 18
   - Added: Recommended priority ordering (telemetry first)
   - Resolved: All open questions decided
+- **2026-07-25** — **Pre-implementation gap analysis** against `music-dna@ef3d6b6` and `agent-brain/src/cognitive-router`:
+  - Gap 1: `SelectionMode` too coarse — added `PairingKnobs` naming the seven real literals in `selectPairing`
+  - Gap 2: hand-scored the weight table — constant terrain fields give explore a structural +8/+5/+5/0 baseline, and `mode_pressure` (+4) makes `scoreTerrain` a near pass-through
+  - Gap 3: three of four transition rules proven unreachable, including the `compound → explore` safety valve
+  - Gap 4: the Skip feature was missing entirely — added `detectSkipPressure`
+  - Gap 5: `artist_frequency` and `delta_vector` don't exist in the database
+  - Gap 6: all analytics SQL referenced non-existent columns; `archetype_score` is a cosine, not a probability
+  - Gap 7: `event_log.experiment_key`/`variant` already exist — drop the bespoke A/B infrastructure
+  - Gap 8: new tables were missing RLS, GRANTs, and an ownership path
+  - Gap 9: §2.2's rewrite silently dropped six pieces of shipped behavior
+  - Gap 10: seven type/correctness errors fixed inline, incl. `ModePressure` vs `SearchRegime` conflation
+  - Gap 11: `shouldStop` interaction left unspecified
+  - Gap 12: API contract docs, test harness, and bootstrap early-return not accounted for
+  - Added: revised sequencing with a Step 0 data-plumbing phase
+  - Added: four decisions still needed before coding
