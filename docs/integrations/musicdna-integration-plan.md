@@ -538,6 +538,467 @@ CREATE INDEX IF NOT EXISTS idx_sessions_regime ON sessions(current_regime);
 
 ---
 
+## Phase 2.5: Feature Flag Infrastructure (Critical for Safe Rollout)
+
+Before enabling Agent Brain routing in production, Music DNA needs feature flag infrastructure to safely A/B test the integration without risking the existing working system.
+
+### Why Feature Flags, Not Forking
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Fork/Branch** | Complete isolation | Merge conflicts, code drift, double maintenance, hard to compare |
+| **Feature Flag** | Same codebase, real A/B testing, instant rollback, measurable | Slightly more code complexity |
+
+**Recommendation: Use feature flags.** This keeps one codebase, allows true randomized A/B testing, and makes rollback trivial.
+
+### 2.5.1 Routing Mode Configuration
+
+**Location:** `src/musicdna/engine/config.ts` (Music DNA)
+
+```typescript
+export type RoutingMode = "legacy" | "agent-brain" | "shadow";
+
+export type RoutingConfig = {
+  mode: RoutingMode;
+  rollout_percent: number;  // 0-100, for gradual rollout
+  shadow_log_enabled: boolean;
+};
+
+// Environment-driven configuration
+export function getRoutingConfig(): RoutingConfig {
+  return {
+    mode: (process.env.MUSICDNA_ROUTING_MODE as RoutingMode) ?? "legacy",
+    rollout_percent: Number(process.env.AGENT_BRAIN_ROLLOUT_PERCENT ?? 0),
+    shadow_log_enabled: process.env.AGENT_BRAIN_SHADOW_LOG === "true",
+  };
+}
+
+// Deterministic assignment based on session ID (consistent across requests)
+function hashSessionId(sessionId: string): number {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    const char = sessionId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash) % 100;
+}
+
+export function getRoutingModeForSession(sessionId: string): RoutingMode {
+  const config = getRoutingConfig();
+  
+  // Explicit mode override
+  if (config.mode === "legacy" || config.mode === "shadow") {
+    return config.mode;
+  }
+  
+  // Percentage-based rollout for "agent-brain" mode
+  if (config.mode === "agent-brain") {
+    const bucket = hashSessionId(sessionId);
+    if (bucket < config.rollout_percent) {
+      return "agent-brain";
+    }
+    return "legacy";
+  }
+  
+  return "legacy";
+}
+```
+
+### 2.5.2 Routing Mode Branch Point
+
+**Location:** `src/musicdna/engine/pairing.ts` (Music DNA)
+
+Rename existing `selectPairing` to `selectPairingLegacy`, then create a router:
+
+```typescript
+import { selectPairingLegacy } from "./pairing-legacy.js";
+import { selectPairingWithStrategy } from "./pairing-agent-brain.js";
+import { recommendMusicDNARegime } from "./agent-brain-client.js";
+import { getRoutingModeForSession, getRoutingConfig } from "./config.js";
+
+export type SelectPairingResult<P> = 
+  | { kind: "picked"; pairing: P; routing_mode: RoutingMode; regime?: SearchRegime }
+  | { kind: "empty" };
+
+export function selectPairing<P extends PairingCandidate>(
+  input: SelectPairingInput<P>,
+): SelectPairingResult<P> {
+  const mode = getRoutingModeForSession(input.session_id);
+  const config = getRoutingConfig();
+  
+  // LEGACY MODE: Use existing hard-coded logic
+  if (mode === "legacy") {
+    const result = selectPairingLegacy(input);
+    if (result.kind === "empty") return result;
+    
+    // Shadow logging: compute what Agent Brain WOULD have done
+    if (config.shadow_log_enabled) {
+      try {
+        const shadowRec = recommendMusicDNARegime({ session: input.session });
+        logShadowComparison({
+          session_id: input.session_id,
+          round: input.session.round,
+          legacy_pairing_id: result.pairing.id,
+          shadow_regime: shadowRec.regime,
+          shadow_strategy: shadowRec.pairing_strategy,
+        });
+      } catch (e) {
+        // Shadow logging should never break the main flow
+        console.warn("[shadow] Agent Brain recommendation failed:", e);
+      }
+    }
+    
+    return { ...result, routing_mode: "legacy" };
+  }
+  
+  // SHADOW MODE: Use legacy but log both
+  if (mode === "shadow") {
+    const legacyResult = selectPairingLegacy(input);
+    
+    try {
+      const regimeRec = recommendMusicDNARegime({ session: input.session });
+      const agentBrainResult = selectPairingWithStrategy({
+        ...input,
+        strategy: regimeRec.pairing_strategy,
+      });
+      
+      logShadowComparison({
+        session_id: input.session_id,
+        round: input.session.round,
+        legacy_pairing_id: legacyResult.kind === "picked" ? legacyResult.pairing.id : null,
+        agent_brain_pairing_id: agentBrainResult.kind === "picked" ? agentBrainResult.pairing.id : null,
+        regime: regimeRec.regime,
+        would_differ: legacyResult.kind === "picked" && agentBrainResult.kind === "picked" 
+          && legacyResult.pairing.id !== agentBrainResult.pairing.id,
+      });
+    } catch (e) {
+      console.warn("[shadow] Agent Brain comparison failed:", e);
+    }
+    
+    // Always return legacy result in shadow mode
+    if (legacyResult.kind === "empty") return legacyResult;
+    return { ...legacyResult, routing_mode: "shadow" };
+  }
+  
+  // AGENT-BRAIN MODE: Use Agent Brain routing
+  try {
+    const regimeRec = recommendMusicDNARegime({ session: input.session });
+    const result = selectPairingWithStrategy({
+      ...input,
+      strategy: regimeRec.pairing_strategy,
+    });
+    
+    if (result.kind === "empty") return result;
+    return { 
+      ...result, 
+      routing_mode: "agent-brain",
+      regime: regimeRec.regime,
+    };
+  } catch (e) {
+    // Fallback to legacy if Agent Brain fails
+    console.error("[agent-brain] Recommendation failed, falling back to legacy:", e);
+    const fallback = selectPairingLegacy(input);
+    if (fallback.kind === "empty") return fallback;
+    return { ...fallback, routing_mode: "legacy" };
+  }
+}
+```
+
+### 2.5.3 Shadow Comparison Logging
+
+**Location:** `src/musicdna/engine/shadow-logger.ts` (Music DNA)
+
+```typescript
+import type { SearchRegime } from "./agent-brain-types.js";
+import type { PairingStrategy } from "./agent-brain-types.js";
+
+export type ShadowComparisonLog = {
+  timestamp: string;
+  session_id: string;
+  round: number;
+  legacy_pairing_id: string | null;
+  agent_brain_pairing_id?: string | null;
+  shadow_regime?: SearchRegime;
+  regime?: SearchRegime;
+  shadow_strategy?: PairingStrategy;
+  would_differ?: boolean;
+};
+
+export function logShadowComparison(log: Omit<ShadowComparisonLog, "timestamp">): void {
+  const entry: ShadowComparisonLog = {
+    ...log,
+    timestamp: new Date().toISOString(),
+  };
+  
+  // Option 1: Console log (for development)
+  console.log("[shadow-comparison]", JSON.stringify(entry));
+  
+  // Option 2: Write to analytics table (for production)
+  // This would be an async fire-and-forget call
+  // supabase.from("shadow_comparisons").insert(entry).then(() => {}).catch(() => {});
+}
+```
+
+### 2.5.4 Analytics Event Enhancement
+
+Update existing analytics events to include routing mode:
+
+```typescript
+// In choice recording / pairing shown events
+await logEvent("pairing_shown", {
+  session_id: sessionId,
+  pairing_id: pairing.id,
+  round: round,
+  // NEW FIELDS
+  routing_mode: result.routing_mode,  // "legacy" | "agent-brain" | "shadow"
+  regime: result.regime ?? null,       // "explore" | "prune" | "compound" | null
+});
+
+await logEvent("choice_made", {
+  session_id: sessionId,
+  pairing_id: pairingId,
+  chosen_song_id: chosenId,
+  ms_to_decide: decisionTimeMs,
+  // NEW FIELDS
+  routing_mode: sessionRoutingMode,
+  regime: sessionCurrentRegime,
+});
+
+await logEvent("session_completed", {
+  session_id: sessionId,
+  archetype_id: archetypeId,
+  archetype_confidence: confidence,
+  rounds: totalRounds,
+  // NEW FIELDS
+  routing_mode: sessionRoutingMode,
+  regime_sequence: regimeLog,  // Array of regime transitions
+});
+```
+
+### 2.5.5 Database Schema for A/B Analytics
+
+```sql
+-- Shadow comparison logs (for shadow mode analysis)
+CREATE TABLE IF NOT EXISTS shadow_comparisons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  session_id UUID REFERENCES sessions(id),
+  round INTEGER NOT NULL,
+  legacy_pairing_id UUID,
+  agent_brain_pairing_id UUID,
+  regime TEXT,
+  would_differ BOOLEAN,
+  strategy JSONB
+);
+
+CREATE INDEX idx_shadow_comparisons_session ON shadow_comparisons(session_id);
+CREATE INDEX idx_shadow_comparisons_created ON shadow_comparisons(created_at);
+
+-- Add routing tracking to sessions
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS routing_mode TEXT DEFAULT 'legacy';
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS current_regime TEXT DEFAULT 'explore';
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS regime_log JSONB DEFAULT '[]'::jsonb;
+
+-- Index for A/B analysis
+CREATE INDEX IF NOT EXISTS idx_sessions_routing_mode ON sessions(routing_mode);
+```
+
+### 2.5.6 Environment Variables
+
+| Variable | Values | Default | Purpose |
+|----------|--------|---------|---------|
+| `MUSICDNA_ROUTING_MODE` | `legacy`, `shadow`, `agent-brain` | `legacy` | Master routing mode |
+| `AGENT_BRAIN_ROLLOUT_PERCENT` | `0-100` | `0` | % of sessions using Agent Brain when mode is `agent-brain` |
+| `AGENT_BRAIN_SHADOW_LOG` | `true`, `false` | `false` | Enable shadow logging in legacy mode |
+| `AGENT_BRAIN_URL` | URL | `http://localhost:7399` | Agent Brain service URL (if using HTTP) |
+| `AGENT_BRAIN_BEARER_TOKEN` | string | — | Auth token for Agent Brain API |
+
+---
+
+## Phase 2.6: Rollout Strategy (Detailed)
+
+### Stage 0: Pre-Integration Baseline (1 week)
+
+**Before any code changes**, establish baseline metrics:
+
+```sql
+-- Capture baseline metrics
+SELECT 
+  COUNT(*) as total_sessions,
+  AVG(archetype_confidence) as avg_confidence,
+  AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) as avg_duration_seconds,
+  COUNT(*) FILTER (WHERE completed_at IS NOT NULL) * 100.0 / COUNT(*) as completion_rate,
+  AVG(rounds) as avg_rounds
+FROM sessions
+WHERE started_at > NOW() - INTERVAL '7 days';
+```
+
+Document these numbers — they're your comparison baseline.
+
+### Stage 1: Shadow Mode (1-2 weeks)
+
+**Config:**
+```bash
+MUSICDNA_ROUTING_MODE=shadow
+AGENT_BRAIN_SHADOW_LOG=true
+```
+
+**What happens:**
+- All users get legacy behavior (no risk)
+- Agent Brain recommendations are computed but not used
+- Both paths are logged for comparison
+
+**Analysis queries:**
+```sql
+-- How often would Agent Brain pick differently?
+SELECT 
+  DATE(created_at) as day,
+  COUNT(*) as total,
+  COUNT(*) FILTER (WHERE would_differ) as would_differ,
+  ROUND(COUNT(*) FILTER (WHERE would_differ) * 100.0 / COUNT(*), 1) as differ_pct
+FROM shadow_comparisons
+GROUP BY DATE(created_at)
+ORDER BY day;
+
+-- Regime distribution in shadow mode
+SELECT 
+  regime,
+  COUNT(*) as count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as pct
+FROM shadow_comparisons
+WHERE regime IS NOT NULL
+GROUP BY regime;
+```
+
+**Exit criteria:**
+- [ ] No errors in Agent Brain recommendations
+- [ ] Shadow logging working correctly
+- [ ] Understand how often Agent Brain would differ (expect 20-40%)
+
+### Stage 2: Canary (1 week)
+
+**Config:**
+```bash
+MUSICDNA_ROUTING_MODE=agent-brain
+AGENT_BRAIN_ROLLOUT_PERCENT=5
+```
+
+**What happens:**
+- 5% of sessions use Agent Brain routing
+- 95% use legacy
+- Both are logged with `routing_mode` field
+
+**Monitoring:**
+```sql
+-- Compare outcomes by routing mode
+SELECT 
+  routing_mode,
+  COUNT(*) as sessions,
+  AVG(archetype_confidence) as avg_confidence,
+  AVG(rounds) as avg_rounds,
+  COUNT(*) FILTER (WHERE completed_at IS NOT NULL) * 100.0 / COUNT(*) as completion_rate
+FROM sessions
+WHERE started_at > NOW() - INTERVAL '7 days'
+GROUP BY routing_mode;
+```
+
+**Exit criteria:**
+- [ ] No increase in errors
+- [ ] No significant drop in completion rate
+- [ ] Agent Brain sessions complete successfully
+
+### Stage 3: A/B Test (2-3 weeks)
+
+**Config:**
+```bash
+MUSICDNA_ROUTING_MODE=agent-brain
+AGENT_BRAIN_ROLLOUT_PERCENT=50
+```
+
+**What happens:**
+- 50/50 split between legacy and Agent Brain
+- Enough volume for statistical significance
+
+**Statistical analysis:**
+```sql
+-- Detailed A/B comparison
+WITH session_metrics AS (
+  SELECT 
+    routing_mode,
+    archetype_confidence,
+    rounds,
+    EXTRACT(EPOCH FROM (completed_at - started_at)) as duration_seconds,
+    completed_at IS NOT NULL as completed
+  FROM sessions
+  WHERE started_at > NOW() - INTERVAL '14 days'
+    AND routing_mode IN ('legacy', 'agent-brain')
+)
+SELECT 
+  routing_mode,
+  COUNT(*) as n,
+  
+  -- Confidence
+  AVG(archetype_confidence) as avg_confidence,
+  STDDEV(archetype_confidence) as stddev_confidence,
+  
+  -- Rounds
+  AVG(rounds) as avg_rounds,
+  STDDEV(rounds) as stddev_rounds,
+  
+  -- Completion
+  AVG(completed::int) * 100 as completion_rate,
+  
+  -- Duration
+  AVG(duration_seconds) as avg_duration
+FROM session_metrics
+GROUP BY routing_mode;
+```
+
+**Decision framework:**
+
+| Metric | Legacy | Agent Brain | Winner | Action |
+|--------|--------|-------------|--------|--------|
+| Archetype confidence | X | X+10% | Agent Brain | Proceed |
+| Completion rate | X | X-5% | Legacy | Investigate |
+| Avg rounds | 14 | 12 | Agent Brain | Proceed |
+
+**Exit criteria:**
+- [ ] Statistical significance (p < 0.05) on primary metric
+- [ ] No significant regressions on any metric
+- [ ] At least 500 sessions per group
+
+### Stage 4: Full Rollout
+
+**Config:**
+```bash
+MUSICDNA_ROUTING_MODE=agent-brain
+AGENT_BRAIN_ROLLOUT_PERCENT=100
+```
+
+**What happens:**
+- All sessions use Agent Brain
+- Legacy code path remains for emergency rollback
+
+**Ongoing monitoring:**
+- Daily dashboard comparing to baseline
+- Alerting on metric regressions
+- Keep shadow comparison data for debugging
+
+### Emergency Rollback
+
+If issues arise at any stage:
+
+```bash
+# Instant rollback - no deployment needed
+MUSICDNA_ROUTING_MODE=legacy
+AGENT_BRAIN_ROLLOUT_PERCENT=0
+```
+
+This immediately reverts all sessions to legacy behavior.
+
+---
+
 ## Phase 3: Telemetry & Learning (Future)
 
 ### 3.1 Outcome Recording
@@ -655,21 +1116,19 @@ describe("Full session flow with regime routing", () => {
 
 ---
 
-## Rollout Plan
+## Rollout Plan Summary
 
-### Stage 1: Shadow Mode
-- Compute regime recommendations but don't use them
-- Log recommendations alongside existing behavior
-- Compare: would regime-driven selection have picked differently?
+> **See Phase 2.5 and Phase 2.6 above for detailed implementation.**
 
-### Stage 2: A/B Test
-- 50% of sessions use regime-driven selection
-- 50% use existing logic
-- Measure archetype confidence, user engagement, completion rate
+| Stage | Duration | Config | Traffic |
+|-------|----------|--------|---------|
+| **0. Baseline** | 1 week | No changes | Measure current metrics |
+| **1. Shadow** | 1-2 weeks | `ROUTING_MODE=shadow` | 0% Agent Brain (log only) |
+| **2. Canary** | 1 week | `ROLLOUT_PERCENT=5` | 5% Agent Brain |
+| **3. A/B Test** | 2-3 weeks | `ROLLOUT_PERCENT=50` | 50% Agent Brain |
+| **4. Full Rollout** | — | `ROLLOUT_PERCENT=100` | 100% Agent Brain |
 
-### Stage 3: Full Rollout
-- If A/B shows improvement, roll out to 100%
-- Monitor for regressions
+**Key principle:** Legacy code path remains intact throughout. Rollback is instant via environment variable.
 
 ---
 
@@ -696,6 +1155,75 @@ describe("Full session flow with regime routing", () => {
 
 ---
 
+## Flutter / Mobile App Compatibility
+
+The Music DNA Flutter app communicates with the backend via API. The feature flag approach is **entirely server-side**, meaning:
+
+### No Flutter Changes Required
+
+- Flutter app calls the same API endpoints
+- Server decides which routing logic to use
+- `routing_mode` and `regime` can be returned in API responses if the app wants to display them
+
+### Optional: Surface Regime in UI
+
+If you want to show the user what mode they're in (for transparency or UX enhancement):
+
+```dart
+// In pairing response
+class PairingResponse {
+  final String pairingId;
+  final Song songA;
+  final Song songB;
+  final String? routingMode;  // "legacy" | "agent-brain"
+  final String? regime;        // "explore" | "prune" | "compound"
+}
+
+// Could display subtle UI hints
+if (response.regime == "prune") {
+  showHint("Testing your hypothesis...");
+} else if (response.regime == "compound") {
+  showHint("Deepening your profile...");
+}
+```
+
+This is optional and can be added later after the backend integration is validated.
+
+---
+
+## Architecture Decision: Where the Terrain Mapper Lives
+
+### Decision: In Agent Brain (as an SDK/Integration)
+
+The Music DNA terrain mapper will be built **inside Agent Brain** at `src/integrations/musicdna/`.
+
+**Rationale:**
+
+1. **Reference implementation** — Shows other projects how to integrate
+2. **Co-versioned** — Mapper evolves with the scoring engine
+3. **Testable** — Can run mapper + scorer tests together
+4. **Reusable pattern** — Template for other integrations
+
+### Implications for Future Projects
+
+Every project that wants to use Agent Brain needs its own terrain mapper:
+
+```
+agent-brain/
+├── src/
+│   ├── cognitive-router/     # Core engine (universal)
+│   └── integrations/
+│       ├── musicdna/         # Music DNA mapper (this project)
+│       ├── debugging/        # Already exists (eval harness)
+│       └── template/         # Starter for new projects
+```
+
+The terrain mapper is the **integration contract** — it translates your domain into Agent Brain's universal terrain vocabulary.
+
+---
+
 ## Document History
 
 - **2026-07-25** — Initial integration plan drafted
+- **2026-07-25** — Added Phase 2.5 (Feature Flag Infrastructure) and Phase 2.6 (Detailed Rollout Strategy)
+- **2026-07-25** — Added Flutter compatibility notes and architecture decision on terrain mapper location
