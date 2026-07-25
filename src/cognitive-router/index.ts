@@ -18,3 +18,4 @@ export * from "./media-evaluator.js";
 export * from "./strategy-layer.js";
 export * from "./problem-ingestion.js";
 export * from "./outcome-events-v1.js";
+export * as musicdna from "./integrations/musicdna/index.js";
