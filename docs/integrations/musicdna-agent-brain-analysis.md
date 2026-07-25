@@ -1,10 +1,19 @@
 # Music DNA × Agent Brain Integration Analysis
 
 **Date:** 2026-07-25  
-**Status:** Analysis complete, integration plan drafted  
+**Status:** Conceptual comparison. **Superseded on specifics** by `musicdna-integration-plan.md`.  
 **Repositories:**
 - Agent Brain: `github.com/The-Gig-Agency/agent-brain`
-- Music DNA: `github.com/acedge123/idea-builder` (src/musicdna/)
+- MusicDNA: `github.com/acedge123/music-dna` (`src/musicdna/`)
+
+> **Read this first.** This document was written against `acedge123/idea-builder`, an older and materially different codebase. Its side-by-side comparison of the two systems is still accurate and useful, but several concrete details are wrong for the current MusicDNA:
+>
+> - **Sessions are 6 rounds, not 12+.** Any "Round 9–12: COMPOUND" style lifecycle below is wrong, and `compound` is in fact unreachable at 6 rounds.
+> - **Cross-lane probes are quarantined.** `probe_state.flips` is always empty, so `hasProbeFlips` and "do probe flips correlate with outcomes?" are moot.
+> - **Recognition mode is a first-class `SelectionMode`**, not implicit logic.
+> - **Regime maps to scoring knobs inside `selectPairing`**, not to `SelectionMode`.
+>
+> For anything you intend to implement, use `musicdna-integration-plan.md` — it is verified against the current codebase and lists these corrections in its Appendix B.
 
 ---
 
