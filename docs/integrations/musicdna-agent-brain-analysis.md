@@ -8,7 +8,7 @@
 
 > **Read this first.** This document was written against `acedge123/idea-builder`, an older and materially different codebase. Its side-by-side comparison of the two systems is still accurate and useful, but several concrete details are wrong for the current MusicDNA:
 >
-> - **Sessions are 6 rounds, not 12+.** Any "Round 9–12: COMPOUND" style lifecycle below is wrong, and `compound` is in fact unreachable at 6 rounds.
+> - **Sessions are 6 rounds, not 12+.** Any "Round 9–12: COMPOUND" style lifecycle below is wrong, and whether `compound` is reachable at all in 6 rounds is an open question being settled empirically.
 > - **Cross-lane probes are quarantined.** `probe_state.flips` is always empty, so `hasProbeFlips` and "do probe flips correlate with outcomes?" are moot.
 > - **Recognition mode is a first-class `SelectionMode`**, not implicit logic.
 > - **Regime maps to scoring knobs inside `selectPairing`**, not to `SelectionMode`.

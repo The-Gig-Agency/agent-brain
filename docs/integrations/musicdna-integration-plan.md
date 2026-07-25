@@ -10,7 +10,7 @@ This document supersedes all earlier drafts. Earlier versions were written again
 
 ## Summary
 
-The integration is smaller than it first appeared, and one product fact constrains the whole thing: **the shipped web session is 6 rounds**, not the 12–18 earlier drafts assumed. At 6 rounds the `compound` regime is mathematically unreachable, which reduces this to an explore-vs-prune integration until the round budget is revisited.
+The integration is smaller than it first appeared, and one product fact constrains the whole thing: **the shipped web session is 6 rounds**, not the 12–18 earlier drafts assumed. Six rounds is a tight budget for the `compound` regime's confidence bar, so V1 should be planned as an explore/prune integration unless a query over historical `vector_after` data proves compound is actually reached.
 
 The useful version of this work is:
 
@@ -57,7 +57,25 @@ const mode: SelectionMode =
       : "diagnostic_first";
 ```
 
-`lane_confidence` is written once at session start and never updated, because the only mechanism that changed it mid-session — cross-lane probes — is quarantined. **Mode is therefore constant for the life of a session.**
+**Mode is constant after bootstrap, and constant for the whole of a normal lane session.** It changes at most once, and only for sessions that open as `general`.
+
+The one mechanism that moves it is bootstrap lane promotion in `recordChoiceImpl`. After two `is_bootstrap` choices whose winners agree on a lane, the session is promoted:
+
+```typescript
+if (aLane && bLane && aLane === bLane && aLane !== "general") {
+  nextLane = aLane as Lane;
+  nextLaneConfidence = 0.65;   // written to sessions.lane_confidence
+}
+```
+
+Cross-lane probes, the other mechanism that used to move it, are quarantined.
+
+Two consequences worth noting:
+
+- Promotion sets confidence to `0.65`, which is just above the `0.6` mode threshold. A promoted session therefore jumps straight from `recognition_first` to `diagnostic_first`, **skipping `recognition_boost` entirely.** Whether that is intended is a product question this integration surfaces but does not answer.
+- For a session that opens in a real lane, mode never changes at all.
+
+Either way the conclusion stands: one possible transition per session, at a fixed point, is far too coarse to carry adaptive per-round routing.
 
 ### Cross-lane probes are off
 
@@ -81,9 +99,41 @@ Six is deliberate. From `finalizeSession`:
 
 Knock-on effects, all verified:
 
-- **`compound` is unreachable.** It requires `confidence > 0.7` — 7 of 10 axes at `|value| >= 30`. Each pairing moves only the axes in its `tests` array. Six rounds cannot get there.
+- **`compound` is likely rare, and its reachability must be measured, not assumed.** It requires `confidence > 0.7` — 7 of 10 axes at `|value| >= 30`. Six rounds is a tight budget for that, but it is *not* impossible: `seedVectorFromPriors` starts axes at up to `0.35 × 100 = 35` before any choice, which already clears the threshold, and `applyChoice` moves every axis in a pairing's `tests` array at once, by up to `100 × diagnostic_weight`. `prior-weighting.md` notes pairing deltas "accumulate ~90–200 on the dominant axis." So a well-seeded session testing 2–3 axes per round can plausibly get there. See below for how to settle this empirically.
 - **`STABILITY_CHECKPOINTS = {8, 10, 12, 14}` never fire**, so the `archetype_ranking_snapshot` event described in `instrumentation.md` is never written for web sessions.
 - Any escape valve at round 15 with a cap at 18 is dead code — 2.5–3× the whole session.
+
+### Settling compound reachability empirically
+
+This does not need a simulation. `choice_scored.props.vector_after` already records the exact vector after every choice in every real session, so the answer is a query over historical data:
+
+```sql
+-- What share of real sessions ever reach compound's confidence bar?
+WITH per_choice AS (
+  SELECT
+    session_id,
+    (props->>'round')::int AS round,
+    (SELECT COUNT(*) FROM jsonb_each_text(props->'vector_after') AS kv(k, v)
+      WHERE ABS(v::numeric) >= 30) AS confident_axes
+  FROM event_log
+  WHERE event_type = 'choice_scored'
+)
+SELECT
+  MAX(confident_axes)                                    AS peak_confident_axes,
+  COUNT(*) FILTER (WHERE confident_axes >= 7) > 0        AS reached_compound
+FROM per_choice
+GROUP BY session_id;
+```
+
+Run this before Step 2 and report the distribution of `peak_confident_axes`. Three possible answers, each with a different consequence:
+
+| Result | Meaning | Action |
+|---|---|---|
+| A meaningful share reach 7+ | Compound is reachable | Keep it in V1; calibrate against the observed distribution |
+| Peak clusters at 4–6 | Compound is *empirically* unreachable at the current bar | Either lower the bar to match reality, or ship V1 as explore/prune |
+| Peak clusters at 0–3 | The vector barely moves in 6 rounds | A larger finding than this integration — escalate |
+
+Until this is run, the plan should say **"compound is empirically unverified"** rather than asserting it is impossible. The pairing corpus determines the answer, not arithmetic.
 
 ### Evidence gating
 
@@ -136,6 +186,8 @@ The unreachable `compound → explore` rule is the safety valve for a user locke
 
 ## Part 2 — Decisions to settle before writing code
 
+> **Current positions (2026-07-25).** D1: keep the 6-round experience; treat V1 as explore/prune unless the reachability query proves compound viable. D2: correct the two constants, then reduce `mode_pressure` from `+4` to `+2` — not to `+1`. D3: regime does not touch `shouldStop` in V1. D4: `event_log.raw_delta` for telemetry; control-grade before live routing. These are agreed pending the Step 0 data.
+
 ### D1. The round budget (blocker)
 
 Reconcile `onboarding.tsx` (6), `shouldStop` (12), and `e2e.test.ts` (12) to a single number, then re-scale every regime threshold to it.
@@ -163,6 +215,8 @@ Scored against the "high-confidence settled session" — the exact case where co
 | `+1` (tiebreaker) | compound 9, prune 10 — **prune wins** | compound 10, prune 10 — **prune wins on tie** |
 
 The `+8 / +5 / +5` constant baseline is what does this: strip `mode_pressure` down and the structural lead decides every case before session data is considered. **Fix the constants first, then de-weight.**
+
+**Landing point: correct the two constants, then set `mode_pressure` to `+2`.** That keeps compound winnable with a 1-point margin while cutting `mode_pressure`'s dominance in half. Going to `+1` is too far — it ties with prune even after the constants are fixed, so the mapper would lose its say entirely.
 
 Two of the constants are also just wrong for this product, independent of the tuning argument:
 
@@ -221,18 +275,38 @@ export type PairingKnobs = {
   fork_filter: "hard" | "soft" | "off";
 };
 
-export const LEGACY_KNOBS: PairingKnobs = {
-  mode: "diagnostic_first",
-  recog_blend: 0,
-  canon_floor: 0,
-  challenge_boost: 1.5,
-  leaning_axis_threshold: 15,
-  leaning_axis_count: 3,
-  axis_need_floor: 0.4,
-  axis_need_span: 0.6,
-  fork_filter: "hard",
-};
+// Defaults MUST be derived from the mode. A single constant cannot preserve
+// today's behavior, because recog_blend and canon_floor are functions of mode
+// in the shipped code — pinning them to 0/0 would silently turn every
+// recognition_first and recognition_boost session into diagnostic_first.
+export function legacyKnobsForMode(mode: SelectionMode): PairingKnobs {
+  return {
+    mode,
+    // mirrors `recogBlend` in selectPairing
+    recog_blend:
+      mode === "recognition_first" ? 0.6 :
+      mode === "recognition_boost" ? 0.4 : 0,
+    // mirrors RECOGNITION_FLOORS — 0..100 scale
+    canon_floor: RECOGNITION_FLOORS[mode],   // 0 / 45 / 55
+    // mode-independent literals
+    challenge_boost: 1.5,
+    leaning_axis_threshold: 15,
+    leaning_axis_count: 3,
+    axis_need_floor: 0.4,
+    axis_need_span: 0.6,
+    fork_filter: "hard",
+  };
+}
 ```
+
+The call site keeps deriving `mode` exactly as it does today, then asks for that mode's legacy knobs:
+
+```typescript
+const mode = regimeToSelectionMode(regime, sessionLane, laneConfidence);
+const knobs = input.knobs ?? legacyKnobsForMode(mode);
+```
+
+The golden test must cover **all three modes**, not just the default one. A single-object default would pass a `diagnostic_first` fixture and quietly break the other two.
 
 `fork_filter: "soft"` — weighting the fork pool instead of hard-filtering to it — is the highest-value explore lever, because the current hard filter collapses the pool as soon as any axis exceeds 15.
 
@@ -337,18 +411,22 @@ export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
 
   return {
     feedback_latency: "fast",
-    reversibility: "high",
     adversariality: "none",
     coordination_load: "low",
     time_horizon: "iterative",
+
+    // Per D2: "medium", not "high". Within a fixed 6-round budget you cannot
+    // un-ask a pairing, and this also removes 2 points of explore's baseline.
+    reversibility: "medium",
 
     uncertainty: confidence < 0.3 ? "high" : confidence < 0.7 ? "medium" : "low",
     branching_factor: session.round < 5 ? "high" : "medium",
     ruggedness: volatility.volatile ? "high" : "medium",
     local_minima_risk: bias.biased ? "high" : "medium",
 
-    // Pairings the user can't engage with are expensive
-    information_cost: skips.recognition_failing ? "high" : "low",
+    // Per D2: baseline "medium", not "low". A pairing consumes one of only six
+    // rounds. Escalates to "high" when the user can't engage with what we serve.
+    information_cost: skips.recognition_failing ? "high" : "medium",
 
     // Unblocks the compound → explore transition
     environment_stability: skips.recognition_failing ? "shifting" : "stable",
@@ -385,7 +463,7 @@ export function inferModePressure(input: MusicDNATerrainInput): ModePressure {
 }
 ```
 
-> With `budget = 6`, the `compound` branch is unreachable — see D1. This is not a bug in the mapper; it is the product constraint surfacing.
+> With `budget = 6`, the `compound` branch may rarely or never fire — see D1. If the reachability query shows sessions do cross the bar, keep it; if they cluster below, either lower the threshold to match observed behavior or ship V1 as explore/prune. Do not silently leave a branch that never executes.
 
 ### What does *not* change
 
@@ -547,12 +625,23 @@ export async function recommendRegime(session) {
 | Step | Scope | Gate |
 |---|---|---|
 | **−1. Round budget** | Resolve D1. Reconcile the three constants; re-scale thresholds | Blocks everything |
-| **0. Data plumbing** | `delta_vector` column; widen the `choices` select; artist frequency; `sessions.routing_mode` | — |
+| **0. Data plumbing** | Widen the `choices` select; artist frequency; `sessions.routing_mode`; split the round counters. **No `delta_vector` column yet** — read `event_log.props.raw_delta` | — |
 | **1. Telemetry** | Log terrain, `mode_pressure_in`, `regime_out`, `scoring_agrees`, knobs via `event_log`. Baseline `axis_coverage` and `empty_reveal_rate` | Step 0 |
 | **2. Fix mapper** | Resolve D2. Real signals for the constant fields; reachable transitions; skip pressure | Steps −1, 1 |
 | **3. Knobs refactor** | Replace the seven literals with `PairingKnobs`, defaults = today's values | Step 2 |
 | **4. Shadow** | Compute knobs from terrain, log divergence, keep serving legacy | Step 3 gate green |
-| **5. Canary 5% → A/B 50% → 100%** | Staged rollout | Part 7 exit criteria |
+| **5. Canary 5% → A/B 50% → 100%** | Staged rollout. **Delta source must be control-grade first** — see below | Part 7 exit criteria |
+
+### Delta source: staged, not one decision
+
+D4 resolves differently at different stages, which earlier drafts conflated:
+
+| Stage | Source | Rationale |
+|---|---|---|
+| Steps 0–4 (telemetry, shadow) | `event_log.props.raw_delta` | Already written on every choice. No migration. Gaps are acceptable — nothing is being controlled |
+| Step 5 onward (canary and live) | Control-grade required | A dropped event flattens `recentDeltas`, reads as "not volatile," and pushes the regime toward compound |
+
+"Control-grade" means either promoting the delta to a durable `choices.delta_vector` column, **or** making the mapper treat a missing delta as *unknown* rather than as zero — declining to assert a ruggedness signal it has no data for. Either is acceptable; silently defaulting to zero is not.
 
 ### Step 3 gate
 
@@ -676,7 +765,7 @@ Condensed record of what the review turned up, with locations, so the reasoning 
 | 2 | `mode_pressure` (+4) plus a +8/+5/+5/0 constant baseline makes `scoreTerrain` a near pass-through | `cognitive-router/scoring.ts` |
 | 3 | Three of four transition rules unreachable, incl. the `compound → explore` safety valve | `cognitive-router/scoring.ts` |
 | 4 | Skip is a live, load-bearing signal that was absent from earlier drafts | `musicdna.functions.ts:1312` |
-| 5 | `artist_frequency` and `delta_vector` do not exist at the call site | `choices` schema |
+| 5 | `artist_frequency` not derived at the call site; delta lives in `event_log.props.raw_delta`, not on `choices` | `choices` schema, `emitChoiceDiagnostics` |
 | 6 | Analytics SQL referenced non-existent columns; `archetype_score` is a cosine | `sessions` schema |
 | 7 | `event_log` already provides `experiment_key` / `variant`; `EVENT_TYPES` is an allow-list | `musicdna.functions.ts:1893` |
 | 8 | New tables need RLS, GRANTs, and an ownership path | `supabase/migrations/*` |
@@ -684,7 +773,7 @@ Condensed record of what the review turned up, with locations, so the reasoning 
 | 10 | `ModePressure` and `SearchRegime` were conflated; `escape` already exists | `cognitive-router/types.ts` |
 | 11 | `shouldStop` interaction unspecified though it controls the rounds metric | `engine/pairing.ts:80` |
 | 12 | API docs, test harness, e2e test, bootstrap early-return unaccounted for | various |
-| 13 | **Three conflicting round budgets; the product is 6 rounds, making compound unreachable** | `onboarding.tsx:35` |
+| 13 | **Three conflicting round budgets; the product is 6 rounds, putting compound's reachability in doubt** | `onboarding.tsx:35` |
 | 14 | Regime can starve the evidence ledger; real gate is `2` / `0.55` | `musicdna.functions.ts:1643` |
 | 15 | Golden fixture is `index.test.ts`, not `session.test.ts`; probe cadence is moot | `engine/*.test.ts` |
 | 16 | Shadow exit criteria were undefined | — |
@@ -700,6 +789,9 @@ Earlier drafts were written against `acedge123/idea-builder` and carry errors th
 | De-weighting `mode_pressure` is an independent fix | It **removes compound entirely** unless the constants are fixed first |
 | `round` is a single number | Separate `rounds_answered` / `rounds_skipped` / `rounds_shown` |
 | Add an `axis_coverage` metric | `v_axis_independence` already measures it |
+| Compound is *mathematically* unreachable | Overstated. Priors seed axes to 35 and `applyChoice` moves several at once — it is **empirically unverified**, settle it with the `vector_after` query |
+| `SelectionMode` never changes | It changes once, on bootstrap lane promotion (`confidence = 0.65`) |
+| A single `LEGACY_KNOBS` constant preserves behavior | It cannot. Use `legacyKnobsForMode(mode)` — blend and floor are mode-derived |
 | Compound fires late in the session | Compound is **unreachable** at 6 rounds |
 | Probe flips indicate rugged terrain | Probes are **quarantined**; `flips` is always empty |
 | Decay the probe schedule rather than disabling it | There is **no live probe schedule**; `probe_weight` removed |
