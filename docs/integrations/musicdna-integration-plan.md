@@ -1,8 +1,10 @@
 # Music DNA × Agent Brain Integration Plan
 
-**Date:** 2026-07-25  
-**Status:** Draft (Revised per owner feedback)  
+**Date:** 2026-07-25 (revised)  
+**Status:** Draft (Revised per owner feedback + current codebase review)  
 **Goal:** Integrate Agent Brain's cognitive routing into Music DNA's preference inference engine
+
+> **Sync Note:** The `music-dna` repo (`acedge123/music-dna`) has an older version of this plan at `docs/musicdna/agent-brain-integration-plan.md`. Please sync this version there.
 
 ---
 
@@ -36,7 +38,181 @@ Critical corrections incorporated into this revision:
 
 ---
 
-## Phase 1: Foundation (Estimated: 1-2 days of focused work)
+## Current Codebase Reality (music-dna repo, not idea-builder)
+
+> **Important:** The analysis was initially done on `acedge123/idea-builder`. The current codebase is `acedge123/music-dna` which has significant differences.
+
+### Key Differences in Current Code
+
+| Feature | idea-builder (old) | music-dna (current) |
+|---------|-------------------|---------------------|
+| Recognition mode | Implicit in logic | **First-class `SelectionMode`** type |
+| Cross-lane probes | In `choice.ts` | **Quarantined** in `experiments/` — NOT ACTIVE |
+| Selection instrumentation | None | **`selection_reason`** returned with every pick |
+| Probe flips | Active | **Always empty** — probes are experimental |
+
+### Implications for Integration
+
+1. **Probe flips don't exist in production** — `probe_state.flips` is always empty, so "probe disagreement" is the only signal
+2. **Recognition mode is already the mechanism** — `SelectionMode` (`diagnostic_first`, `recognition_boost`, `recognition_first`) controls the behavior
+3. **`selection_reason` is perfect for shadow logging** — already instrumented
+4. **Regime should map to SelectionMode** — not create a parallel concept
+
+### Updated Strategy Mapping
+
+Instead of a new `PairingStrategy` type, regime should influence the **existing** `SelectionMode`:
+
+```typescript
+// Regime → SelectionMode mapping
+function regimeToSelectionMode(
+  regime: SearchRegime,
+  laneConfidence: number,
+): SelectionMode {
+  // Lane-uncertain sessions always need recognition (bootstrap)
+  if (laneConfidence < 0.4) {
+    return "recognition_first";
+  }
+  
+  // High confidence + compound regime → diagnostic (lane is settled)
+  if (regime === "compound" && laneConfidence > 0.7) {
+    return "diagnostic_first";
+  }
+  
+  // Default: blend recognition and diagnostic
+  return "recognition_boost";
+}
+```
+
+---
+
+## Minimal First Step: Shadow Logging
+
+The simplest way to start is **shadow logging only** — compute what Agent Brain *would* recommend, log it alongside the current behavior, but don't change any behavior. This gives us:
+
+1. Data to validate the terrain mapper before making changes
+2. Metrics showing where current behavior differs from regime recommendations
+3. Zero risk to production
+
+### Implementation in Music DNA
+
+Add a single function to `nextPairingImpl` in `src/lib/musicdna.functions.ts`:
+
+```typescript
+// src/lib/musicdna-regime-shadow.ts
+import type { SelectionReason } from "@/musicdna/engine/pairing";
+
+export type RegimeShadowLog = {
+  session_id: string;
+  round: number;
+  // Terrain inputs
+  confidence: number;
+  lane_confidence: number;
+  artist_bias: { biased: boolean; count: number };
+  vector_volatility: { volatile: boolean; avgMagnitude: number };
+  // Computed regime
+  inferred_regime: "explore" | "prune" | "compound";
+  would_use_mode: "diagnostic_first" | "recognition_boost" | "recognition_first";
+  // Actual behavior
+  actual_mode: "diagnostic_first" | "recognition_boost" | "recognition_first";
+  actual_selection_reason: SelectionReason;
+  // Did they differ?
+  mode_differs: boolean;
+};
+
+export function computeRegimeShadow(
+  session: { id: string; round: number; lane_confidence: number; vector: Record<string, number> },
+  artistFreq: Record<string, number>,
+  recentDeltas: Array<Record<string, number>>,
+  actualMode: "diagnostic_first" | "recognition_boost" | "recognition_first",
+  actualSelectionReason: SelectionReason,
+): RegimeShadowLog {
+  const confidence = calculateSessionConfidence({ vector: session.vector } as any).confidence;
+  const artistBias = detectArtistBias({ artist_frequency: artistFreq } as any);
+  const volatility = detectVectorVolatility(recentDeltas);
+  
+  const inferredRegime = inferModePressure(
+    { vector: session.vector, artist_frequency: artistFreq } as any,
+    recentDeltas,
+    [],
+  );
+  const wouldUseMode = regimeToSelectionMode(inferredRegime, session.lane_confidence);
+  
+  return {
+    session_id: session.id,
+    round: session.round,
+    confidence,
+    lane_confidence: session.lane_confidence,
+    artist_bias: { biased: artistBias.biased, count: artistBias.count },
+    vector_volatility: { volatile: volatility.volatile, avgMagnitude: volatility.avgMagnitude },
+    inferred_regime: inferredRegime,
+    would_use_mode: wouldUseMode,
+    actual_mode: actualMode,
+    actual_selection_reason: actualSelectionReason,
+    mode_differs: wouldUseMode !== actualMode,
+  };
+}
+```
+
+### Call Site
+
+In `nextPairingImpl` after `selectPairing` returns:
+
+```typescript
+// After selectPairing
+const result = selectPairing({ pool, vector, used_ids, session_lane, dims, rng, mode, recognition });
+
+// Shadow log (read env at runtime for SSR)
+const shadowEnabled = (() => {
+  if (typeof process !== "undefined") return process.env.REGIME_SHADOW_LOG === "true";
+  return false;
+})();
+
+if (shadowEnabled && result.kind === "picked") {
+  const shadow = computeRegimeShadow(
+    { id: session_id, round, lane_confidence, vector },
+    artistFrequency,
+    recentDeltas,
+    mode,
+    result.selection_reason,
+  );
+  
+  // Log to console or insert into regime_shadow_log table
+  console.log("[regime-shadow]", JSON.stringify(shadow));
+}
+```
+
+### Database Table (Optional)
+
+```sql
+CREATE TABLE regime_shadow_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  session_id UUID NOT NULL REFERENCES sessions(id),
+  round INT NOT NULL,
+  confidence REAL,
+  lane_confidence REAL,
+  artist_bias_count INT,
+  vector_volatility REAL,
+  inferred_regime TEXT,
+  would_use_mode TEXT,
+  actual_mode TEXT,
+  mode_differs BOOLEAN
+);
+
+CREATE INDEX idx_regime_shadow_log_session ON regime_shadow_log(session_id);
+CREATE INDEX idx_regime_shadow_log_differs ON regime_shadow_log(mode_differs) WHERE mode_differs = true;
+```
+
+### Success Metric
+
+After 2 weeks of shadow logging:
+- If `mode_differs` > 30% of rounds, the regime logic is adding signal
+- If `mode_differs` < 5%, the current hard-coded logic already matches what Agent Brain recommends (or the mapper needs calibration)
+- Analyze the cases where they differ to tune thresholds
+
+---
+
+## Phase 1: Foundation
 
 ### 1.1 Shared Types Package
 
@@ -155,28 +331,31 @@ export function detectArtistBias(
 
 export function inferModePressure(
   session: MusicDNASessionState,
+  recentDeltas: Array<Record<string, number>> = [],
+  recentChoices: Array<{ ms_to_decide: number | null }> = [],
   config = DEFAULT_CONFIG,
 ): ModePressure {
   const { confidence } = calculateSessionConfidence(session, config.dims);
   const artistBias = detectArtistBias(session, config.artist_bias_threshold);
-  const probeDisagreement = detectProbeDisagreement(session);
+  const volatility = detectVectorVolatility(recentDeltas);
+  const hesitation = detectDecisionHesitation(recentChoices);
   const { low, high } = config.confidence_thresholds;
   
   // NOTE: No round gate here — that would be a tautology that guarantees
   // shadow mode shows "no difference" vs current hard-coded behavior.
-  // Let confidence, artist bias, and probe signals drive the regime.
+  // Let confidence, artist bias, and ruggedness signals drive the regime.
   
   // Artist bias detected: force exploration to break out of local minimum
   if (artistBias.biased && artistBias.count >= 4) return "explore";
   
-  // Probe disagreement (probes shown but not flipping): landscape is rugged
-  if (probeDisagreement.disagreeing && confidence < high) return "explore";
+  // High volatility + low confidence: landscape is rugged, explore more
+  if (volatility.volatile && confidence < high) return "explore";
   
   // Low confidence: explore
   if (confidence < low) return "explore";
   
   // High confidence AND no warning signals: compound
-  if (confidence > high && !artistBias.biased && !probeDisagreement.disagreeing) {
+  if (confidence > high && !artistBias.biased && !volatility.volatile) {
     return "compound";
   }
   
@@ -184,34 +363,69 @@ export function inferModePressure(
   return "prune";
 }
 
-// Probe disagreement = probes shown but not flipping (taste is rugged)
-// Probe FLIP = lane guess was wrong, not taste rugged (flip = reset, often stabilizes fast)
-export function detectProbeDisagreement(
-  session: MusicDNASessionState,
-): { disagreeing: boolean; probes_without_flip: number } {
-  const probesShown = session.probe_state?.probes_shown?.length ?? 0;
-  const flips = session.probe_state?.flips?.length ?? 0;
+// NOTE: Cross-lane probes are QUARANTINED (experiments/cross-lane-probes.ts).
+// probe_state.probes_shown and probe_state.flips will be empty in production.
+// Use alternative ruggedness signals instead.
+
+// Detect vector volatility — high variance in recent deltas suggests rugged taste
+export function detectVectorVolatility(
+  recentDeltas: Array<Record<string, number>>,
+  threshold = 15,
+): { volatile: boolean; avgMagnitude: number } {
+  if (recentDeltas.length < 3) return { volatile: false, avgMagnitude: 0 };
   
-  // If we've shown 3+ probes and none flipped, that's disagreement
-  const probes_without_flip = probesShown - flips;
+  const magnitudes = recentDeltas.map(d => 
+    Object.values(d).reduce((sum, v) => sum + Math.abs(v), 0)
+  );
+  const avgMagnitude = magnitudes.reduce((a, b) => a + b, 0) / magnitudes.length;
+  
+  // Large swings between choices = rugged landscape
   return {
-    disagreeing: probes_without_flip >= 3,
-    probes_without_flip,
+    volatile: avgMagnitude > threshold,
+    avgMagnitude,
   };
 }
 
+// Detect decision hesitation — slow choices suggest uncertainty or engagement
+export function detectDecisionHesitation(
+  recentChoices: Array<{ ms_to_decide: number | null }>,
+  slowThresholdMs = 8000,
+): { hesitant: boolean; avgDecisionMs: number; slowCount: number } {
+  const validChoices = recentChoices.filter(c => c.ms_to_decide != null);
+  if (validChoices.length < 2) return { hesitant: false, avgDecisionMs: 0, slowCount: 0 };
+  
+  const times = validChoices.map(c => c.ms_to_decide!);
+  const avgDecisionMs = times.reduce((a, b) => a + b, 0) / times.length;
+  const slowCount = times.filter(t => t > slowThresholdMs).length;
+  
+  // Multiple slow decisions = engaged but uncertain (rugged landscape)
+  return {
+    hesitant: slowCount >= 2,
+    avgDecisionMs,
+    slowCount,
+  };
+}
+
+// Extended input type to include choice history for ruggedness signals
+export type MusicDNATerrainInput = {
+  session: MusicDNASessionState;
+  recentDeltas?: Array<Record<string, number>>; // From choice history
+  recentChoices?: Array<{ ms_to_decide: number | null }>; // Decision times
+  config?: typeof DEFAULT_CONFIG;
+};
+
 export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
-  const { session, config = DEFAULT_CONFIG } = input;
+  const { session, recentDeltas = [], recentChoices = [], config = DEFAULT_CONFIG } = input;
   const { confidence } = calculateSessionConfidence(session, config.dims);
   const artistBias = detectArtistBias(session, config.artist_bias_threshold);
-  const probeDisagreement = detectProbeDisagreement(session);
+  const volatility = detectVectorVolatility(recentDeltas);
+  const hesitation = detectDecisionHesitation(recentChoices);
   const { low, high } = config.confidence_thresholds;
   
-  // NOTE on probe flips vs ruggedness:
-  // - Probe FLIP = lane guess was wrong, NOT that taste is rugged
-  //   After a flip, the vector often stabilizes fast (reset effect)
-  // - Probe DISAGREEMENT (probes shown but not flipping) = taste is rugged
-  //   User keeps rejecting alternative lanes despite probing
+  // Ruggedness signals (since probes are quarantined):
+  // - High volatility = vector swinging wildly, taste landscape is complex
+  // - Decision hesitation = user deliberating hard, choices are close/difficult
+  const isRugged = volatility.volatile || hesitation.hesitant;
   
   return {
     // Always fast for A/B choices
@@ -231,9 +445,8 @@ export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
     // Single-user, no adversaries
     adversariality: "none",
     
-    // Probe DISAGREEMENT (not flip) indicates rugged taste landscape
-    // Flip = wrong lane guess, disagreement = taste itself is complex
-    ruggedness: probeDisagreement.disagreeing ? "high" : "medium",
+    // Ruggedness from vector volatility or decision hesitation
+    ruggedness: isRugged ? "high" : "medium",
     
     // Artist bias indicates risk of local minimum
     local_minima_risk: artistBias.biased ? "high" : "medium",
