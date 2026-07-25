@@ -1,7 +1,7 @@
 # Music DNA × Agent Brain Integration Plan
 
 **Date:** 2026-07-25  
-**Status:** Draft  
+**Status:** Draft (Revised per owner feedback)  
 **Goal:** Integrate Agent Brain's cognitive routing into Music DNA's preference inference engine
 
 ---
@@ -9,6 +9,30 @@
 ## Overview
 
 This plan outlines the technical work required to integrate Agent Brain's regime selection into Music DNA's session flow. The integration will make Music DNA's adaptive behavior explicit, tunable, and measurable.
+
+> **Key Principle (per owner feedback):** Regime is a *weight source* for the existing selector, not a replacement. The plan folds regime into `selectPairing` as an additional input — it does not fork a parallel implementation.
+
+---
+
+## Owner Feedback Summary (2026-07-25)
+
+Critical corrections incorporated into this revision:
+
+| Issue | Original Plan | Correction |
+|-------|--------------|------------|
+| Recognition mode | Dropped in `selectPairingWithStrategy` | **Preserved.** `PairingStrategy` adds `recognition_mode` and `min_canon_floor` |
+| Round-based mode_pressure | `if (round < 4) return "explore"` | **Removed.** Tautology — guarantees shadow shows no difference. Let confidence/bias/probes drive it |
+| Probe flips → ruggedness | Flip = high ruggedness | **Inverted.** Flip = lane was wrong, not taste is rugged. Use probe *disagreement without flip* as ruggedness signal |
+| Compound disables probes | `probe_enabled: false` | **Changed.** Probes recover from wrong lane. Use *decayed schedule*, not hard disable |
+| regime_log JSONB array | On sessions table | **Changed.** Use append-only `regime_events` table to avoid lost-update races |
+| env var at module scope | `const URL = process.env.X` | **Changed.** Read inside handler (SSR prerender) |
+| User-visible regime | Open question | **Decided: No.** Breaks critic illusion |
+| Edge case: stuck user | Not addressed | **Added.** Escape transition at round 15, hard cap at 18 |
+
+**Priority reordering:**
+1. Ship telemetry first (shadow logging) — 2 weeks of data before changing behavior
+2. Refactor `selectPairing` to take `PairingStrategy` with current hard-coded defaults
+3. Only then wire terrain mapper as strategy source
 
 ---
 
@@ -66,8 +90,15 @@ export type PairingStrategy = {
   // Weights for pairing selection
   axis_need_weight: number;        // How much to favor uncertain dimensions
   hypothesis_challenge_weight: number; // How much to challenge strong axes
-  probe_enabled: boolean;          // Whether to include probe lanes
   artist_diversity_weight: number; // How much to penalize same-artist
+  
+  // Recognition mode (PRESERVED from existing logic)
+  recognition_mode: "recognition_first" | "blended" | "diagnostic_first";
+  recognition_boost: number;       // Boost for recognizable pairings (0-1)
+  min_canon_floor: number;         // Minimum canon song threshold
+  
+  // Probe schedule (NOT hard-disabled — use decay)
+  probe_weight: number;            // 0-1, decays over rounds, never fully off
   
   // Thresholds
   min_diagnostic_weight: number;
@@ -127,27 +158,60 @@ export function inferModePressure(
   config = DEFAULT_CONFIG,
 ): ModePressure {
   const { confidence } = calculateSessionConfidence(session, config.dims);
+  const artistBias = detectArtistBias(session, config.artist_bias_threshold);
+  const probeDisagreement = detectProbeDisagreement(session);
   const { low, high } = config.confidence_thresholds;
   
-  // Early rounds: always explore
-  if (session.round < 4) return "explore";
+  // NOTE: No round gate here — that would be a tautology that guarantees
+  // shadow mode shows "no difference" vs current hard-coded behavior.
+  // Let confidence, artist bias, and probe signals drive the regime.
+  
+  // Artist bias detected: force exploration to break out of local minimum
+  if (artistBias.biased && artistBias.count >= 4) return "explore";
+  
+  // Probe disagreement (probes shown but not flipping): landscape is rugged
+  if (probeDisagreement.disagreeing && confidence < high) return "explore";
   
   // Low confidence: explore
   if (confidence < low) return "explore";
   
-  // High confidence: compound
-  if (confidence > high) return "compound";
+  // High confidence AND no warning signals: compound
+  if (confidence > high && !artistBias.biased && !probeDisagreement.disagreeing) {
+    return "compound";
+  }
   
-  // Medium confidence: prune (challenge hypothesis)
+  // Medium confidence OR high confidence with warning signals: prune
   return "prune";
+}
+
+// Probe disagreement = probes shown but not flipping (taste is rugged)
+// Probe FLIP = lane guess was wrong, not taste rugged (flip = reset, often stabilizes fast)
+export function detectProbeDisagreement(
+  session: MusicDNASessionState,
+): { disagreeing: boolean; probes_without_flip: number } {
+  const probesShown = session.probe_state?.probes_shown?.length ?? 0;
+  const flips = session.probe_state?.flips?.length ?? 0;
+  
+  // If we've shown 3+ probes and none flipped, that's disagreement
+  const probes_without_flip = probesShown - flips;
+  return {
+    disagreeing: probes_without_flip >= 3,
+    probes_without_flip,
+  };
 }
 
 export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
   const { session, config = DEFAULT_CONFIG } = input;
   const { confidence } = calculateSessionConfidence(session, config.dims);
   const artistBias = detectArtistBias(session, config.artist_bias_threshold);
-  const hasProbeFlips = (session.probe_state?.flips?.length ?? 0) > 0;
+  const probeDisagreement = detectProbeDisagreement(session);
   const { low, high } = config.confidence_thresholds;
+  
+  // NOTE on probe flips vs ruggedness:
+  // - Probe FLIP = lane guess was wrong, NOT that taste is rugged
+  //   After a flip, the vector often stabilizes fast (reset effect)
+  // - Probe DISAGREEMENT (probes shown but not flipping) = taste is rugged
+  //   User keeps rejecting alternative lanes despite probing
   
   return {
     // Always fast for A/B choices
@@ -167,8 +231,9 @@ export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
     // Single-user, no adversaries
     adversariality: "none",
     
-    // Probe flips indicate rugged taste landscape
-    ruggedness: hasProbeFlips ? "high" : "medium",
+    // Probe DISAGREEMENT (not flip) indicates rugged taste landscape
+    // Flip = wrong lane guess, disagreement = taste itself is complex
+    ruggedness: probeDisagreement.disagreeing ? "high" : "medium",
     
     // Artist bias indicates risk of local minimum
     local_minima_risk: artistBias.biased ? "high" : "medium",
@@ -190,15 +255,38 @@ export function sessionToTerrain(input: MusicDNATerrainInput): TerrainProfile {
   };
 }
 
+// Decay function for probe weight — never fully disables probes
+// Probes are the only mechanism that recovers from wrong opening lane
+function decayedProbeWeight(round: number, regime: SearchRegime): number {
+  // Base probe weight by regime
+  const baseWeight = regime === "explore" ? 1.0 
+                   : regime === "prune" ? 0.7 
+                   : 0.4; // compound — reduced but NOT zero
+  
+  // Decay over rounds, but floor at 0.2 (probes never fully off)
+  const decay = Math.max(0.2, 1 - (round / 20));
+  return baseWeight * decay;
+}
+
 export function regimeToPairingStrategy(
   regime: SearchRegime,
   session: MusicDNASessionState,
 ): PairingStrategy {
+  // Base strategy preserves existing recognition mode logic
   const base: PairingStrategy = {
     axis_need_weight: 0.5,
     hypothesis_challenge_weight: 0.5,
-    probe_enabled: true,
     artist_diversity_weight: 0.3,
+    
+    // PRESERVED: Recognition mode from existing selectPairing
+    // Bootstrap users need recognizable pairings regardless of regime
+    recognition_mode: session.round < 3 ? "recognition_first" : "blended",
+    recognition_boost: session.round < 5 ? 0.8 : 0.4,
+    min_canon_floor: 0.3,
+    
+    // CHANGED: Decayed probe weight, never hard-disabled
+    probe_weight: decayedProbeWeight(session.round, regime),
+    
     min_diagnostic_weight: 30,
     max_pairings_per_dimension: 5,
   };
@@ -209,8 +297,8 @@ export function regimeToPairingStrategy(
         ...base,
         axis_need_weight: 0.8,           // Favor uncertain dimensions
         hypothesis_challenge_weight: 0.2, // Don't challenge too hard yet
-        probe_enabled: true,              // Try other lanes
         artist_diversity_weight: 0.5,     // Encourage variety
+        probe_weight: decayedProbeWeight(session.round, "explore"),
       };
     
     case "prune":
@@ -218,8 +306,8 @@ export function regimeToPairingStrategy(
         ...base,
         axis_need_weight: 0.3,           // Focus on known dimensions
         hypothesis_challenge_weight: 0.9, // Challenge the hypothesis hard
-        probe_enabled: session.round < 10, // Still probe early
         artist_diversity_weight: 0.4,
+        probe_weight: decayedProbeWeight(session.round, "prune"),
       };
     
     case "compound":
@@ -227,18 +315,20 @@ export function regimeToPairingStrategy(
         ...base,
         axis_need_weight: 0.2,           // Deepen existing signal
         hypothesis_challenge_weight: 0.3, // Light challenge
-        probe_enabled: false,             // Stop probing
         artist_diversity_weight: 0.2,     // Allow some repeat artists
+        // NOTE: probe_weight is reduced but NOT zero
+        // Probes recover from wrong opening lane — don't lock users in
+        probe_weight: decayedProbeWeight(session.round, "compound"),
       };
     
     case "coordinate":
-      // Not applicable, fall back to explore
+      // Not applicable to Music DNA, fall back to explore
       return {
         ...base,
         axis_need_weight: 0.8,
         hypothesis_challenge_weight: 0.2,
-        probe_enabled: true,
         artist_diversity_weight: 0.5,
+        probe_weight: decayedProbeWeight(session.round, "explore"),
       };
   }
 }
@@ -377,37 +467,69 @@ export async function recommendMusicDNARegime(
 
 ### 2.2 Refactor Pairing Selection
 
+> **Key principle:** Regime *composes with* existing logic, does not replace it. The existing `selectPairing` becomes the single implementation that takes `PairingStrategy` as input.
+
 **Location:** `src/musicdna/engine/pairing.ts`
 
 ```typescript
-// Add new regime-aware selection function
+// REFACTORED: selectPairing now takes optional PairingStrategy
+// If no strategy provided, uses current hard-coded defaults (backward compatible)
 
 import type { PairingStrategy } from "./agent-brain-types.js";
 
-export type SelectPairingWithStrategyInput<P extends PairingCandidate> = 
-  SelectPairingInput<P> & {
-    strategy: PairingStrategy;
-  };
+export type SelectPairingInput<P extends PairingCandidate> = {
+  pool: P[];
+  vector: Vector;
+  used_ids: Set<string>;
+  session_lane: Lane;
+  dims: readonly string[];
+  rng: Rng;
+  round: number;
+  // NEW: Optional strategy — if omitted, uses legacy defaults
+  strategy?: PairingStrategy;
+};
 
-export function selectPairingWithStrategy<P extends PairingCandidate>(
-  input: SelectPairingWithStrategyInput<P>,
+// Default strategy = current hard-coded behavior
+function defaultStrategy(round: number): PairingStrategy {
+  return {
+    axis_need_weight: 0.5,
+    hypothesis_challenge_weight: 1.5, // Current challengeBoost
+    artist_diversity_weight: 0.3,
+    recognition_mode: round < 3 ? "recognition_first" : "blended",
+    recognition_boost: round < 5 ? 0.8 : 0.4,
+    min_canon_floor: 0.3,
+    probe_weight: 1.0, // Current: probes always enabled
+    min_diagnostic_weight: 30,
+    max_pairings_per_dimension: 5,
+  };
+}
+
+export function selectPairing<P extends PairingCandidate>(
+  input: SelectPairingInput<P>,
 ): SelectPairingResult<P> {
-  const { pool, vector, used_ids, dims, rng, strategy } = input;
+  const { pool, vector, used_ids, dims, rng, round } = input;
+  const strategy = input.strategy ?? defaultStrategy(round);
   
   // 1. Filter used pairings
   let candidates = pool.filter((p) => !used_ids.has(p.id));
   if (!candidates.length) return { kind: "empty" };
   
-  // 2. Filter same-artist if strategy wants diversity
+  // 2. PRESERVED: Recognition mode logic (critical for bootstrap users)
+  if (strategy.recognition_mode === "recognition_first") {
+    const recognizable = candidates.filter(isRecognizable);
+    if (recognizable.length > 0) candidates = recognizable;
+  }
+  
+  // 3. Filter same-artist if strategy wants diversity
   if (strategy.artist_diversity_weight > 0.3) {
     const diverse = candidates.filter(differentArtist);
     if (diverse.length > 0) candidates = diverse;
   }
   
-  // 3. Calculate axis need (favor uncertain dimensions)
+  // 4. Calculate axis need (favor uncertain dimensions)
   const need = (dim: string) => 1 / (1 + Math.abs(vector[dim] ?? 0));
   
-  // 4. Find hypothesis-challenging axes
+  // 5. Find hypothesis-challenging axes
   const leaningAxes = new Set(
     dims
       .map((d) => ({ d, v: Math.abs(vector[d] ?? 0) }))
@@ -417,7 +539,7 @@ export function selectPairingWithStrategy<P extends PairingCandidate>(
       .map((x) => x.d),
   );
   
-  // 5. Score each pairing using strategy weights
+  // 6. Score each pairing using strategy weights
   const scored = candidates.map((p) => {
     const tests = (p.tests?.length ? p.tests : dims.slice()) as string[];
     
@@ -428,16 +550,26 @@ export function selectPairingWithStrategy<P extends PairingCandidate>(
     const challengesHypothesis = leaningAxes.size > 0 && tests.some((t) => leaningAxes.has(t));
     const challengeScore = challengesHypothesis ? 1.0 : 0.0;
     
+    // PRESERVED: Recognition boost for blended mode
+    const recognitionScore = strategy.recognition_mode === "blended" && isRecognizable(p)
+      ? strategy.recognition_boost
+      : 0;
+    
+    // PRESERVED: Canon floor
+    const canonScore = isCanonSong(p) ? strategy.min_canon_floor : 0;
+    
     // Combined score using strategy weights
     const w = (
       strategy.axis_need_weight * axisNeed +
-      strategy.hypothesis_challenge_weight * challengeScore
+      strategy.hypothesis_challenge_weight * challengeScore +
+      recognitionScore +
+      canonScore
     ) * ((p.diagnostic_weight || 50) / 100);
     
     return { p, w };
   });
   
-  // 6. Weighted random selection
+  // 7. Weighted random selection
   const total = scored.reduce((s, x) => s + x.w, 0);
   let r = rng.next() * total;
   const pick = scored.find((x) => (r -= x.w) <= 0) ?? scored[0];
@@ -445,6 +577,12 @@ export function selectPairingWithStrategy<P extends PairingCandidate>(
   return { kind: "picked", pairing: pick.p };
 }
 ```
+
+**Migration path:**
+1. Refactor existing `selectPairing` to take optional `strategy` param
+2. Default strategy = current hard-coded values (behavior unchanged)
+3. Add golden fixture test to confirm identical output
+4. Only then wire terrain mapper as strategy source
 
 ### 2.3 Update Session Flow
 
@@ -528,12 +666,65 @@ export async function nextPairingImpl(supabase: AuthedSupabase, data: { sessionI
 ### 2.4 Database Schema Updates
 
 ```sql
--- Add columns to sessions table
+-- Add current regime to sessions (single value, not array)
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS current_regime TEXT DEFAULT 'explore';
-ALTER TABLE sessions ADD COLUMN IF NOT EXISTS regime_log JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS routing_mode TEXT DEFAULT 'legacy';
 
 -- Index for analytics
 CREATE INDEX IF NOT EXISTS idx_sessions_regime ON sessions(current_regime);
+CREATE INDEX IF NOT EXISTS idx_sessions_routing_mode ON sessions(routing_mode);
+
+-- CHANGED: Use append-only table instead of JSONB array on sessions
+-- Avoids lost-update races when nextPairing called in parallel (mobile + web tabs)
+CREATE TABLE IF NOT EXISTS regime_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  round INTEGER NOT NULL,
+  regime TEXT NOT NULL,
+  previous_regime TEXT,
+  trigger TEXT NOT NULL, -- 'initial' | 'confidence' | 'artist_bias' | 'probe_disagreement' | 'escape'
+  terrain_snapshot JSONB, -- Optional: full terrain at transition time
+  rationale TEXT[]
+);
+
+CREATE INDEX idx_regime_events_session ON regime_events(session_id);
+CREATE INDEX idx_regime_events_created ON regime_events(created_at);
+```
+
+### 2.5 Edge Cases: Escape Transition and Round Cap
+
+Per owner feedback, add safety valves for stuck users:
+
+```typescript
+// In nextPairingImpl, after regime recommendation
+
+const MAX_ROUNDS = 18;
+const ESCAPE_ROUND = 15;
+
+// Hard cap: stop session at round 18
+if (session.round >= MAX_ROUNDS) {
+  return { kind: "force_complete", reason: "max_rounds_reached" };
+}
+
+// Escape transition: user stuck at low confidence past round 15
+if (session.round >= ESCAPE_ROUND && confidence < 0.4) {
+  // Force a probe from the strongest disagreeing lane
+  const escapeRegime = "explore";
+  const escapeLane = findStrongestDisagreeingLane(session);
+  
+  await recordRegimeEvent({
+    session_id: session.id,
+    round: session.round,
+    regime: escapeRegime,
+    previous_regime: currentRegime,
+    trigger: "escape",
+    rationale: [`Stuck at ${(confidence * 100).toFixed(0)}% confidence past round ${ESCAPE_ROUND}`],
+  });
+  
+  // Force probe from escape lane
+  return selectPairingFromLane(escapeLane, { ...input, strategy: exploreStrategy });
+}
 ```
 
 ---
@@ -813,6 +1004,23 @@ CREATE INDEX IF NOT EXISTS idx_sessions_routing_mode ON sessions(routing_mode);
 | `AGENT_BRAIN_SHADOW_LOG` | `true`, `false` | `false` | Enable shadow logging in legacy mode |
 | `AGENT_BRAIN_URL` | URL | `http://localhost:7399` | Agent Brain service URL (if using HTTP) |
 | `AGENT_BRAIN_BEARER_TOKEN` | string | — | Auth token for Agent Brain API |
+
+> **SSR Warning:** On this stack, env vars must be read **inside the handler**, not at module scope, or SSR prerender breaks. Same rule as `LOVABLE_API_KEY`.
+
+```typescript
+// WRONG — breaks SSR prerender
+const AGENT_BRAIN_URL = process.env.AGENT_BRAIN_URL;
+
+export async function recommendRegime(session) {
+  const res = await fetch(AGENT_BRAIN_URL, ...); // URL is undefined during prerender
+}
+
+// CORRECT — read inside handler
+export async function recommendRegime(session) {
+  const url = process.env.AGENT_BRAIN_URL ?? "http://localhost:7399";
+  const res = await fetch(url, ...);
+}
+```
 
 ---
 
@@ -1116,6 +1324,62 @@ describe("Full session flow with regime routing", () => {
 
 ---
 
+## Recommended Priority Ordering (per Owner Feedback)
+
+> **"The plan is currently ~30% too eager to replace working logic. Fold regime into the existing selector as a weight source, don't fork a parallel one."**
+
+### Step 1: Ship Telemetry First (2 weeks)
+
+Log terrain + confidence + regime **without changing the selector**.
+
+```typescript
+// In nextPairingImpl, BEFORE selectPairing call
+const terrain = sessionToTerrain({ session });
+const regimeRec = recommendMusicDNARegime({ session });
+
+// Log for shadow analysis — does NOT affect pairing selection
+await logShadowRecommendation({
+  session_id: session.id,
+  round: session.round,
+  terrain,
+  recommended_regime: regimeRec.regime,
+  confidence: regimeRec.confidence,
+});
+
+// Continue with existing selectPairing (unchanged)
+const pairing = selectPairing(input);
+```
+
+Two weeks of shadow data is worth more than any theoretical plan.
+
+### Step 2: Refactor selectPairing to Take PairingStrategy
+
+Wire current hard-coded values as the default strategy:
+
+```typescript
+// Before: magic numbers scattered
+const challengeBoost = 1.5;
+const axisConf = 30;
+
+// After: strategy param with same defaults
+const strategy = input.strategy ?? {
+  hypothesis_challenge_weight: 1.5,
+  // ... same values as before
+};
+```
+
+**Confirm identical behavior** via golden fixture test before proceeding.
+
+### Step 3: Only Then Wire Terrain Mapper as Strategy Source
+
+Once Step 2 is validated:
+- Shadow mode: compute strategy from terrain, log comparison
+- Canary: 5% traffic uses terrain-derived strategy
+- A/B: 50% traffic
+- Full: 100% traffic
+
+---
+
 ## Rollout Plan Summary
 
 > **See Phase 2.5 and Phase 2.6 above for detailed implementation.**
@@ -1123,10 +1387,12 @@ describe("Full session flow with regime routing", () => {
 | Stage | Duration | Config | Traffic |
 |-------|----------|--------|---------|
 | **0. Baseline** | 1 week | No changes | Measure current metrics |
-| **1. Shadow** | 1-2 weeks | `ROUTING_MODE=shadow` | 0% Agent Brain (log only) |
-| **2. Canary** | 1 week | `ROLLOUT_PERCENT=5` | 5% Agent Brain |
-| **3. A/B Test** | 2-3 weeks | `ROLLOUT_PERCENT=50` | 50% Agent Brain |
-| **4. Full Rollout** | — | `ROLLOUT_PERCENT=100` | 100% Agent Brain |
+| **1. Telemetry** | 2 weeks | Log terrain/regime, don't use | 0% behavior change |
+| **2. Refactor** | 1 week | `selectPairing` takes strategy param | 0% behavior change (golden test) |
+| **3. Shadow** | 1-2 weeks | `ROUTING_MODE=shadow` | 0% Agent Brain (log comparison) |
+| **4. Canary** | 1 week | `ROLLOUT_PERCENT=5` | 5% Agent Brain |
+| **5. A/B Test** | 2-3 weeks | `ROLLOUT_PERCENT=50` | 50% Agent Brain |
+| **6. Full Rollout** | — | `ROLLOUT_PERCENT=100` | 100% Agent Brain |
 
 **Key principle:** Legacy code path remains intact throughout. Rollback is instant via environment variable.
 
@@ -1143,15 +1409,22 @@ describe("Full session flow with regime routing", () => {
 
 ---
 
-## Open Questions
+## Open Questions (Resolved per Owner Feedback)
 
-1. **Should regime be visible to user?** Could show "Challenging your hypothesis..." vs "Deepening your profile..."
+1. **Should regime be visible to user?**  
+   **Decision: No.** Keep it internal. The Rolling Stone voice already conveys the shift ("early read" → "you keep coming back to…" → verdict). Exposing "prune mode" breaks the critic illusion.
 
-2. **How to handle edge cases?** User who never converges, user who converges too fast
+2. **How to handle edge cases?**  
+   **Decision: Implemented.**
+   - Escape transition for users stuck at low confidence past round 15 — force probe from strongest disagreeing lane
+   - Hard cap at round 18
+   - See Section 2.5 for implementation
 
-3. **Per-lane regime weights?** Maybe hip_hop needs more exploration than alternative?
+3. **Per-lane regime weights?**  
+   **Decision: Not now.** Ship one global weight table, learn from telemetry, split only if data justifies it. Premature optimization otherwise.
 
-4. **LLM involvement?** Should the micro-reaction commentary mention regime? "I'm testing whether you really mean that..."
+4. **LLM involvement?**  
+   **Decision: No direct mention.** Same reason as (1) — breaks illusion. But: wire regime confidence into the hedge selector. The Critic's hedge tier should be a function of regime confidence, which is close to what `fit_tier` already does. This is a natural extension, not a new concept.
 
 ---
 
@@ -1227,3 +1500,13 @@ The terrain mapper is the **integration contract** — it translates your domain
 - **2026-07-25** — Initial integration plan drafted
 - **2026-07-25** — Added Phase 2.5 (Feature Flag Infrastructure) and Phase 2.6 (Detailed Rollout Strategy)
 - **2026-07-25** — Added Flutter compatibility notes and architecture decision on terrain mapper location
+- **2026-07-25** — **Major revision per owner feedback:**
+  - Fixed: Recognition mode preserved (not dropped)
+  - Fixed: Round-based mode_pressure removed (was tautology)
+  - Fixed: Probe flips → ruggedness inverted (disagreement = rugged, flip = reset)
+  - Fixed: Compound doesn't hard-disable probes (uses decayed weight)
+  - Fixed: regime_log uses append-only table (not JSONB array on hot row)
+  - Fixed: env vars read inside handler (SSR prerender)
+  - Added: Escape transition at round 15, hard cap at 18
+  - Added: Recommended priority ordering (telemetry first)
+  - Resolved: All open questions decided
