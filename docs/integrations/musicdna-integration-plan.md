@@ -347,25 +347,127 @@ Open items: Does regime affect `shouldStop`? A compound regime arguably should b
 - **`docs/musicdna/instrumentation.md`** — should document the new `experiment_key`/`variant` convention.
 - **Bootstrap phase** — the `sessionLane === "general" && bootstrapChoices.length < 2` branch returns *before* reaching `selectPairing`. Regime routing must not apply to bootstrap rounds; the plan never mentions this early return.
 
+### Gap 13 — The real session is 6 rounds, and that invalidates most of the round-based design (BLOCKER)
+
+There are **three conflicting round budgets** in the codebase:
+
+| Location | Limit | Effect |
+|---|---|---|
+| `src/routes/onboarding.tsx:35` | `MAX_ROUNDS = 6` | **This is the shipped web experience.** UI renders `Round NN / 6` and calls `finalizeSession` when `nr > MAX_ROUNDS` |
+| `pairing.ts` `shouldStop` | `min_rounds = 12` | Engine default — **unreachable from web**, the UI ends the session first |
+| `src/routes/api/v1/e2e.test.ts:33` | `MAX_ROUNDS = 12` | Test harness disagrees with the product |
+
+The evidence-threshold comment confirms 6 is intentional, not a leftover:
+
+> `// Tuned for 6-round adaptive test: 2 supporting choices on an axis is enough to call a tendency ... 0.55 keeps out pure noise without demanding 12 rounds.`
+
+Everything round-indexed in this plan was written against a 12–18 round assumption and is therefore wrong:
+
+1. **`ESCAPE_ROUND = 15` / `MAX_ROUNDS = 18` are dead code.** They are 2.5–3× the entire shipped session. The stuck-user safety valve can never fire.
+2. **Compound can essentially never fire.** `inferModePressure` returns `compound` only when `confidence > 0.7`, i.e. 7 of 10 axes at |value| ≥ 30. Each pairing moves only the axes in its `tests` array. Reaching 7 axes in 6 rounds is not achievable in practice. **The compound regime is unreachable in production**, which removes roughly a third of the integration's value.
+3. **`STABILITY_CHECKPOINTS = {8, 10, 12, 14}` never fire.** The `archetype_ranking_snapshot` event does not exist in web sessions. Any telemetry plan depending on those snapshots is planning against data that is never written.
+4. **`PROBE_ROUNDS = {4, 9, 14}`** — only round 4 is even reachable, and the whole set is `void`ed anyway.
+5. **`branching_factor: round < 5 ? "high" : "medium"`** means the mapper flips this field exactly once, at round 5 of 6. Combined with Gap 3, the `explore → prune` transition is confined to a 6-round session's first five rounds.
+
+**This must be resolved before the terrain mapper is written**, because it determines whether regime routing has any room to operate at all. Options:
+
+- **(a) Reconcile the budgets.** Decide the real number, make `shouldStop`, the UI, and the e2e test agree, and delete the other two constants. Even if the answer is "6", having one number is a prerequisite.
+- **(b) Re-scale every threshold to a 6-round world.** `confidence > 0.7` for compound becomes unreachable; a 6-round product needs something closer to `> 0.4`, and the escape valve belongs around round 4–5, not 15.
+- **(c) Express regime thresholds as fractions of the session budget** rather than absolute rounds, so they survive a future change to the round count.
+
+Recommend (a) then (c). Note that if the product is genuinely 6 rounds, **explore vs. prune is the only live distinction**, and the plan should say so plainly rather than describing a three-regime lifecycle that the product cannot reach.
+
+### Gap 14 — Regime must not starve the evidence ledger
+
+`finalizeSession` gates every user-visible claim on an evidence threshold:
+
+```typescript
+const MIN_SUPPORT = 2;      // supporting choices on an axis
+const MIN_CONFIDENCE = 0.55;
+const allowed_claims = patterns.filter(
+  (p) => p.supporting_choices >= MIN_SUPPORT && p.confidence >= MIN_CONFIDENCE,
+).slice(0, 5);
+```
+
+`supporting_choices` counts how many choices tested that axis. `selectPairing` already concentrates selection via the fork hard-filter (any axis over 15 pulls the pool toward pairings testing that axis). A regime that narrows further — compound, or an aggressive `challenge_boost` — concentrates the same axes again and **reduces the number of distinct axes reaching `MIN_SUPPORT`**.
+
+The failure is user-visible, not subtle. When nothing clears the threshold the reveal falls back to:
+
+> `"Nothing cleared the evidence threshold this round. Either you're harder to read than most, or the matchups didn't catch you. Worth another pass."`
+
+With only 6 rounds and `MIN_SUPPORT = 2`, the ledger has very little slack: roughly 3 axes can clear the bar in a best case, fewer if pairings overlap in what they test.
+
+**Rule to state explicitly in the plan: regime shapes *selection*, never *evidence gating*.** Regime must not touch `MIN_SUPPORT`, `MIN_CONFIDENCE`, or the `patterns` computation.
+
+**Additionally, add axis coverage as a rollout guardrail**, because selection changes can degrade it silently:
+
+```typescript
+// Guardrail metric — track per session, alert on regression
+axis_coverage = countDistinctAxesWith(supporting_choices >= MIN_SUPPORT);
+allowed_claims_count = allowed_claims.length;
+empty_reveal_rate = share of sessions where allowed_claims.length === 0;
+```
+
+`empty_reveal_rate` should be a **hard rollback trigger**, not a metric to review later. It is the clearest signal that regime routing has starved the ledger.
+
+> **Note on thresholds:** the "≥3 supporting, 0 contradicting" rule is a *different surface* — it governs `ShippedClaim` in the decade/subculture flow (`if (supports < 3 || contradicts !== 0) continue;`). The main MusicDNA reveal uses 2/0.55. Both should be checked, but they are not the same gate.
+
+**Also reuse, don't duplicate:** `finalizeSession` already derives artist bias with the same threshold the terrain mapper proposes (`if (n >= 3) counterarguments.push({ claim: "User may simply prefer ${artist}." })`) and already computes a snap-decision signal (`ms_to_decide < 2000`, flagged at ≥60% of choices). The mapper's `detectArtistBias` and `detectDecisionHesitation` should share these definitions rather than inventing parallel thresholds that can drift.
+
+### Gap 15 — Corrections to the proposed Stage 1 gate and probe cadence
+
+**The golden fixture is `index.test.ts`, not `session.test.ts`.**
+
+- `session.test.ts` only exercises `buildStartSessionSeed` — lane, confidence, probe candidates, seed vector. It never calls `selectPairing`, so it cannot detect a selection behavior change.
+- `index.test.ts` is the actual golden fixture, self-described: *"Golden-fixture test: drive the full engine loop with in-memory gateways... If cosine, archetype scoring, probe alignment, or pairing selection tweaks change behavior, this test surfaces it."*
+- `pairing.test.ts` is the direct `selectPairing` contract test, including `drops same-artist pairings`.
+
+**Stage 1 gate = `pairing.test.ts` + `index.test.ts`, both green with unchanged fixtures, plus a new assertion on byte-identical `selection_reason`.** Existing tests compare picked ids; they do not pin the full `selection_reason`, so a knob refactor could shift scoring without failing them.
+
+**Probe cadence is moot, and the reason matters.** Tying cadence to confidence rather than round number is the right instinct, but cross-lane probes are **quarantined** (`experiments/cross-lane-probes.ts`), and `nextPairingImpl` actively throws if `probe_state.pending` is non-empty. `PROBE_ROUNDS = {4, 9, 14}` is `void`ed. So there is no probe schedule to decay — `probe_weight` and `decayedProbeWeight` in this plan control a mechanism that is switched off. Those fields should be **removed from `PairingKnobs`** until cross-lane probes are reactivated against their documented criteria.
+
+If the intent was *within-lane* diversification rather than cross-lane probing, that is a different mechanism and should be specified as such — most likely as the `fork_filter: "soft"` knob from Gap 1, which is the real lever for widening selection.
+
+**On `fit_tier`:** it is computed every round and written to `event_log.props.fit_tier` on each `choice_scored` event, so it is technically available mid-session. But two caveats: it is *archetype* strength-of-fit, not lane confidence — `sessions.lane_confidence` is a separate value set once at session start — and reading it back per round means querying `event_log`, since it is not on the session row. It is a usable signal, but it is not the same thing as lane confidence and the plan should not treat the two interchangeably.
+
+### Gap 16 — Shadow exit criteria must be defined before shadow starts
+
+"Two weeks of data" with no decision rule becomes indefinite shadow mode. Concrete criteria, all measurable from the shadow log:
+
+**Proceed to Stage 2 when all of these hold:**
+
+| Criterion | Threshold | Rationale |
+|---|---|---|
+| Error rate in recommendation path | `0` over the full window | Any exception means the mapper is not production-ready |
+| `mode_differs` rate | `≥ 15%` and `≤ 60%` | Below 15%, regime adds nothing over current logic. Above 60%, the mapper is miscalibrated rather than insightful |
+| `scoring_agrees` (Gap 2) | `< 95%` | At ~100%, `scoreTerrain` is echoing the mapper and Agent Brain is not contributing a decision |
+| Regime distribution | every reachable regime ≥ 5% | If compound is 0% (see Gap 13), the integration is two-regime and the plan must say so |
+| Divergences reviewed by hand | `≥ 30` cases | Someone must confirm the different choice is *better*, not merely different |
+| Sessions in window | `≥ 200` | Below this, rates are noise |
+
+**Abort and re-specify if:** `mode_differs > 60%`, or hand review finds the divergent pick worse in the majority of sampled cases, or compound never fires (which makes Gap 13 the blocker rather than anything in the mapper).
+
 ### Revised Sequencing
 
 | Step | Scope | Gates on |
 |------|-------|----------|
+| **−1. Round budget** | Gap 13 — reconcile `onboarding.tsx` (6), `shouldStop` (12), `e2e.test.ts` (12) to one number; re-scale regime thresholds to it | Nothing. **This blocks everything else** |
 | **0. Data plumbing** | Add `delta_vector` to `choices`; widen the `choices` select; compute artist frequency; add `sessions.routing_mode` | — |
-| **1. Telemetry** | Log `mode_pressure_in`, `regime_out`, terrain, `selection_reason` via `event_log` with `experiment_key` | Step 0 |
-| **2. Fix mapper** | Gaps 2, 3, 4, 10 — real signals for the constant fields, reachable transitions, skip pressure, `escape` | Step 1 data |
-| **3. Knobs refactor** | Replace seven literals in `selectPairing` with `PairingKnobs`; golden test on `selection_reason` | Step 2 |
-| **4. Shadow** | Compute knobs from terrain, log divergence, keep serving legacy | Step 3 golden test green |
-| **5. Canary → A/B → Full** | As previously planned | Shadow shows meaningful, explainable divergence |
+| **1. Telemetry** | Log `mode_pressure_in`, `regime_out`, terrain, `selection_reason` via `event_log` with `experiment_key`; add `axis_coverage` and `empty_reveal_rate` to the baseline | Step 0 |
+| **2. Fix mapper** | Gaps 2, 3, 4, 10 — real signals for the constant fields, reachable transitions, skip pressure, `escape`; drop `probe_weight` (Gap 15) | Steps −1 and 1 |
+| **3. Knobs refactor** | Replace seven literals in `selectPairing` with `PairingKnobs`; gate on `pairing.test.ts` + `index.test.ts` with a new `selection_reason` assertion | Step 2 |
+| **4. Shadow** | Compute knobs from terrain, log divergence, keep serving legacy | Step 3 gate green |
+| **5. Canary → A/B → Full** | As previously planned | Gap 16 exit criteria met |
 
-Steps 0–1 are the only ones that should start before the open decisions below are settled.
+Step −1 is a genuine blocker: until the round budget is settled, there is no way to know whether compound is reachable, and therefore no way to know whether this is a three-regime integration or a two-regime one.
 
 ### Decisions Still Needed
 
-1. **Gap 2 resolution** — de-weight `mode_pressure`, or derive the nine constant terrain fields from real data? This determines whether Agent Brain is genuinely routing or just echoing the mapper.
-2. **Gap 11** — may regime change `shouldStop`? If yes, "avg rounds" stops being a clean metric.
-3. **`delta_vector` persistence** — add the column (recommended) or recompute from `song_axes`?
-4. **Primary success metric** — `archetype_margin` is the defensible choice; confirm before baselining.
+1. **Gap 13 — the round budget.** What is the real session length? If it is 6, compound is unreachable and the integration is explore-vs-prune only. This is the decision everything else depends on.
+2. **Gap 2 resolution** — de-weight `mode_pressure`, or derive the nine constant terrain fields from real data? This determines whether Agent Brain is genuinely routing or just echoing the mapper.
+3. **Gap 11** — may regime change `shouldStop`? If yes, "avg rounds" stops being a clean metric.
+4. **`delta_vector` persistence** — add the column (recommended) or recompute from `song_axes`?
+5. **Primary success metric** — `archetype_margin` is the defensible choice; confirm before baselining. `empty_reveal_rate` should be a hard rollback trigger regardless (Gap 14).
 
 ---
 
@@ -1206,13 +1308,16 @@ CREATE INDEX idx_regime_events_created ON regime_events(created_at);
 
 ### 2.5 Edge Cases: Escape Transition and Round Cap
 
-Per owner feedback, add safety valves for stuck users:
+Per owner feedback, add safety valves for stuck users.
+
+> **SUPERSEDED BY GAP 13.** The constants below assume a 12–18 round session. The shipped web product is **6 rounds** (`onboarding.tsx:35`), so `ESCAPE_ROUND = 15` and `MAX_ROUNDS = 18` are dead code — they are 2.5–3× the entire session. Re-scale these to the reconciled budget from Step −1 before implementing. For a 6-round session the escape valve belongs around round 4.
 
 ```typescript
 // In nextPairingImpl, after regime recommendation
+// NOTE: these values are placeholders pending the Gap 13 round-budget decision
 
-const MAX_ROUNDS = 18;
-const ESCAPE_ROUND = 15;
+const MAX_ROUNDS = 18;   // WRONG for a 6-round product
+const ESCAPE_ROUND = 15; // WRONG for a 6-round product
 
 // Hard cap: stop session at round 18
 if (session.round >= MAX_ROUNDS) {
@@ -2037,3 +2142,9 @@ The terrain mapper is the **integration contract** — it translates your domain
   - Gap 12: API contract docs, test harness, and bootstrap early-return not accounted for
   - Added: revised sequencing with a Step 0 data-plumbing phase
   - Added: four decisions still needed before coding
+- **2026-07-25** — **Second review round (Lovable feedback + verification):**
+  - Gap 13: found three conflicting round budgets — the shipped web product is **6 rounds** (`onboarding.tsx:35`), not 12. This makes compound unreachable, `ESCAPE_ROUND`/`MAX_ROUNDS` dead code, and `STABILITY_CHECKPOINTS {8,10,12,14}` never fire. Added as the top blocker (Step −1)
+  - Gap 14: regime must shape selection, never evidence gating. Documented the real thresholds (`MIN_SUPPORT = 2`, `MIN_CONFIDENCE = 0.55` — the "≥3 supporting / 0 contradicting" rule is a different surface) and added `axis_coverage` / `empty_reveal_rate` as rollout guardrails, the latter a hard rollback trigger
+  - Gap 15: corrected the Stage 1 gate — `session.test.ts` never calls `selectPairing`; the golden fixture is `index.test.ts`, with `pairing.test.ts` as the direct contract test. Probe cadence is moot because cross-lane probes are quarantined; `probe_weight` should be dropped from `PairingKnobs`
+  - Gap 16: defined concrete shadow exit criteria so shadow mode cannot run indefinitely
+  - Noted that `finalizeSession` already computes artist bias (n ≥ 3) and snap-decision rate (<2000ms), which the mapper should reuse rather than duplicate
