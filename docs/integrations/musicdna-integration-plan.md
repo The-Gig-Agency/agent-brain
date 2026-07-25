@@ -146,12 +146,32 @@ Prefer expressing thresholds as fractions of the session budget so they survive 
 
 ### D2. Is Agent Brain deciding, or confirming?
 
-Given the `mode_pressure` weight and the constant-field baseline, `scoreTerrain` will largely echo whatever the mapper puts in `mode_pressure`. Either:
+Given the `mode_pressure` weight and the constant-field baseline, `scoreTerrain` will largely echo whatever the mapper puts in `mode_pressure`. Two candidate fixes:
 
-- **(a)** de-weight `mode_pressure` and let `uncertainty` / `ruggedness` / `local_minima_risk` carry the decision, or
-- **(b)** stop hard-coding the nine constants and derive at least `information_cost`, `environment_stability`, and `branching_factor` from real session data.
+- **(a)** de-weight `mode_pressure` so it acts as a tiebreaker rather than the decision, and let `uncertainty` / `ruggedness` / `local_minima_risk` carry the result
+- **(b)** stop hard-coding the nine constants and derive at least `information_cost`, `reversibility`, and `environment_stability` from real session data
 
-Recommend both. Whichever is chosen, record the **predicted regime distribution** before shipping so shadow data can be checked against it.
+**These are coupled. Doing (a) alone silently removes `compound` entirely.**
+
+Scored against the "high-confidence settled session" — the exact case where compound *should* win:
+
+| `mode_pressure` weight | Current constants | With `reversibility: medium`, `information_cost: medium` |
+|---|---|---|
+| `+4` (today) | compound 12 — **wins** | compound 13 — **wins** |
+| `+3` | compound 11 — **wins** | compound 12 — **wins** |
+| `+2` | compound 10, prune 10 — **prune wins on tie** | compound 11 — **wins** |
+| `+1` (tiebreaker) | compound 9, prune 10 — **prune wins** | compound 10, prune 10 — **prune wins on tie** |
+
+The `+8 / +5 / +5` constant baseline is what does this: strip `mode_pressure` down and the structural lead decides every case before session data is considered. **Fix the constants first, then de-weight.**
+
+Two of the constants are also just wrong for this product, independent of the tuning argument:
+
+- `information_cost: "low"` — a pairing consumes one of only six rounds. That is not cheap. `"medium"` is defensible.
+- `reversibility: "high"` — within a fixed 6-round budget you cannot un-ask a pairing. `"medium"` is defensible.
+
+Correcting those two moves the baseline from `explore 8 / prune 5 / compound 5` to `explore 5 / prune 6 / compound 6`, which is both more honest and leaves room for `mode_pressure` to be de-weighted safely.
+
+Whichever path is taken, record the **predicted regime distribution** before shipping so shadow data can be checked against it.
 
 ### D3. May regime influence `shouldStop`?
 
@@ -159,7 +179,20 @@ Currently unspecified. If yes, "average rounds" stops being a clean rollout metr
 
 ### D4. How to obtain `delta_vector`
 
-`applyChoice` computes it but nothing persists it. Either add a `delta_vector JSONB` column to `choices` (cheap, recommended) or recompute per round by re-joining `song_axes` (expensive).
+**It is already persisted.** `emitChoiceDiagnostics` writes it to `event_log.props.raw_delta` on every `choice_scored` event, alongside `vector_before` and `vector_after` — documented in `instrumentation.md`. No migration is needed for shadow mode; read it back from `event_log`.
+
+One caveat before it becomes a live control input: the emit is deliberately fire-and-forget, wrapped in a `try/catch` that only warns.
+
+```typescript
+// recordChoiceImpl — diagnostics are "an observability channel, not a product invariant"
+try {
+  await emitChoiceDiagnostics(...);
+} catch (e) {
+  console.warn("[musicdna] emitChoiceDiagnostics failed:", ...);
+}
+```
+
+That is correct for telemetry and wrong for a control loop: a dropped event would silently flatten `recentDeltas`, which reads as "not volatile," which pushes the regime toward compound. **For shadow, use `event_log`. Before Step 5, either promote the delta to a `choices.delta_vector` column or make the mapper explicitly handle missing deltas as unknown rather than as zero.**
 
 ---
 
@@ -369,9 +402,9 @@ Three of the mapper's inputs do not currently exist at the call site.
 | Input | Status | Work |
 |---|---|---|
 | `artist_frequency` | No column, no computation | Derive per round by joining `choices → songs` and tallying `chosen.artist` |
-| `recentDeltas` | `applyChoice` computes `delta_vector`, nothing persists it | Add `delta_vector JSONB` to `choices` (D4) |
+| `recentDeltas` | Already in `event_log.props.raw_delta` (D4) | Read from `event_log`; no migration for shadow |
 | `ms_to_decide` | Column exists | `nextPairingImpl` currently selects only `pairing_id` — widen the query |
-| `round` | `usedIds.size`, includes skips | Pass explicitly; do not recompute differently in the mapper |
+| Round counters | Conflated into one number | Separate — see below |
 
 ```typescript
 // nextPairingImpl — current
@@ -379,12 +412,32 @@ supabase.from("choices").select("pairing_id").eq("session_id", id)
 
 // nextPairingImpl — required
 supabase.from("choices")
-  .select("pairing_id, chosen_song_id, ms_to_decide, delta_vector, created_at")
+  .select("pairing_id, chosen_song_id, ms_to_decide, created_at")
   .eq("session_id", id)
   .order("created_at", { ascending: true })
 ```
 
-**Skips distort confidence.** A skip advances `round` without moving the vector, so a skip-heavy session looks "stuck at low confidence" as an artifact. Any confidence-versus-round threshold should use choice count, not `round`.
+### Separate shown, answered, and skipped
+
+Today a single `round` conflates three different things:
+
+```typescript
+const usedIds = new Set(choices.map((c) => c.pairing_id));
+for (const pid of probeState.skipped_pairing_ids ?? []) usedIds.add(pid);
+const round = usedIds.size;   // = answered + skipped
+```
+
+Make all three explicit and pass them separately:
+
+| Counter | Definition | Used for |
+|---|---|---|
+| `rounds_answered` | choices recorded — the only rounds that move the vector | Confidence, evidence, volatility |
+| `rounds_skipped` | `skipped_pairing_ids.length` | Recognition-failure signal |
+| `rounds_shown` | `answered + skipped` — today's `round` | Budget accounting, `usedIds` exclusion |
+
+**Confidence must be measured against `rounds_answered`, never `rounds_shown`.** A skip advances the budget without producing evidence, so a skip-heavy session currently reads as "stuck at low confidence" when the truth is "we have barely asked them anything."
+
+**This connects directly to the evidence guardrail in Part 7.** Skips consume the 6-round budget — `onboarding.tsx` finalizes on `nr > MAX_ROUNDS`, where `nr` is `rounds_shown`. A user who skips three of six pairings reaches the reveal with three vector-moving choices, and `MIN_SUPPORT = 2` means almost nothing clears the evidence threshold. **Skip-heavy sessions are the most likely to produce an empty reveal**, and they are also the sessions where the mapper would push hardest toward explore. Any regime change that increases skips therefore degrades reveals through two paths at once. Track `rounds_skipped` against `empty_reveal_rate` from the first day of telemetry.
 
 ---
 
@@ -503,13 +556,46 @@ export async function recommendRegime(session) {
 
 ### Step 3 gate
 
-The refactor is strictly "replace seven literals with `knobs.*`" — no restructuring. It must be proven behavior-neutral by:
+The refactor is strictly "replace seven literals with `knobs.*`" — no restructuring, no reordering, no reinterpretation. An earlier draft proposed a rewrite that silently dropped shipped behavior; that must not happen again.
+
+**Safeguards that must survive the refactor byte-for-byte:**
+
+| Safeguard | Current behavior |
+|---|---|
+| Same-artist exclusion | `differentArtist` is **unconditional**. Same-artist matchups are "micro-comparisons inside one artist's catalog," not lane decisions |
+| Recognition floor | `min_canon >= canonFloor` filter, **including** the "if the floor empties the pool, drop the floor" fallback |
+| Recognition blend | `recogBlend` mixes `recognition_score` with `diagnostic_weight` per mode |
+| Fork filter | Hard-filter to pairings testing the leaning axes, when any axis exceeds 15 |
+| `selection_reason` | Returned on every pick; consumed by `pairing_shown.props` and the admin diagnostics views |
+| Lane invariant | `assertWithinLane`, plus the general-lane retry fallback in `nextPairingImpl` |
+
+Note the earlier draft made same-artist exclusion *conditional* on a diversity weight, which would have started serving same-artist pairings in compound regime. It also invented `isRecognizable()` and `isCanonSong()` helpers that do not exist — recognition arrives as a `Map<string, RecognitionRow>` hydrated from the `pairing_recognition` view, not as a property of the candidate.
+
+**Tests that gate the merge:**
 
 - `src/musicdna/engine/pairing.test.ts` — the direct `selectPairing` contract, including `drops same-artist pairings`
 - `src/musicdna/engine/index.test.ts` — the golden fixture, self-described as catching pairing-selection changes
-- **a new assertion** on byte-identical `selection_reason` across a seeded-RNG corpus
+- **a new assertion** on byte-identical `selection_reason` across a seeded-RNG corpus, since the existing tests compare picked ids and would let a scoring shift through
 
-`session.test.ts` is **not** the right gate — it only exercises `buildStartSessionSeed` and never calls `selectPairing`. The existing tests compare picked ids and would let a scoring shift through, which is why the `selection_reason` assertion is needed.
+`session.test.ts` is **not** the right gate — it only exercises `buildStartSessionSeed` and never calls `selectPairing`.
+
+### Step 4 gate: prove every transition is reachable
+
+Three of four transition rules are currently unreachable (Part 1). Rather than rediscovering this from shadow data, assert it directly in Agent Brain with a unit test that enumerates the terrain the mapper can actually emit and checks each rule fires at least once:
+
+```typescript
+it("every transition rule is reachable from MusicDNA terrain", () => {
+  const reachable = enumerateMusicDNATerrains();   // cartesian product of mapper outputs
+  const fired = new Set(
+    reachable.map((t) => scoreTerrain(t).transition_candidate).filter(Boolean),
+  );
+  expect(fired).toContain("prune");
+  expect(fired).toContain("compound");
+  expect(fired).toContain("explore");   // fails today — see Part 1
+});
+```
+
+This is cheap, it documents the constraint as an executable fact, and it catches regressions if the mapper's constants change later. A rule that cannot fire should either be made reachable or explicitly declared out of scope — not left silently dead.
 
 ### Rollback
 
@@ -540,23 +626,29 @@ Narrowing selection concentrates the axes being tested, which can starve the evi
 
 | Metric | Definition | Action |
 |---|---|---|
-| `axis_coverage` | distinct axes with `supporting_choices >= MIN_SUPPORT` | Track per session; alert on regression |
+| `v_axis_independence` | **Existing view.** Distinct axes appearing in `choice_scored.supports` per session | Track per session; alert on regression |
 | `allowed_claims_count` | `allowed_claims.length` | Track per session |
+| `rounds_skipped` | `skipped_pairing_ids.length` | Track against the two above |
 | `empty_reveal_rate` | share of sessions with `allowed_claims.length === 0` | **Hard rollback trigger** |
 
+`v_axis_independence` already exists and measures exactly the concentration risk this integration introduces — no new metric is needed, just a `GROUP BY variant` over it.
+
 `empty_reveal_rate` is not a metric to review later. Any increase means regime routing has starved the ledger and the reveal is degrading to *"Nothing cleared the evidence threshold this round."*
+
+> **Two existing analytics surfaces are already dead at 6 rounds.** `v_session_stability` answers "did the round-8 winner survive to reveal?" using the `archetype_ranking_snapshot` events emitted at rounds 8/10/12/14 — none of which fire. Resolving D1 should include deciding whether to re-point those checkpoints at the real budget or retire the view.
 
 ### Success metrics
 
 | Metric | Baseline | Target |
 |---|---|---|
 | `archetype_margin` (avg) | TBD | Improve — primary quality metric |
-| `axis_coverage` (avg) | TBD | No regression — guardrail |
+| `archetype_score` (avg) | TBD | Supporting context only — it is a cosine, not a probability |
+| `v_axis_independence` (avg) | TBD | No regression — guardrail |
 | `empty_reveal_rate` | TBD | No regression — hard trigger |
 | Completion rate | TBD | No regression |
 | `archetype_flagged` rate | TBD | No regression |
 
-Baseline all five before Step 4.
+Baseline all six before Step 4.
 
 ---
 
@@ -604,6 +696,10 @@ Earlier drafts were written against `acedge123/idea-builder` and carry errors th
 | Earlier draft said | Correct |
 |---|---|
 | Sessions run 12–18 rounds; escape at 15, cap at 18 | Web ships **6 rounds**; those constants are dead code |
+| `delta_vector` is never persisted; add a column | Already in `event_log.props.raw_delta` on every `choice_scored` |
+| De-weighting `mode_pressure` is an independent fix | It **removes compound entirely** unless the constants are fixed first |
+| `round` is a single number | Separate `rounds_answered` / `rounds_skipped` / `rounds_shown` |
+| Add an `axis_coverage` metric | `v_axis_independence` already measures it |
 | Compound fires late in the session | Compound is **unreachable** at 6 rounds |
 | Probe flips indicate rugged terrain | Probes are **quarantined**; `flips` is always empty |
 | Decay the probe schedule rather than disabling it | There is **no live probe schedule**; `probe_weight` removed |
