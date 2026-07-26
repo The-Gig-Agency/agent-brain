@@ -11,7 +11,10 @@
  *   - transition reachability from terrains the mapper can emit
  *   - escape ModePressure
  *   - SelectionMode mapping (general / low-confidence / settled)
+ *   - shared golden parity fixtures
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { scoreTerrain } from "../../scoring.js";
 import type { SearchRegime, TerrainProfile } from "../../types.js";
 import { legacyKnobsForMode, regimeToPairingKnobs, regimeToSelectionMode } from "./knobs.js";
@@ -58,6 +61,22 @@ function input(overrides: Partial<MusicDNATerrainInput> = {}): MusicDNATerrainIn
   if (overrides.config !== undefined) result.config = overrides.config;
   return result;
 }
+
+type GoldenCase = {
+  id: string;
+  input: MusicDNATerrainInput;
+  expected: {
+    terrain: TerrainProfile;
+    regime: SearchRegime;
+    confidence: number;
+    mode_pressure_in: string;
+    scoring_agrees: boolean;
+    transition_candidate: SearchRegime | null;
+    selection_mode: SelectionMode;
+    pairing_knobs: unknown;
+    scores: Record<string, number>;
+  };
+};
 
 // ---------- legacyKnobsForMode: all three modes ----------
 {
@@ -250,6 +269,36 @@ function input(overrides: Partial<MusicDNATerrainInput> = {}): MusicDNATerrainIn
     `compound→explore must be reachable via local_minima_risk; fired=${[...fired].join(",")}`,
   );
   assert(!fired.has("coordinate"), "coordinate must remain unreachable for MusicDNA");
+}
+
+// ---------- Shared golden parity fixture ----------
+{
+  const fixture = JSON.parse(
+    readFileSync(resolve("fixtures/musicdna/parity-golden-v1.json"), "utf8"),
+  ) as { cases: GoldenCase[] };
+
+  for (const testCase of fixture.cases) {
+    const rec = recommendMusicDNARegime(testCase.input);
+    assert(
+      JSON.stringify(rec.terrain) === JSON.stringify(testCase.expected.terrain),
+      `${testCase.id}: terrain mismatch`,
+    );
+    assert(rec.regime === testCase.expected.regime, `${testCase.id}: regime`);
+    assert(rec.confidence === testCase.expected.confidence, `${testCase.id}: confidence`);
+    assert(rec.mode_pressure_in === testCase.expected.mode_pressure_in, `${testCase.id}: mode_pressure_in`);
+    assert(rec.scoring_agrees === testCase.expected.scoring_agrees, `${testCase.id}: scoring_agrees`);
+    assert(
+      rec.transition_candidate === testCase.expected.transition_candidate,
+      `${testCase.id}: transition_candidate`,
+    );
+    assert(rec.selection_mode === testCase.expected.selection_mode, `${testCase.id}: selection_mode`);
+    assert(
+      JSON.stringify(rec.pairing_knobs) === JSON.stringify(testCase.expected.pairing_knobs),
+      `${testCase.id}: pairing_knobs`,
+    );
+    const scores = Object.fromEntries(rec.scoring.breakdown.map((row) => [row.regime, row.score]));
+    assert(JSON.stringify(scores) === JSON.stringify(testCase.expected.scores), `${testCase.id}: scores`);
+  }
 }
 
 console.log("musicdna-mapper selftest: OK");
