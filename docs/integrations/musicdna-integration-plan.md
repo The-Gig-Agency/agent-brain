@@ -22,6 +22,47 @@ Everything else is sequencing and guardrails.
 
 ---
 
+## Operating posture — learn slowly, serve cheaply
+
+Agent Brain should not treat every MusicDNA click as a direct training signal
+or immediate policy update. Individual choices, skips, and feedback entries are
+noisy: a user may not know the songs, may be distracted, may dislike the
+specific pairing, or may be reacting to presentation rather than taste
+structure. The useful signal is aggregate behavior over many sessions, joined
+back to the recommendation that shaped each pairing decision.
+
+For MusicDNA, outcome learning should therefore be **batch-first**:
+
+1. Emit recommendation and outcome telemetry with stable join keys.
+2. Aggregate by session, lane, regime, knob set, round, and outcome window.
+3. Compare against legacy/shadow baselines before changing any live behavior.
+4. Promote calibration changes as versioned artifacts with fixture coverage.
+5. Keep raw user text and one-off feedback out of automatic policy updates.
+
+This keeps "Agent Brain gets smarter" grounded in measured outcome deltas, not
+in overfitting to the last listener action.
+
+The runtime posture should be similarly conservative. Agent Brain is best
+viewed as a **recommendation and calibration engine**, not a required
+real-time decision engine for the pairing hot path. A product such as MusicDNA
+can call or sync with Agent Brain periodically to update regime weights,
+pairing knobs, calibration packs, and rollout guidance, while keeping the
+per-pairing decision local and fast.
+
+That gives integrators two clean modes:
+
+- **Hot path:** local deterministic mapper/scorer/knob logic, tight fallback,
+  no required network hop before showing the next pairing.
+- **Cold path:** batch telemetry ingestion, offline evaluation, calibration,
+  shadow-diff review, and deliberate promotion of new policy versions.
+
+Remote Agent Brain calls can still be useful for dashboards, analysis,
+experiments, or low-frequency config refreshes. They should not be required
+for every web/mobile pairing unless latency, availability, and fallback
+behavior have been proven under real traffic.
+
+---
+
 ## Part 1 — What is actually true today
 
 Facts verified in the current codebase. Several contradict earlier drafts.
