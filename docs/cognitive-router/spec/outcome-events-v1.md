@@ -122,3 +122,15 @@ npm run smoke:outcome-events:v1
 ```
 
 The selftest validates a recommendation event, an outcome event, join-key consistency, low-confidence field summarization, eval-source requirements, and privacy rejection for raw-text events.
+
+## Strict boundary validation and Music DNA mapping (AB-28 / AB-43)
+
+Runtime validation now requires every declared required field, closed nested field allowlists, full terrain/regime enums, bounded technical identifiers, digest-shaped hashes, finite numeric ranges and calendar-valid RFC3339 timestamps (UTC/offsets and second/fractional precision). Optional outcome labels are bounded codes, not prose. Production telemetry cannot carry eval-case/suite metadata; privacy attestations do not make unknown text fields acceptable. Created-event self-join IDs must equal their event IDs.
+
+`validateOutcomeAttributionV1` additionally checks an outcome against a separately loaded, already-authorized immutable recommendation: recommendation ID, environment, trace, tenant/subject/actor/decision/experiment scope and temporal ordering. The caller must still authorize the source/record and persist unique events; a pure validator cannot prove a database reference exists or authenticate an API request. Late outcome events remain valid, append-only records; do not conflate the original request trace with a new delivery correlation ID.
+
+The optional join references `decision_ref`, `result_ref`, `result_version`, `observation_id`, `experiment_id` and `variant` support exact-version attribution. Result versions must be positive safe integers and experiment/variant are present together. These additions do not change the public recommendation HTTP response.
+
+The shared synthetic-only [Music DNA contract](../../../contracts/musicdna-learning/v1/README.md) and `integrations/musicdna/learning-outcome.ts` bridge the domain observation to these existing event families. Unknown recommendation/policy provenance stays unattributed, with no invented outcome; matched reading feedback stays `unknown` and never becomes an automatic `succeeded`, `accepted` or inferred quality score. The original observation retains accuracy/rating, located by observation ID. The source registry supplies tenant/environment binding and the agreed measurement window. The initial mapper handles direct synthetic-session attribution only; real-user consent and cohort assignment remain later gates.
+
+Run `npm run check:learning-contract` for pinned cross-repo envelope/receipt fixtures and `npm run smoke:outcome-events:v1` for positive/negative outcome validation plus retry, tenant denial and late-version mapping. Pass another repository's manifest path to the contract checker for a cross-repo checksum comparison.

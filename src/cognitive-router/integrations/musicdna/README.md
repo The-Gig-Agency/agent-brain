@@ -37,3 +37,7 @@ npm run smoke:musicdna-mapper
 - Does not change MusicDNA's `selectPairing`, evidence gating, or `shouldStop`
 - Does not call MusicDNA's database or LLM
 - Does not change global `DIMENSION_WEIGHTS` (debugging / media lanes stay intact)
+
+## Outcome evidence contract
+
+`mapMusicDnaObservationToOutcomeV1` provides a pure, synthetic-only bridge from the pinned [learning-observation.v1 contract](../../../../contracts/musicdna-learning/v1/README.md) to generic outcome events. It requires authorized source binding and matching immutable recommendation context; absent attribution stays unjoined and reading agreement never implies router success. This does not add a hosted Music DNA endpoint, telemetry storage or live learning.
