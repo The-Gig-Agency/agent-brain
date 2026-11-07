@@ -11,7 +11,7 @@
 - Source: `The-Gig-Agency/agent-brain`, branch `master`.
 - `router-recommend-v1` is the HTTP service identifier in responses/logs. Confirm the dashboard service identity before changing configuration; do not create a duplicate service.
 
-These are the settings declared by the existing repository's `railway.json`. Confirm them against the selected service and deployment before an infrastructure change.
+These are the settings declared by the existing repository's `railway.json` and the reviewed migration candidate in [`.railway/railway.ts`](../.railway/railway.ts). Until the explicit hosted cutover, the legacy file remains active. Confirm settings against the selected service and deployment before an infrastructure change.
 
 | Setting | Value |
 |---------|-------|
@@ -34,7 +34,7 @@ The service starts from `dist/`; Railway deploys must not use the local convenie
 4. Prepare the generated configuration for review using the current CLI's actual help. In CLI `5.71.0`, `railway config migrate --apply` writes the local authoring file only. The separate `railway config migrate cutover` command changes the hosted config-file settings and saves an undo snapshot. Review the generated file and migration sequence before cutover; keep `railway.json` until that sequence is complete. A TypeScript plan also needs the documented `railway` SDK; a disposable preview installation is separate from adding it to this app's dependencies.
 5. A subsequent reviewed migration must preserve the existing service/domain/auth and show no unexpected service or variable deletions. Verify health, authenticated routes and log correlation afterward, and record rollback evidence before closing AB-36.
 
-This runbook/CI repair performs no hosted migration and adds no Railway SDK dependency. Keep migration acceptance open until actual service inspection and a reviewed plan/application are recorded.
+The [migration runbook](../.railway/README.md) contains the concrete candidate, pinned development SDK, read-only planning, cutover and rollback sequence. `npm run check` includes the configuration type-check. Merging that source does not itself migrate the hosted service; keep migration acceptance open until reviewed application and post-change evidence are recorded.
 
 ## Required environment
 
