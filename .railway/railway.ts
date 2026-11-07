@@ -15,9 +15,10 @@ export default defineRailway((ctx) => {
     healthcheckTimeout: 300,
     replicas: { "us-west2": 1 },
     deploy: {
-      restartPolicyType: "ON_FAILURE",
       restartPolicyMaxRetries: 3,
-      sleepApplication: false,
+      // Railway omits its verified ON_FAILURE / awake defaults from the stored
+      // graph. Declaring them explicitly produces perpetual no-effect drift.
+      // Verify both effective values after deploy; see .railway/README.md.
     },
   });
 

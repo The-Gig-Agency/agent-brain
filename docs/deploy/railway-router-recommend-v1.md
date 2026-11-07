@@ -2,7 +2,7 @@
 
 **Tickets:** AB-34, AB-35, AB-36, AB-37  
 **Service:** `router-recommend-v1`  
-**Status:** Existing hosted service; authenticated caller/log evidence and configuration migration remain acceptance gates under AB-36/37.
+**Status:** Hosted service live; IaC settings applied with authenticated/log evidence. Final legacy-file cleanup deployment remains under AB-36. Monitoring is operational under AB-37.
 
 ## Target shape
 
@@ -32,7 +32,7 @@ AB-40 implemented `/v1/intake-recommend`. Do not overload `POST /v1/recommend`; 
 
 ## Railway commands
 
-Existing legacy settings are committed in [`../../railway.json`](../../railway.json). The install and build phases are separate:
+Settings are managed in [`../../.railway/railway.ts`](../../.railway/railway.ts). The install and build phases are separate:
 
 ```text
 Install phase: npm ci (Nixpacks)
@@ -43,7 +43,7 @@ Health check path: /health
 
 `npm run serve:router-recommend:v1` remains a local convenience command because it builds before starting. Hosted environments should start from `dist/`.
 
-The canonical [runtime runbook](../../deploy/RAILWAY_RUNTIME.md) records the existing hostname, migration deadline, access prerequisites and exact acceptance steps. Railway's [current IaC documentation](https://docs.railway.com/infrastructure-as-code) sets a 2026-12-01 cutoff for legacy config files. Preserve `railway.json` until the actual existing service is inspected and its migration plan is reviewed; this documentation change does not apply a migration.
+The canonical [runtime runbook](../../deploy/RAILWAY_RUNTIME.md) records the hostname, effective settings and acceptance steps. [Migration evidence](ab36-migration-2026-11-07.md) records the November 7 apply. This source removes the old auto-detected file; verify its deployment before closing AB-36. Future authoring edits still require a reviewed plan/apply.
 
 ## Environment
 
@@ -70,11 +70,11 @@ EdgeBot/calling-service environment names (verify the actual client under AB-51)
 
 ## Railway build: `npm error EBUSY ... rmdir '/app/node_modules/.cache'`
 
-Nixpacks generates a **Dockerfile** with two steps: an **install** phase (`npm ci`, often with a cache on `/root/.npm`) and a **build** phase (your `railway.json` **`buildCommand`**). Railway also mounts a cache on **`/app/node_modules/.cache`** during the build `RUN`.
+Nixpacks generates a **Dockerfile** with two steps: an **install** phase (`npm ci`, often with a cache on `/root/.npm`) and a **build** phase (the configured **`buildCommand`**). Railway also mounts a cache on **`/app/node_modules/.cache`** during the build `RUN`.
 
 **Root cause:** Running **`npm ci` again inside `buildCommand`** tries to replace `node_modules` while `.cache` is a busy mount → **`EBUSY`** on `rmdir '/app/node_modules/.cache'`.
 
-**Mitigation (this repo):** `railway.json` **`buildCommand` is only `npm run build`**. Dependencies are installed in Nixpacks’ install phase; the build step only compiles TypeScript (`tsc`). Do not add a second `npm ci` there.
+**Mitigation (this repo):** IaC **`buildCommand` is only `npm run build`**. Dependencies are installed in Nixpacks’ install phase; the build step only compiles TypeScript (`tsc`). Do not add a second `npm ci` there.
 
 If a build still fails, clear the Railway **build cache** once (dashboard) and redeploy.
 

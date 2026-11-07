@@ -46,7 +46,7 @@ npm run smoke:router-recommend-ops:v1
 
 ## Railway wrapper (AB-34 / AB-35)
 
-- Railway config: [`../../railway.json`](../../railway.json)
+- Railway config: [`../../.railway/railway.ts`](../../.railway/railway.ts)
 - Install phase: `npm ci` (Nixpacks)
 - Build command: `npm run build` (do not repeat `npm ci` in this phase)
 - Start command: `npm run start:router-recommend:v1`
@@ -57,7 +57,7 @@ npm run smoke:router-recommend-ops:v1
 
 Topology and rollout notes live in [`../../docs/deploy/railway-router-recommend-v1.md`](../../docs/deploy/railway-router-recommend-v1.md). Runtime settings live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY_RUNTIME.md), and the deployment checklist lives in [`../../docs/deploy/router-recommend-observability-checklist-v1.md`](../../docs/deploy/router-recommend-observability-checklist-v1.md).
 
-The runtime runbook also tracks the existing service's legacy configuration migration deadline. These source settings do not establish that the hosted migration or authenticated caller/log acceptance is complete. [CI](../../.github/workflows/verify.yml) runs local source checks separately from deployment verification.
+The runtime runbook links the applied migration and authenticated/log evidence. Verify the final legacy-file cleanup deployment before closing AB-36. [CI](../../.github/workflows/verify.yml) runs source checks separately from deployment verification.
 
 ## Internal example clients (AB-27 / AB-40)
 
