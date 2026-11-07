@@ -1,57 +1,76 @@
 # Agent Brain Railway configuration (AB-36)
 
-This named partial manages the existing `agent-brain` service in `gallant-bravery` / `production`. It preserves the deployed Nixpacks build, start/health settings, restart behavior and one `us-west2` replica. Project variables are unmanaged: the existing bearer stays in Railway. Public domains are left untouched, and the plan must show no domain or variable deletion.
+The named `agent-brain` partial manages only the existing service in
+`gallant-bravery` / `production`. Variables are unmanaged; domains, the separate
+monitoring worker and its volume are outside this configuration's change scope.
+The app is stateless and deterministic. No database, model call or job is added.
 
-The app remains a stateless deterministic HTTP service. This configuration adds no database, model call, background job, service or alert sender. The `railway` SDK is a pinned development dependency for configuration tooling; use Node 22 or 24 for that tooling. The recommendation server's runtime code and declared Node compatibility are unchanged.
+## Migration status
 
-## Source review and read-only plan
+The reviewed configuration was applied on November 7, 2026, producing successful
+deployment `5d5d615e-b91d-453c-9d38-832d401944b3` from merged PR #8 / commit
+`99f1dac4ca96de7f8a3602dfafc027fd73cb7d25`. Health/readiness, both authenticated
+routes, missing/wrong-token denial and all eight matching request logs passed.
+See the [execution evidence](../docs/deploy/ab36-migration-2026-11-07.md).
 
-Use Railway CLI **5.71.0** with SDK **3.16.0**, or review a toolchain update deliberately. The installed older CLI `4.30.3` has no IaC commands. Run the native `railway` executable on PATH: SDK evaluation checks that executable's version.
+That deployment still auto-detected the repository's old `railway.json`, even
+though `railwayConfigFile` was null and migration status reported no explicit
+Config as Code paths. No separate path-clearing cutover or undo snapshot existed.
+This cleanup removes the old file so subsequent deployments use the applied IaC
+settings alone. Close AB-36 only after its merged deployment is verified.
+
+## Provider defaults and idempotency
+
+Effective settings were verified through Railway's service API and deployment
+manifest: Nixpacks, `npm run build`, `npm run start:router-recommend:v1`, `/health`,
+timeout 300, ON_FAILURE with three retries, sleeping disabled and one us-west2 replica.
+
+Railway's stored graph omits its ON_FAILURE and awake defaults, despite reporting
+those effective values. Explicitly declaring `restartPolicyType: "ON_FAILURE"`
+and `sleepApplication: false` caused repeated no-effect plan differences after apply.
+The authoring file relies on these verified defaults, retains max retries 3, and
+requires the operator to verify effective restart/sleep behavior after deployment.
+The normalized read-only plan must contain zero changes and diagnostics.
+
+## Plan and apply
+
+Use CLI **5.71.0**, pinned dev SDK **3.16.0**, and Node 22/24 for configuration tooling.
+Run the native CLI executable on PATH; the older installed CLI 4.30.3 has no IaC commands.
 
 ```sh
 npm ci
 npm run check
-railway whoami
 railway link --project ddc9d9d6-98be-4854-93c3-94ed324e3279 \
   --environment 0b3a3e78-f9d0-454e-ba54-5eea5ac6a23a \
   --service d0b95799-b5c1-4400-8d62-b532da2d0af9
-railway config plan --file .railway/railway.ts --environment production --json
+railway config plan --file .railway/railway.ts --environment production \
+  --json --out /tmp/agent-brain-reviewed.plan.json
 ```
 
-Review the exact source commit and plan. Only updates to this existing service's build/start/health/restart settings are expected. Those values are currently supplied by `railway.json`; dashboard defaults alone do not describe the running deployment. No service creation, removal, credential edit, domain change, replica change or unrelated resource change is authorized by this migration scope. Replan after any source or environment change. Never use `--show-values`, `--decrypt-variables` or `--include-variables` for this review.
+Review source commit/tree, environment revision and every change. No creation,
+deletion, source/domain/replica/credential edit or unrelated resource update is in
+scope. Never use `--show-values`, `--decrypt-variables` or `--include-variables`.
+Replan after any source/environment change. Apply only the exact reviewed artifact:
 
-Merging the source does **not** apply IaC: Railway still reads `railway.json` until the explicit cutover. Keep that file in the repository during source review and cutover. There is no automatic config-apply workflow in this PR.
+```sh
+railway config apply --plan /tmp/agent-brain-reviewed.plan.json --environment production
+```
 
-## Reviewed production cutover
-
-Perform this only after the source/plan is reviewed, from a clean checkout of the approved commit. See the [runtime runbook](../deploy/RAILWAY_RUNTIME.md) for authenticated smoke and log correlation.
-
-1. Record the current successful deployment/commit, config-file path, domain and passing health/auth/log checks. Run `railway config migrate status` and save the output with AB-36.
-2. Run `railway config migrate cutover --service agent-brain`. CLI 5.71.0 saves the previous hosted config-file paths for `migrate undo`. This changes configuration ownership; it is distinct from the local-only `migrate --apply` command. Keep `railway.json` available for rollback.
-3. Immediately generate a **fresh** pinned plan after cutover, since cutover can change the environment revision:
-
-   ```sh
-   railway config plan --file .railway/railway.ts --environment production \
-     --json --out /tmp/agent-brain-reviewed.plan.json
-   ```
-
-4. Compare it with the reviewed scope above. Stop and undo cutover if it changes anything else. Apply that exact artifact, allowing the CLI to enforce its environment revision and source-tree checks:
-
-   ```sh
-   railway config apply --plan /tmp/agent-brain-reviewed.plan.json
-   ```
-
-5. Confirm the deployment succeeds, the hostname stays the same, `/health` and `/ready` pass with auth configured/bypass off, both authenticated API routes succeed, missing/wrong tokens return 401, and traces appear in that deployment's JSON logs. Inspect the effective build/start/health/restart/region settings. A successful config apply is not sufficient evidence by itself.
-6. Replan: no outstanding changes should remain. Record `railway config migrate status`, deployment/commit, sanitized plan, trace evidence and rollback instructions on AB-36 before closing it. AB-37 separately tracks actual monitoring and delivered alert/recovery proof.
+After an actual change, verify deployment success and effective settings, public
+health/readiness, both authenticated routes, four 401 denial checks, and request logs
+from that exact deployment. Filter logs server-side by quoted exact synthetic trace
+IDs (`@trace_id:"<id>"`), never retrieve unrelated production logs. Replan for zero drift.
+Merging future authoring changes does not automatically run `config apply`.
 
 ## Rollback
 
-If the fresh plan is unexpected, apply fails, or post-change checks fail:
+Preserve the last healthy deployment and sanitized before-graph/plan. For an unhealthy
+deployment, use Railway deployment rollback to the recorded healthy revision, then
+repeat health/auth/log checks. If source cleanup needs reversal, restore the prior
+`railway.json` from Git and review that deployment. A settings reversal needs its
+own fresh, scoped plan; never reset credentials or touch the monitor/volume.
 
-```sh
-railway config migrate undo
-```
-
-Confirm the saved `/railway.json` mapping is restored. If an unhealthy deployment was created, restore the recorded last healthy deployment through Railway's deployment rollback. Repeat the health/auth/log checks and record the outcome. Undo restores legacy config-file paths; it does not claim to undo every unrelated service setting or a credential change.
-
-Transient plan/snapshot files are ignored under `.railway/`; only this README and `railway.ts` are tracked. Do not commit keys, decrypted variables or CLI authentication state. Delete the legacy source file in a later cleanup only after the recorded cutover succeeds.
+`migrate undo` applies only when a real cutover saved `.railway/.cac-migration.json`.
+It is not a general rollback command, and this execution required no explicit path
+cutover. Rollback was prepared, not induced against a healthy production service.
+Transient plans/snapshots remain ignored; never commit secrets or authentication state.
