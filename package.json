@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-musicdna-learning-contract.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-musicdna-learning-contract.mjs && npm run check:railway",
     "check:oss-boundary": "bash scripts/verify-echelon-oss-boundary.sh",
     "export:oss-echelon": "bash scripts/export-oss-echelon.sh",
     "eval:debugging": "npm run build && node dist/cognitive-router/run-debugging-v1.js",
@@ -52,10 +52,12 @@
     "smoke:ab17-role-runners": "npm run build && node dist/cognitive-router/run-ab17-role-runners-selftest.js",
     "smoke:musicdna-mapper": "npm run build && node dist/cognitive-router/integrations/musicdna/run-musicdna-mapper-selftest.js",
     "check:learning-contract": "node scripts/check-musicdna-learning-contract.mjs",
-    "smoke:outcome-validation:v1": "npm run build && node dist/cognitive-router/run-outcome-validation-selftest.js"
+    "smoke:outcome-validation:v1": "npm run build && node dist/cognitive-router/run-outcome-validation-selftest.js",
+    "check:railway": "tsc -p tsconfig.railway.json"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
+    "railway": "3.16.0",
     "typescript": "^5.9.3"
   }
 }

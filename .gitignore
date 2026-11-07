@@ -4,3 +4,6 @@ reports/
 _oss_export/
 .DS_Store
 **/.DS_Store
+.railway/*
+!.railway/railway.ts
+!.railway/README.md
