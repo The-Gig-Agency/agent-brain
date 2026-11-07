@@ -2,7 +2,7 @@
 
 **Tickets:** AB-34, AB-35, AB-36, AB-37  
 **Service:** `router-recommend-v1`  
-**Status:** Internal hosted-service design, wrapper contract, Railway config, and ops checklist.
+**Status:** Existing hosted service; authenticated caller/log evidence and configuration migration remain acceptance gates under AB-36/37.
 
 ## Target shape
 
@@ -28,19 +28,22 @@ The service owns HTTP, auth, request limits, structured request logs, health, an
 | `POST /v1/recommend` | bearer | Structured terrain assessment → regime recommendation. |
 | `POST /v1/intake-recommend` | bearer | Messy problem text → inferred terrain + clarification + recommendation (AB-40). |
 
-AB-40 adds `/v1/intake-recommend`. Do not overload `POST /v1/recommend`; it remains the structured terrain contract from AB-24/25.
+AB-40 implemented `/v1/intake-recommend`. Do not overload `POST /v1/recommend`; it remains the structured terrain contract from AB-24/25.
 
 ## Railway commands
 
-Recommended Railway settings are committed in [`../../railway.json`](../../railway.json):
+Existing legacy settings are committed in [`../../railway.json`](../../railway.json). The install and build phases are separate:
 
 ```text
-Build command: npm ci && npm run build
+Install phase: npm ci (Nixpacks)
+Build command: npm run build
 Start command: npm run start:router-recommend:v1
 Health check path: /health
 ```
 
 `npm run serve:router-recommend:v1` remains a local convenience command because it builds before starting. Hosted environments should start from `dist/`.
+
+The canonical [runtime runbook](../../deploy/RAILWAY_RUNTIME.md) records the existing hostname, migration deadline, access prerequisites and exact acceptance steps. Railway's [current IaC documentation](https://docs.railway.com/infrastructure-as-code) sets a 2026-12-01 cutoff for legacy config files. Preserve `railway.json` until the actual existing service is inspected and its migration plan is reviewed; this documentation change does not apply a migration.
 
 ## Environment
 
@@ -50,7 +53,7 @@ Health check path: /health
 | `ROUTER_RECOMMEND_BEARER_TOKEN` | production yes | Shared bearer used by internal clients. |
 | `ROUTER_RECOMMEND_ALLOW_UNAUTHENTICATED` | no | Local-only escape hatch. Do not set to `true` in Railway production. |
 
-Future AB-40/41 client env names:
+EdgeBot/calling-service environment names (verify the actual client under AB-51):
 
 | Env var | Owner |
 |---------|-------|
@@ -92,6 +95,8 @@ Runtime details live in [`../../deploy/RAILWAY_RUNTIME.md`](../../deploy/RAILWAY
 6. Confirm `GET /health` returns `200`.
 7. Confirm `GET /ready` returns `200` with bypass locally, and returns `503` if neither bypass nor bearer token is configured.
 8. In Railway, set `ROUTER_RECOMMEND_BEARER_TOKEN`, deploy, then verify `/health`, `/ready`, and authenticated `POST /v1/recommend` and `POST /v1/intake-recommend`.
+
+For the existing deployment, reuse its matching injected token instead of replacing it during verification. Follow the runtime runbook for trace/log proof and monitor acceptance. Local smokes, a successful build, or a Railway deployment health check do not substitute for those live checks.
 
 ## What is intentionally not solved here
 
