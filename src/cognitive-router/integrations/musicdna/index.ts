@@ -13,3 +13,6 @@ export * from "./knobs.js";
 export * from "./terrain-mapper.js";
 export * from "./scoring-musicdna.js";
 export * from "./recommender.js";
+
+export { mapMusicDnaObservationToOutcomeV1 } from "./learning-outcome.js";
+export type { MusicDnaOutcomeContext, MusicDnaOutcomeMapping } from "./learning-outcome.js";

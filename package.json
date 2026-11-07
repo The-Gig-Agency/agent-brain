@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-musicdna-learning-contract.mjs",
     "check:oss-boundary": "bash scripts/verify-echelon-oss-boundary.sh",
     "export:oss-echelon": "bash scripts/export-oss-echelon.sh",
     "eval:debugging": "npm run build && node dist/cognitive-router/run-debugging-v1.js",
@@ -40,7 +40,7 @@
     "eval:transition-candidate:v0.1": "npm run build && node dist/cognitive-router/run-transition-candidate-v0.1.js",
     "eval:transition-candidate:v0.2": "npm run build && node dist/cognitive-router/run-transition-candidate-v0.2.js",
     "eval:ablation-matrix:v0.1": "npm run build && node dist/cognitive-router/run-ablation-matrix-v0.1.js",
-    "smoke:outcome-events:v1": "npm run build && node dist/cognitive-router/run-outcome-events-v1-selftest.js",
+    "smoke:outcome-events:v1": "npm run build && node dist/cognitive-router/run-outcome-events-v1-selftest.js && node dist/cognitive-router/run-outcome-validation-selftest.js",
     "start": "node dist/server/run-router-recommend-http-v1.js",
     "start:router-recommend:v1": "node dist/server/run-router-recommend-http-v1.js",
     "serve:router-recommend:v1": "npm run build && node dist/server/run-router-recommend-http-v1.js",
@@ -50,7 +50,9 @@
     "smoke:router-recommend-ops:v1": "npm run build && node dist/server/smoke-router-recommend-ops-v1.js",
     "smoke:ab18-orchestration": "npm run build && node dist/cognitive-router/run-ab18-orchestration-selftest.js",
     "smoke:ab17-role-runners": "npm run build && node dist/cognitive-router/run-ab17-role-runners-selftest.js",
-    "smoke:musicdna-mapper": "npm run build && node dist/cognitive-router/integrations/musicdna/run-musicdna-mapper-selftest.js"
+    "smoke:musicdna-mapper": "npm run build && node dist/cognitive-router/integrations/musicdna/run-musicdna-mapper-selftest.js",
+    "check:learning-contract": "node scripts/check-musicdna-learning-contract.mjs",
+    "smoke:outcome-validation:v1": "npm run build && node dist/cognitive-router/run-outcome-validation-selftest.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

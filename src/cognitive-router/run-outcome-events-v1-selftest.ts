@@ -54,7 +54,7 @@ const recommendation: RecommendationCreatedEventV1 = {
       branching_factor: 0.4,
       mode_pressure: 0.7,
     }),
-    problem_summary_hash: "sha256:example",
+    problem_summary_hash: `sha256:${"a".repeat(64)}`,
   },
   recommendation: {
     primary_regime: "explore",
