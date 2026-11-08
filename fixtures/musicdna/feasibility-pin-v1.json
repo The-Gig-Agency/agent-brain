@@ -1,0 +1,39 @@
+{
+  "version": "musicdna-feasibility-pin.v1",
+  "agent_brain": {
+    "adapter_version": "musicdna-domain-ab52.v1",
+    "files": {
+      "src/cognitive-router/integrations/musicdna/types.ts": "651eb61b3e2e802e784939d8b3523cd5cac5fe75689ec7a7f95cd9b8ba8d9804",
+      "src/cognitive-router/integrations/musicdna/knobs.ts": "a9be199598f943dc5008a86f09918fe5052bd1a3ef1fd8863af9d67ef135e412",
+      "src/cognitive-router/integrations/musicdna/signals.ts": "273dfb4f4fb0710de34451119abaa6049b9e3c5985664fb3adf5f5b7aced2ace",
+      "src/cognitive-router/integrations/musicdna/terrain-mapper.ts": "58bcef0a97ddd049386d178bfcf9f78ed132159396d11072edc109e4a41f8104",
+      "src/cognitive-router/integrations/musicdna/scoring-musicdna.ts": "4462779071b424ba5607029f133c13a4d882de77960e7c6d95e14fb4b881c049",
+      "src/cognitive-router/integrations/musicdna/recommender.ts": "8770b81f95f3cfddceee2d4f1b9db821ee5b894603596a4e4d3e5f60ce307157",
+      "src/cognitive-router/scoring.ts": "db8e66024c8c116619d89e1888c84a98a267825334fff8e7806480bf47b71868",
+      "src/cognitive-router/types.ts": "689fc85fa9209de60d22321ec3bb45d4bdf476c6e17f7e16dfb0c2ca39e19f3d",
+      "fixtures/musicdna/parity-golden-v1.json": "c49bc46539aed49b2c37fbf7659e15246b091b05d5d001c6f6d90f0de41ecf07"
+    },
+    "build_files": {
+      "dist/cognitive-router/integrations/musicdna/types.js": "0178012646b86699281470f61d450dff63ad3bbb17b20ad9ea734020fe524f09",
+      "dist/cognitive-router/integrations/musicdna/knobs.js": "867427f13dcc956ba58677d4f9d1784150a2d142dfdbaefc5e232734c95f2f1b",
+      "dist/cognitive-router/integrations/musicdna/signals.js": "858699b375ee16d8fb18eac4a84bef16da3de6ed462e319a7338cb554fcc0b8a",
+      "dist/cognitive-router/integrations/musicdna/terrain-mapper.js": "e95e05fd6668751429f76b7cc6db496e9a4a7c9f724ac1339874a2117666a544",
+      "dist/cognitive-router/integrations/musicdna/scoring-musicdna.js": "c01b4ae32a3b5b3bd33cdd960acd58f33f4b6d38c59ad1be10f075e38effe701",
+      "dist/cognitive-router/integrations/musicdna/recommender.js": "cf41400c5ca6d7185b9f7a600214e5cd0b008cc324419e80af524fb3113bb1f0",
+      "dist/cognitive-router/scoring.js": "b2de5f1f77dd22976d796991e08717a98ede6346c8fcd4fc3113a1f28f2ab923",
+      "dist/cognitive-router/types.js": "6b114ae6b302884bd26c3e61f49ace997ff9331f29ea1999e262fc37b8d89aaa"
+    }
+  },
+  "musicdna": {
+    "commit": "e0bb787adc495265936fe0b0d599b595033cd1f1",
+    "files": {
+      "src/musicdna/router/types.ts": "222f6a197b1b59c8ce3e06112c1bf89c555a791c52e79e4cc5b4655c83227d5a",
+      "src/musicdna/router/terrain.ts": "b50f11b08d4908afd0389b2a105373c82ce43a130a8436ad29855207b476e5a3",
+      "src/musicdna/router/scoring.ts": "b45b6d78ad242b3234e6e931f0429efbaeb5847a0c511dcd4ab7e5db0a5f9722",
+      "src/musicdna/router/knobs.ts": "07a2f3bfb523f18ef7fad620702894955b5e3cd259b8fba61aae474c0a23bb63",
+      "src/musicdna/router/index.ts": "dd402e866a6bab05991d6fc189ec3ad213aa68e373fca776ae7f80bcf38bcc53",
+      "src/lib/musicdna.functions.ts": "2f00ebe3e3f370b7f3a71926b0badbd1156e5bb189226ead3b21db76439bfa9a",
+      "fixtures/musicdna/parity-golden-v1.json": "c49bc46539aed49b2c37fbf7659e15246b091b05d5d001c6f6d90f0de41ecf07"
+    }
+  }
+}

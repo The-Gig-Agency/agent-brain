@@ -127,12 +127,8 @@ function transitionCandidateFor(
   return null;
 }
 
-/**
- * Does mode_pressure_in "agree" with the scored regime?
- * escape/create are not SearchRegimes — they never "agree" as an equality,
- * which is correct: scoring_agrees measures whether scoreTerrain is echoing
- * a single-regime mode_pressure.
- */
+/** Match MusicDNA's shipped telemetry: escape is a request to explore. */
 export function scoringAgrees(modePressureIn: ModePressure, regimeOut: SearchRegime): boolean {
-  return modePressureIn === regimeOut;
+  const normalized = modePressureIn === "escape" ? "explore" : modePressureIn;
+  return normalized === regimeOut;
 }
