@@ -19,7 +19,7 @@ import { scoreTerrain } from "../../scoring.js";
 import type { SearchRegime, TerrainProfile } from "../../types.js";
 import { legacyKnobsForMode, regimeToPairingKnobs, regimeToSelectionMode } from "./knobs.js";
 import { recommendMusicDNARegime } from "./recommender.js";
-import { scoreMusicDNATerrain } from "./scoring-musicdna.js";
+import { scoreMusicDNATerrain, scoringAgrees } from "./scoring-musicdna.js";
 import {
   detectSkipPressure,
   detectVectorVolatility,
@@ -215,6 +215,13 @@ type GoldenCase = {
     `MusicDNA compound score should be global-2 (got ${musicCompound} vs ${globalCompound})`,
   );
   assert(music.primary_regime === "compound", `settled session should score compound, got ${music.primary_regime}`);
+}
+
+// ---------- Match the shipped MusicDNA escape telemetry semantic ----------
+{
+  assert(scoringAgrees("escape", "explore"), "escape intentionally requests explore");
+  assert(!scoringAgrees("escape", "prune"), "escape must not agree with prune");
+  assert(!scoringAgrees("create", "explore"), "create is not an escape alias");
 }
 
 // ---------- recommendMusicDNARegime shape ----------

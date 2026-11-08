@@ -41,3 +41,12 @@ npm run smoke:musicdna-mapper
 ## Outcome evidence contract
 
 `mapMusicDnaObservationToOutcomeV1` provides a pure, synthetic-only bridge from the pinned [learning-observation.v1 contract](../../../../contracts/musicdna-learning/v1/README.md) to generic outcome events. It requires authorized source binding and matching immutable recommendation context; absent attribution stays unjoined and reading agreement never implies router success. This does not add a hosted Music DNA endpoint, telemetry storage or live learning.
+
+## Offline experiment preflight (AB-52)
+
+`npm run eval:musicdna:feasibility -- --output /tmp/new-musicdna-report` produces a
+pinned JSON/Markdown hold report comparing domain knobs with post-bootstrap legacy
+knobs. The optional pinned Music DNA checkout verifies eleven covered inputs against
+the actual mirror. Escape pressure intentionally requesting explore counts as
+`scoring_agrees`, matching Music DNA's shipped telemetry. This is not an efficacy
+report or trial activation. See [the runbook](../../../../docs/integrations/musicdna-feasibility.md).

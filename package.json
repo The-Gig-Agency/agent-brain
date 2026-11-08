@@ -53,7 +53,9 @@
     "smoke:musicdna-mapper": "npm run build && node dist/cognitive-router/integrations/musicdna/run-musicdna-mapper-selftest.js",
     "check:learning-contract": "node scripts/check-musicdna-learning-contract.mjs",
     "smoke:outcome-validation:v1": "npm run build && node dist/cognitive-router/run-outcome-validation-selftest.js",
-    "check:railway": "tsc -p tsconfig.railway.json"
+    "check:railway": "tsc -p tsconfig.railway.json",
+    "eval:musicdna:feasibility": "npm run build && node scripts/musicdna-feasibility.mjs",
+    "smoke:musicdna-feasibility": "npm run build && node --test scripts/musicdna-feasibility.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
